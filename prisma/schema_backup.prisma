@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  referralBatches referralBatch[] @relation("UserReferralBatches")
+}
+
+model referralBatch {
+  id         String @id @default(cuid())
+  referrerId String
+  referrer   User   @relation("UserReferralBatches", fields: [referrerId], references: [id])
+}

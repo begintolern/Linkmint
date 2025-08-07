@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String               @id @default(cuid())
+  email                  String               @unique
+  name                   String?
+  password               String?
+  role                   String?              @default("user") // ← Add this line
+  createdAt              DateTime             @default(now())
+  referralCode           String?              @unique
+  referralBadge          String? // e.g., "Inviter", "Active Referrer", "Power Referrer"
+  emailVerified          Boolean              @default(false)
+  verifyToken            String?              @unique
+  verifyTokenExpiry      DateTime?
+  trustScore             Int?                 @default(0) // ✅ Added here
+  referralGroupId        String?
+  referralGroup          referralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
+  eventLogs              eventLogs[]
+  payouts                Payout[]
+  Commissions            Commission[] // ✅ ← ADD THIS LINE
+  referralGroupsCreated  referralGroup[]      @relation("UsersInGroupReferrer")
+  referralBatches        referralBatch[]      @relation("UserReferralBatches")
+  referredById           String? //added for check
+  referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals              User[]               @relation("UserReferrals")
+  overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
+  commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
+}
+
+model referralGroup {
+  id         String   @id @default(cuid())
+  referrerId String
+  referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
+  users      User[]   @relation("UsersInGroup")
+  startedAt  DateTime @default(now())
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+}
+
+model referralBatch {
+  id         String    @id @default(cuid())
+  referrerId String
+  referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
+  inviteeIds String[] // Store user IDs as array
+  startedAt  DateTime?
+  expiresAt  DateTime?
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now())
+}
+
+model eventLogs {
+  id        String   @id @default(cuid())
+  userId    String? // ✅ Make optional
+  user      User?    @relation(fields: [userId], references: [id]) // ✅ Make nullable
+  type      String // e.g. "signup", "referral", "commission", "payout"
+  detail    String?
+  message   String?
+  createdAt DateTime @default(now())
+}
+
+model Payout {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  amount     Float
+  method     String // e.g. "paypal"
+  status     String // "pending", "approved", "paid", "failed"
+  details    String? // PayPal email or error notes
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
+  paidAt     DateTime?
+}
+
+model FloatLog {
+  id        String   @id @default(cuid())
+  amount    Float
+  source    String // e.g. "Amazon", "Rakuten"
+  note      String? // optional notes like "manual upload"
+  createdAt DateTime @default(now())
+}
+
+model PendingUser {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String
+  name              String? // 👈 Add this line
+  verifyToken       String
+  verifyTokenExpiry DateTime
+  referredById      String?
+  createdAt         DateTime @default(now())
+}
+
+enum CommissionType {
+  referral_purchase
+  override_bonus
+  payout
+}
+
+model Commission {
+  id          String         @id @default(cuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  amount      Float
+  type        CommissionType // ✅ Uses the enum
+  status      String // "pending", "approved", "paid"
+  source      String? // Amazon, Rakuten, etc.
+  description String?
+  createdAt   DateTime       @default(now())
+}
+model OverrideCommission {
+  id                 String   @id @default(cuid())
+  referrerId         String
+  inviteeId          String
+  amount             Float
+  sourceCommissionId String
+  reason             String   @default("Referral bonus override")
+  status             String   @default("pending") // ✅ Add this line
+  createdAt          DateTime @default(now())
+
+  referrer User @relation("ReferrerOverride", fields: [referrerId], references: [id])
+  invitee  User @relation("InviteeOverride", fields: [inviteeId], references: [id])
+}
+model systemSetting {
+  key   String @id
+  value String
+}
+

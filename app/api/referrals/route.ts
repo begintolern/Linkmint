@@ -1,0 +1,50 @@
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
+import { prisma } from "@/lib/db";
+import { NextResponse } from "next/server";
+import { addDays } from "date-fns";
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user?.email || !session.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: {
+        referralGroup: {
+          include: {
+            users: { select: { email: true } },
+          },
+        },
+      },
+    });
+
+    if (!user || !user.referralGroup) {
+      return NextResponse.json({ error: "User or referral group not found" }, { status: 404 });
+    }
+
+    const referredUsers = user.referralGroup.users
+      .filter((u) => u.email !== user.email)
+      .map((u) => u.email);
+
+    const startedAt = user.referralGroup.startedAt;
+    const expiresAt = startedAt ? addDays(new Date(startedAt), 90) : null;
+
+    return NextResponse.json({
+      referralLink: `https://linkmint.co/signup?ref=${user.id}`,
+      totalReferrals: referredUsers.length,
+      isActive: referredUsers.length >= 3,
+      expiresAt,
+    });
+  } catch (error: any) {
+  console.error("API /referrals error:", error?.message, error);
+  return NextResponse.json({ error: "Server error" }, { status: 500 });
+}
+}
