@@ -1,79 +1,69 @@
 // lib/engines/recordCommission.ts
 import { prisma } from "@/lib/db";
-import { CommissionType } from "@prisma/client";
 import { sendAlert } from "@/lib/telegram/sendAlert";
-import { sendEmail } from "@/lib/email/sendEmail"; // ✅ New import
+import { sendEmail } from "@/lib/email/sendEmail";
 
-type RecordCommissionParams = {
+/**
+ * Records a commission for a user.
+ * - No Prisma enum dependency (type is plain string)
+ * - Status defaults to "Pending" (adjust casing if your schema differs)
+ * - paidOut defaults to false
+ */
+export type RecordCommissionInput = {
   userId: string;
-  amount: number;
-  type: CommissionType;
-  status?: string;
-  source?: string;
-  description?: string;
-  bonusAmount?: number; // ✅ Optional
+  amount: number;              // dollars; will be stored as Decimal by Prisma
+  type?: string;               // e.g. "Referral" | "Sale" | ...
+  source?: string;             // e.g. "AMAZON", "CJ", etc.
+  status?: string;             // default "Pending" (match your schema casing)
+  note?: string | null;
 };
 
-export async function recordCommission({
-  userId,
-  amount,
-  type,
-  status = "pending",
-  source = "referral",
-  description,
-  bonusAmount = 0,
-}: RecordCommissionParams) {
-  // 1. Create the commission record
-  await prisma.commission.create({
-    data: {
-      userId,
-      amount,
-      type,
-      status,
-      source,
-      description,
-    },
-  });
+export async function recordCommission(input: RecordCommissionInput) {
+  const {
+    userId,
+    amount,
+    type = "Referral",
+    source = "MANUAL",
+    status = "Pending", // <- adjust to your schema if needed
+    note = null,
+  } = input;
 
-  // 2. Create the payout record
-  await prisma.payout.create({
-    data: {
-      userId,
-      amount,
-      status,
-      method: "simulated",
-    },
-  });
-
-  // 3. Find the referrer of this user
-  const referredUser = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      referredBy: true, // ✅ This gets the referrer
-    },
-  });
-
-  const referrerEmail = referredUser?.referredBy?.email;
-  const referrerId = referredUser?.referredBy?.id;
-
-  // 4. Send Telegram Alert to Admin
-  if (bonusAmount > 0) {
-    await sendAlert(`📦 Commission earned: $${amount.toFixed(2)} pending (referral bonus active)`);
-  } else {
-    await sendAlert(`📦 Commission earned: $${amount.toFixed(2)} pending (no bonus – outside 90-day window)`);
+  if (!userId) throw new Error("recordCommission: userId is required");
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("recordCommission: amount must be a positive number");
   }
 
-  // 5. Send Email Alert to Referrer (if email found)
-  if (referrerEmail) {
-    const subject = `You earned a commission!`;
-    const text = bonusAmount > 0
-      ? `🎉 Your referred user just made a purchase!\nYou earned $${amount.toFixed(2)} — including a 5% referral bonus.\n\nCheck your dashboard for details.`
-      : `🎉 Your referred user just made a purchase!\nYou earned $${amount.toFixed(2)} — the 5% bonus was not applied as the referral window has ended.\n\nKeep sharing your link to earn more.`;
+  // Create commission
+  const commission = await prisma.commission.create({
+    data: {
+      userId,
+      amount,         // Prisma will coerce to Decimal
+      status,         // string field in your schema
+      paidOut: false, // boolean we added to schema
+      type,           // optional string
+      source,         // optional string if present in your schema; remove if not
+      note,           // optional string if present; remove if not
+    } as any,
+  });
 
+  // Fire-and-forget notifications (non-blocking)
+  try {
+    await sendAlert(`🧾 Commission recorded: $${amount.toFixed(2)} for user ${userId} (${type}/${source})`);
+  } catch (e) {
+    console.warn("sendAlert failed (non-blocking):", e);
+  }
+
+  try {
     await sendEmail({
-      to: referrerEmail,
-      subject,
-      text,
+      to: process.env.OP_ALERT_EMAIL || "ops@linkmint.co",
+      subject: "Commission recorded",
+      text: `Commission recorded for user ${userId}\nAmount: $${amount.toFixed(2)}\nType: ${type}\nSource: ${source}\nStatus: ${status}`,
     });
+  } catch (e) {
+    console.warn("sendEmail failed (non-blocking):", e);
   }
+
+  return commission;
 }
+
+export default recordCommission;
