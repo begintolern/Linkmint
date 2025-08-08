@@ -1,3 +1,4 @@
+// app/api/referrals/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -17,9 +18,12 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
+      select: {
+        id: true,
+        email: true,
         referralGroup: {
-          include: {
+          select: {
+            startedAt: true,
             users: { select: { email: true } },
           },
         },
@@ -27,15 +31,21 @@ export async function GET() {
     });
 
     if (!user || !user.referralGroup) {
-      return NextResponse.json({ error: "User or referral group not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "User or referral group not found" },
+        { status: 404 }
+      );
     }
 
-    const referredUsers = user.referralGroup.users
-      .filter((\1: any) => u.email !== user.email)
-      .map((\1: any) => u.email);
+    const referredUsers =
+      user.referralGroup.users
+        ?.filter((u) => u.email && u.email !== user.email)
+        .map((u) => u.email!) ?? [];
 
     const startedAt = user.referralGroup.startedAt;
-    const expiresAt = startedAt ? addDays(new Date(startedAt), 90) : null;
+    const expiresAt = startedAt
+      ? addDays(new Date(startedAt), 90).toISOString()
+      : null;
 
     return NextResponse.json({
       referralLink: `https://linkmint.co/signup?ref=${user.id}`,
@@ -44,7 +54,7 @@ export async function GET() {
       expiresAt,
     });
   } catch (error: any) {
-  console.error("API /referrals error:", error?.message, error);
-  return NextResponse.json({ error: "Server error" }, { status: 500 });
-}
+    console.error("API /referrals error:", error?.message, error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }

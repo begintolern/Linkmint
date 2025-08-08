@@ -17,39 +17,47 @@ export async function GET() {
   try {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: { id: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Only fetch fields we need
     const payouts = await prisma.payout.findMany({
       where: { userId: user.id },
+      select: { status: true, amount: true },
     });
 
     let pending = 0;
     let approved = 0;
     let paid = 0;
 
-    payouts.forEach((\1: any) => {
-      const status = payout.status.toLowerCase(); // ✅ Normalize here
+    for (const p of payouts) {
+      const status = String(p.status).toLowerCase();
+
+      // Prisma Decimal-safe conversion
+      const amount =
+        typeof (p.amount as any)?.toNumber === "function"
+          ? (p.amount as any).toNumber()
+          : Number(p.amount);
 
       if (status === "pending") {
-        pending += payout.amount;
+        pending += amount;
       } else if (status === "approved") {
-        approved += payout.amount;
+        approved += amount;
       } else if (status === "paid") {
-        paid += payout.amount;
+        paid += amount;
       }
-    });
+    }
 
-    return NextResponse.json({
-      pending,
-      approved,
-      paid,
-    });
+    return NextResponse.json({ pending, approved, paid });
   } catch (error) {
     console.error("Error fetching commissions:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }
