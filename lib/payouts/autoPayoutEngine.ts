@@ -1,90 +1,98 @@
-import { prisma } from "@/lib/prisma";
-import { sendTelegramAlert } from "@/lib/telegram/notify";
+// lib/payouts/autoPayoutEngine.ts
+import { prisma } from "@/lib/db";
+import { sendAlert } from "@/lib/telegram/sendAlert";
+import type { Prisma } from "@prisma/client";
 
-// Config
-const FLOAT_CAP = 1000; // Max $1000 allowed for early float payouts
+// Float limit: $1000 for early payouts
+const FLOAT_LIMIT = 1000;
 
 export async function runAutoPayoutEngine() {
-  const floatUsage = await getCurrentFloatUsage();
-  if (floatUsage >= FLOAT_CAP) {
-    await sendTelegramAlert(`🛑 Auto Payouts Paused: Float cap ($${FLOAT_CAP}) reached.`);
-    return;
-  }
-
-  const eligibleUsers = await prisma.user.findMany({
-    where: {
-      trustScore: { gte: 80 },
-      emailVerified: true,
-      payouts: {
-        none: { status: "pending" },
-      },
-    },
-    include: {
-      payouts: true,
-    },
-  });
-
-  for (const user of eligibleUsers) {
-    const approvedPayouts = await prisma.payout.findMany({
+  try {
+    // Use `select` so TS knows the shape includes `Commissions`
+    const eligibleUsers = await prisma.user.findMany({
       where: {
-        userId: user.id,
-        status: "approved",
+        Commissions: {
+          some: {
+            status: "Approved" as any, // match your enum/literals
+            paidOut: false,
+          },
+        },
+        // honeymoonOver: true, // ❌ your schema doesn't have this — removing
+        trustScore: { gte: 80 },
+      },
+      select: {
+        id: true,
+        email: true,
+        Commissions: {
+          where: { status: "Approved" as any, paidOut: false },
+          select: { id: true, amount: true },
+        },
       },
     });
 
-    const totalApproved = approvedPayouts.reduce((sum: number, p: any) => {
-  const amt =
-    typeof p?.amount?.toNumber === "function"
-      ? p.amount.toNumber()
-      : Number(p?.amount ?? 0);
-  return sum + amt;
-}, 0);
+    let currentFloatUsage = await getCurrentFloatUsage();
 
-    if (totalApproved > 0 && floatUsage + totalApproved <= FLOAT_CAP) {
-      try {
-        // Mark all approved payouts as "paid"
-        await prisma.payout.updateMany({
-          where: {
-            userId: user.id,
-            status: "approved",
-          },
-          data: {
-            status: "paid",
-            paidAt: new Date(),
-          },
+    for (const user of eligibleUsers) {
+      const approvedPayouts = user.Commissions as Array<{ id: string; amount: unknown }>;
+
+      const totalApproved = approvedPayouts.reduce(
+        (sum: number, p: { amount: unknown }) => {
+          const amt =
+            typeof (p as any)?.amount?.toNumber === "function"
+              ? (p as any).amount.toNumber()
+              : Number((p as any)?.amount ?? 0);
+          return sum + amt;
+        },
+        0
+      );
+
+      if (totalApproved > 0 && currentFloatUsage + totalApproved <= FLOAT_LIMIT) {
+        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+          await tx.payout.create({
+            data: {
+              userId: user.id,
+              amount: totalApproved,
+              status: "Paid" as any, // or "Approved"/"Pending" per your flow
+            } as any,
+          });
+
+          await tx.commission.updateMany({
+            where: { id: { in: approvedPayouts.map((c: { id: string }) => c.id) } }, // ✅ typed `c`
+            data: { paidOut: true, status: "Paid" as any },
+          });
+
+          await tx.floatLog.create({
+            data: {
+              type: "payout",
+              amount: totalApproved,
+              note: `Auto payout to ${user.email ?? user.id}`,
+            } as any,
+          });
         });
 
-        // Log
-        await prisma.eventLogs.create({
-          data: {
-            userId: user.id,
-            type: "payout",
-            detail: `Auto payout executed`,
-            message: `Auto-payout of $${totalApproved} sent.`,
-          },
-        });
+        currentFloatUsage += totalApproved;
 
-        // Update float log
-        await prisma.floatLog.create({
-          data: {
-            amount: totalApproved,
-            source: "AutoPayoutEngine",
-            note: `Auto payout for user ${user.email}`,
-          },
-        });
-
-        await sendTelegramAlert(
-          `✅ Auto payout sent: $${totalApproved.toFixed(2)} to ${user.email}`
+        await sendAlert(
+          `✅ Auto payout sent to ${user.email ?? user.id} — $${totalApproved.toFixed(2)}`
         );
-      } catch (err) {
-        console.error("Auto payout error:", err);
-        await sendTelegramAlert(`❌ Auto payout FAILED for ${user.email}`);
       }
     }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Auto payout engine failed:", error);
+    await sendAlert(`❌ Auto payout engine failed: ${error}`);
+    return { success: false, error };
   }
 }
 
 async function getCurrentFloatUsage(): Promise<number> {
   const all = await prisma.floatLog.findMany();
-  return all.reduce((sum, log) => sum + log.amount, 0);
+  return all.reduce((sum: number, log: { amount: unknown }) => {
+    const amt =
+      typeof (log as any)?.amount?.toNumber === "function"
+        ? (log as any).amount.toNumber()
+        : Number((log as any)?.amount ?? 0);
+    return sum + amt;
+  }, 0);
 }
