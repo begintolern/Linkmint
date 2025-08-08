@@ -1,51 +1,71 @@
 // app/api/verify-email/route.ts
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const token = searchParams.get("token");
+type Row = { id: string; email: string };
 
-  if (!token) {
-    return NextResponse.json(
-      { success: false, error: "Token missing" },
-      { status: 400 }
-    );
-  }
-
-  // ✅ Use raw SQL with type casting to avoid Prisma case mismatch issues
-  const users = await prisma.$queryRawUnsafe<
-    { id: string; email: string }[]
-  >(
-    `
-    SELECT id, email FROM "User"
-    WHERE "verifyToken" = '${token}'
-    AND "verifyTokenExpiry" > NOW()
+async function verifyTokenCore(token: string) {
+  const rows = await prisma.$queryRaw<Row[]>`
+    SELECT "id", "email"
+    FROM "User"
+    WHERE lower("verifyToken") = lower(${token})
+      AND "verifyTokenExpiry" > NOW()
     LIMIT 1
-    `
-  );
+  `;
 
-  const user = users[0];
-
-  if (!user) {
-    return NextResponse.json(
-      { success: false, error: "Invalid or expired token" },
-      { status: 400 }
-    );
+  const match = rows[0];
+  if (!match) {
+    return { ok: false as const, error: "Invalid or expired token" };
   }
 
-  // ✅ Clear verification token and mark user verified
   await prisma.user.update({
-    where: { id: user.id },
+    where: { id: match.id },
     data: {
-      emailVerified: true,
+      emailVerified: true,   // <-- boolean per your schema
       verifyToken: null,
       verifyTokenExpiry: null,
     },
   });
 
-  return NextResponse.json({ success: true });
+  return { ok: true as const };
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const token = body?.token ?? body?.verifyToken;
+    if (!token || typeof token !== "string") {
+      return NextResponse.json({ error: "Token missing" }, { status: 400 });
+    }
+
+    const res = await verifyTokenCore(token);
+    if (!res.ok) {
+      return NextResponse.json({ success: false, error: res.error }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("verify-email POST error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const token = searchParams.get("token") ?? searchParams.get("verifyToken");
+    if (!token) {
+      return NextResponse.json({ error: "Token missing" }, { status: 400 });
+    }
+
+    const res = await verifyTokenCore(token);
+    if (!res.ok) {
+      return NextResponse.json({ success: false, error: res.error }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("verify-email GET error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
