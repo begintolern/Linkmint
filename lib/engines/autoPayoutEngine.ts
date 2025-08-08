@@ -1,6 +1,7 @@
 // lib/engines/autoPayoutEngine.ts
 import { prisma } from "@/lib/db";
 import { sendPayoutAlert } from "@/lib/alerts/sendPayoutAlert";
+import type { Prisma } from "@prisma/client";
 
 export async function runAutoPayoutEngine() {
   console.log("🚀 Auto payout engine starting...");
@@ -25,7 +26,7 @@ export async function runAutoPayoutEngine() {
 
   for (const user of eligibleUsers) {
     // Prisma include gives us `Commissions` (capital C)
-    const unpaid = (user as any).Commissions as Array<{
+    const unpaid = user.Commissions as Array<{
       id: string;
       amount: any;   // Prisma.Decimal | number
       status: string;
@@ -39,7 +40,7 @@ export async function runAutoPayoutEngine() {
     if (approvedCommissions.length === 0) continue;
 
     // Sum amounts (Decimal-safe)
-    const totalAmount = approvedCommissions.reduce((sum: number, c: any) => {
+    const totalAmount = approvedCommissions.reduce((sum: number, c) => {
       const amt =
         typeof c?.amount?.toNumber === "function"
           ? c.amount.toNumber()
@@ -54,10 +55,10 @@ export async function runAutoPayoutEngine() {
     );
 
     // Create payout + mark commissions as Paid & paidOut in a single transaction
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.payout.create({
         data: {
-          userId: (user as any).id,
+          userId: user.id,
           amount: totalAmount,
           status: "Approved" as any, // or "Pending" depending on your flow
           source: "AUTO_PAYOUT",
@@ -65,7 +66,7 @@ export async function runAutoPayoutEngine() {
       });
 
       await tx.commission.updateMany({
-        where: { id: { in: approvedCommissions.map((c: { id: string }) => c.id) } },
+        where: { id: { in: approvedCommissions.map((c) => c.id) } },
         data: { status: "Paid" as any, paidOut: true },
       });
     });
