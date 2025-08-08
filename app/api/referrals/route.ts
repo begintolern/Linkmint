@@ -8,6 +8,8 @@ import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { addDays } from "date-fns";
 
+type RefUser = { email: string | null };
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -38,9 +40,9 @@ export async function GET() {
     }
 
     const referredUsers =
-      user.referralGroup.users
-        ?.filter((u) => u.email && u.email !== user.email)
-        .map((u) => u.email!) ?? [];
+      (user.referralGroup.users as RefUser[] | null | undefined)?.filter(
+        (u: RefUser) => !!u.email && u.email !== user.email
+      ).map((u: RefUser) => u.email as string) ?? [];
 
     const startedAt = user.referralGroup.startedAt;
     const expiresAt = startedAt
