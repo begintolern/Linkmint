@@ -7,18 +7,18 @@ import { createReferralGroup } from "@/lib/referrals/createReferralGroup";
  * Returns the created group or null if fewer than 3 are available.
  */
 export async function createReferralBatch(referrerId: string) {
-  // Find users referred by this referrer who are not in any referral batch yet
-  const ungroupedReferrals = await prisma.user.findMany({
+  // Explicitly type the result so TS knows each item has { id: string }
+  const ungroupedReferrals: { id: string }[] = await prisma.user.findMany({
     where: {
       referredById: referrerId,
       referralBatches: { none: {} }, // adjust relation name if your schema differs
     },
-    select: { id: true }, // <-- ensures TS knows the shape
+    select: { id: true },
     take: 3,
   });
 
   if (ungroupedReferrals.length === 3) {
-    const referredUserIds = ungroupedReferrals.map((u) => u.id);
+    const referredUserIds = ungroupedReferrals.map((u: { id: string }) => u.id);
 
     const group = await createReferralGroup(referrerId, referredUserIds);
 
