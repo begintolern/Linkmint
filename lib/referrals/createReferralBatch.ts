@@ -14,7 +14,7 @@ export async function createReferralBatch(referrerId: string) {
   });
 
   if (ungroupedReferrals.length === 3) {
-    const referredUserIds = ungroupedReferrals.map((user) => user.id);
+    const referredUserIds = ungroupedReferrals.map((\1: any) => user.id);
 
     const group = await createReferralGroup(referrerId, referredUserIds);
 

@@ -21,6 +21,6 @@ async function main() {
   console.log(`✅ Simulated $${amount} commission and payout for ${user.email}`);
 }
 
-main().catch((e) => {
+main().catch((\1: any) => {
   console.error("❌ Error in testAddCommission:", e);
 });

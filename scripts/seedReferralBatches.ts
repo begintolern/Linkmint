@@ -20,7 +20,7 @@ async function main() {
 
   // Create 3 invited users
   const invitees = await Promise.all(
-    ["invitee1@test.com", "invitee2@test.com", "invitee3@test.com"].map((email) =>
+    ["invitee1@test.com", "invitee2@test.com", "invitee3@test.com"].map((\1: any) =>
       prisma.user.upsert({
         where: { email },
         update: {},
@@ -38,7 +38,7 @@ async function main() {
     data: {
       referrerId: referrer.id,
       users: {
-        connect: invitees.map((user) => ({ id: user.id })),
+        connect: invitees.map((\1: any) => ({ id: user.id })),
       },
       expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
     },
@@ -48,7 +48,7 @@ async function main() {
   await prisma.referralBatch.create({
     data: {
       referrerId: referrer.id,
-      inviteeIds: invitees.map((u) => u.id),
+      inviteeIds: invitees.map((\1: any) => u.id),
       startedAt: new Date(),
       expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
       status: "active",
@@ -59,7 +59,7 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch((\1: any) => {
     console.error("❌ Error:", e);
     process.exit(1);
   })

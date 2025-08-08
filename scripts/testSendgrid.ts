@@ -32,7 +32,7 @@ sgMail
   .then(() => {
     console.log('✅ Email sent successfully');
   })
-  .catch((error) => {
+  .catch((\1: any) => {
     console.error('❌ Email failed to send:');
     console.error(error.response?.body || error.message);
   });

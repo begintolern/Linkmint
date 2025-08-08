@@ -35,8 +35,8 @@ export default function PayoutList() {
     });
 
     if (res.ok) {
-      setPayouts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: "Paid" } : p))
+      setPayouts((\1: any) =>
+        prev.map((\1: any) => (p.id === id ? { ...p, status: "Paid" } : p))
       );
     }
   };
@@ -48,7 +48,7 @@ export default function PayoutList() {
       <h2 className="text-xl font-semibold">Pending Payouts</h2>
       {payouts.length === 0 && <p>No pending payouts.</p>}
       <ul className="divide-y divide-gray-200">
-        {payouts.map((payout) => (
+        {payouts.map((\1: any) => (
           <li key={payout.id} className="py-4 flex justify-between items-center">
             <div>
               <p><strong>Email:</strong> {payout.user.email}</p>

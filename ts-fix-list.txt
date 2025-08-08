@@ -1,0 +1,1502 @@
+app\admin\logs\page.tsx:44:          {logs.map((log: LogEntry) => (
+app\admin\payouts\page.tsx:45:          {payouts.map((p: any) => (
+app\api\admin\payouts\route.ts:16:    const payouts = commissions.map((c: any) => ({
+app\api\referrals\route.ts:35:      .map((\1: any) => u.email);
+app\dashboard\ReferralCardWrapper.tsx:45:      {batches.map((\1: any) => {
+app\dashboard\ReferralCardWrapper.tsx:63:              {batch.referredUsers.map((user, i) => (
+app\page.tsx:57:          ].map((step, index) => (
+components\admin\PayoutList.tsx:39:        prev.map((\1: any) => (p.id === id ? { ...p, status: "Paid" } : p))
+components\admin\PayoutList.tsx:51:        {payouts.map((\1: any) => (
+components\dashboard\ReferralCardWrapper.tsx:77:        {data.referredUsers.map((email, idx) => (
+components\ReferralStatusCard.tsx:43:        groups.map((group, idx) => {
+components\ReferralStatusCard.tsx:59:                {group.referredUsers.map((user, i) => (
+lib\referrals\createReferralBatch.ts:17:    const referredUserIds = ungroupedReferrals.map((\1: any) => user.id);
+lib\referrals\createReferralGroup.ts:15:        connect: referredUserIds.map((\1: any) => ({ id })), // ✅ Correct relation field
+lib\referrals\getReferralStats.ts:35:  const inviteeEmails = batch.users.map((\1: any) => u.email);
+node_modules\@jridgewell\gen-mapping\src\gen-mapping.ts:291:    // originalScopes: decoded.originalScopes.map((\1: any) => encodeOriginalScopes(os)),
+node_modules\@jridgewell\gen-mapping\src\gen-mapping.ts:306:  cast(gen)._sourcesContent = map.sourcesContent || map.sources.map(() => null);
+node_modules\@jridgewell\gen-mapping\src\gen-mapping.ts:541:    scope.vars = variables.map((\1: any) => put(names, v));
+node_modules\@jridgewell\gen-mapping\src\gen-mapping.ts:576:    range.bindings = originalScope[2].map(() => [[-1]]);
+node_modules\@jridgewell\trace-mapping\src\by-source.ts:18:  const sources: Source[] = memos.map(buildNullArray);
+node_modules\@jridgewell\trace-mapping\src\trace-mapping.ts:122:    this.resolvedSources = sources.map(resolve);
+node_modules\@jridgewell\trace-mapping\src\trace-mapping.ts:489:    (cast(map)._bySourceMemos = sources.map(memoizedState)),
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:146: * id  String  @id @default(auto()) @map("_id") @db.ObjectId
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:162: * If mixed snake_case and camelCase column names is an issue for you and/or your underlying database system, we recommend using Prisma's `@map()`([see the documentation here](https://www.prisma.io/docs/concepts/components/prisma-schema/names-in-underlying-database)) feature to change the field names. This won't affect Auth.js, but will allow you to customize the column names to whichever naming convention you wish.
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:169: *   userId             String  @map("user_id")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:172: *   providerAccountId  String  @map("provider_account_id")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:184: *   @@map("accounts")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:189: *   sessionToken String   @unique @map("session_token")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:190: *   userId       String   @map("user_id")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:194: *   @@map("sessions")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:201: *   emailVerified DateTime? @map("email_verified")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:206: *   @@map("users")
+node_modules\@next-auth\prisma-adapter\dist\index.d.ts:215: *   @@map("verificationtokens")
+node_modules\effect\dist\dts\Array.d.ts:5422: *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Array.d.ts:5470: *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Array.d.ts:5518:     *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Array.d.ts:5568:     *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Array.d.ts:5619: *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Array.d.ts:5667:     *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Array.d.ts:5717:     *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Array.d.ts:5777: *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\dist\dts\Chunk.d.ts:819: * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\dist\dts\Chunk.d.ts:838:     * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\dist\dts\Chunk.d.ts:857:     * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\dist\dts\Chunk.d.ts:876:     * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\dist\dts\Effect.d.ts:898: * const iterableOfEffects: Iterable<Effect.Effect<number>> = [1, 2, 3].map(
+node_modules\effect\dist\dts\Effect.d.ts:3168: *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\dist\dts\Effect.d.ts:3220:     *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\dist\dts\Effect.d.ts:3272:     *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\dist\dts\Effect.d.ts:3327: *         .pipe(Effect.map((\1: any) => acc + order.price)),
+node_modules\effect\dist\dts\Effect.d.ts:3379:     *         .pipe(Effect.map((\1: any) => acc + order.price)),
+node_modules\effect\dist\dts\Effect.d.ts:3434:     *         .pipe(Effect.map((\1: any) => acc + order.price)),
+node_modules\effect\dist\dts\Effect.d.ts:3488: *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\dist\dts\Effect.d.ts:3539:     *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\dist\dts\Effect.d.ts:3590:     *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\dist\dts\Effect.d.ts:9223: * const mappedEffect = pipe(myEffect, Effect.map(transformation))
+node_modules\effect\dist\dts\Effect.d.ts:9225: * const mappedEffect = Effect.map(myEffect, transformation)
+node_modules\effect\dist\dts\Effect.d.ts:9227: * const mappedEffect = myEffect.pipe(Effect.map(transformation))
+node_modules\effect\dist\dts\Effect.d.ts:9250: *   Effect.map(addServiceCharge)
+node_modules\effect\dist\dts\Effect.d.ts:9271:     * const mappedEffect = pipe(myEffect, Effect.map(transformation))
+node_modules\effect\dist\dts\Effect.d.ts:9273:     * const mappedEffect = Effect.map(myEffect, transformation)
+node_modules\effect\dist\dts\Effect.d.ts:9275:     * const mappedEffect = myEffect.pipe(Effect.map(transformation))
+node_modules\effect\dist\dts\Effect.d.ts:9298:     *   Effect.map(addServiceCharge)
+node_modules\effect\dist\dts\Effect.d.ts:9319:     * const mappedEffect = pipe(myEffect, Effect.map(transformation))
+node_modules\effect\dist\dts\Effect.d.ts:9321:     * const mappedEffect = Effect.map(myEffect, transformation)
+node_modules\effect\dist\dts\Effect.d.ts:9323:     * const mappedEffect = myEffect.pipe(Effect.map(transformation))
+node_modules\effect\dist\dts\Effect.d.ts:9346:     *   Effect.map(addServiceCharge)
+node_modules\effect\dist\dts\Effect.d.ts:12338: *     Effect.map((\1: any) => `Current time is: ${currentTime}`),
+node_modules\effect\dist\dts\Effect.d.ts:17279: *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\dist\dts\Effect.d.ts:17355:     *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\dist\dts\Effect.d.ts:17431:     *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\dist\dts\Effect.d.ts:17507:     *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\dist\dts\Effect.d.ts:17583:     *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\dist\dts\Effect.d.ts:23831: * const nodeConfigs = ["node1", "node2", "node3", "node4"].map(remoteConfig)
+node_modules\effect\dist\dts\Function.d.ts:558: * as.map(f).filter(g)
+node_modules\effect\dist\dts\Function.d.ts:566: * pipe(as, Array.map(f), Array.filter(g))
+node_modules\effect\dist\dts\HashSet.d.ts:1731: *   HashSet.map(String) // HashSet.HashSet<string>
+node_modules\effect\dist\dts\HashSet.d.ts:1735: * HashSet.make(0, 1, 2).pipe(HashSet.map(String))
+node_modules\effect\dist\dts\HashSet.d.ts:1738: * HashSet.map(HashSet.make(0, 1, 2), String)
+node_modules\effect\dist\dts\HashSet.d.ts:1752:     *     HashSet.map((\1: any) => String(n + 1)) // HashSet.HashSet<String>
+node_modules\effect\dist\dts\HashSet.d.ts:1767:     *   HashSet.map(
+node_modules\effect\dist\dts\Option.d.ts:1200: * console.log(Option.map(someValue, (\1: any) => n * 2))
+node_modules\effect\dist\dts\Option.d.ts:1206: * console.log(Option.map(noneValue, (\1: any) => n * 2))
+node_modules\effect\dist\dts\Option.d.ts:1235:     * console.log(Option.map(someValue, (\1: any) => n * 2))
+node_modules\effect\dist\dts\Option.d.ts:1241:     * console.log(Option.map(noneValue, (\1: any) => n * 2))
+node_modules\effect\dist\dts\Option.d.ts:1270:     * console.log(Option.map(someValue, (\1: any) => n * 2))
+node_modules\effect\dist\dts\Option.d.ts:1276:     * console.log(Option.map(noneValue, (\1: any) => n * 2))
+node_modules\effect\dist\dts\Record.d.ts:679: * assert.deepStrictEqual(map({ a: 3, b: 5 }, f), { a: "-3", b: "-5" })
+node_modules\effect\dist\dts\Record.d.ts:683: * assert.deepStrictEqual(map({ a: 3, b: 5 }, g), { a: "A-3", b: "B-5" })
+node_modules\effect\dist\dts\Record.d.ts:700:     * assert.deepStrictEqual(map({ a: 3, b: 5 }, f), { a: "-3", b: "-5" })
+node_modules\effect\dist\dts\Record.d.ts:704:     * assert.deepStrictEqual(map({ a: 3, b: 5 }, g), { a: "A-3", b: "B-5" })
+node_modules\effect\dist\dts\Record.d.ts:721:     * assert.deepStrictEqual(map({ a: 3, b: 5 }, f), { a: "-3", b: "-5" })
+node_modules\effect\dist\dts\Record.d.ts:725:     * assert.deepStrictEqual(map({ a: 3, b: 5 }, g), { a: "A-3", b: "B-5" })
+node_modules\effect\dist\dts\Stream.d.ts:3451: *       Stream.map((\1: any) => [key, words] as const)
+node_modules\effect\dist\dts\Stream.d.ts:3487:     *       Stream.map((\1: any) => [key, words] as const)
+node_modules\effect\dist\dts\Stream.d.ts:3525:     *       Stream.map((\1: any) => [key, words] as const)
+node_modules\effect\dist\dts\Stream.d.ts:4349: * const stream = Stream.make(1, 2, 3).pipe(Stream.map((\1: any) => n + 1))
+node_modules\effect\dist\dts\Stream.d.ts:4366:     * const stream = Stream.make(1, 2, 3).pipe(Stream.map((\1: any) => n + 1))
+node_modules\effect\dist\dts\Stream.d.ts:4383:     * const stream = Stream.make(1, 2, 3).pipe(Stream.map((\1: any) => n + 1))
+node_modules\effect\dist\dts\Stream.d.ts:4568: *   Stream.map((\1: any) => parseInt(s))
+node_modules\effect\dist\dts\Stream.d.ts:4589:     *   Stream.map((\1: any) => parseInt(s))
+node_modules\effect\dist\dts\Stream.d.ts:4610:     *   Stream.map((\1: any) => parseInt(s))
+node_modules\effect\dist\dts\Stream.d.ts:5238: *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:5263:     *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:5288:     *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:5371: *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:5396:     *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:5421:     *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:8326: *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:8353:     *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:8380:     *   Stream.map((\1: any) => n * 2),
+node_modules\effect\dist\dts\Stream.d.ts:9223: *     Effect.map((\1: any) => (b ? Option.some([n, -n]) : Option.some([n, n])))
+node_modules\effect\dist\dts\Trie.d.ts:1146: * assert.equal(Equal.equals(Trie.map(trie, (\1: any) => v + 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1147: * assert.equal(Equal.equals(Trie.map(trie, (_, k) => k.length), trieMapK), true)
+node_modules\effect\dist\dts\Trie.d.ts:1180:     * assert.equal(Equal.equals(Trie.map(trie, (\1: any) => v + 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1181:     * assert.equal(Equal.equals(Trie.map(trie, (_, k) => k.length), trieMapK), true)
+node_modules\effect\dist\dts\Trie.d.ts:1214:     * assert.equal(Equal.equals(Trie.map(trie, (\1: any) => v + 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1215:     * assert.equal(Equal.equals(Trie.map(trie, (_, k) => k.length), trieMapK), true)
+node_modules\effect\dist\dts\Tuple.d.ts:72: *   Tuple.map((\1: any) => el.toString().toUpperCase())
+node_modules\effect\dist\dts\Tuple.d.ts:91:     *   Tuple.map((\1: any) => el.toString().toUpperCase())
+node_modules\effect\dist\dts\Tuple.d.ts:110:     *   Tuple.map((\1: any) => el.toString().toUpperCase())
+node_modules\effect\src\Arbitrary.ts:376:    Option.map((\1: any) => ast.annotations[id]),
+node_modules\effect\src\Arbitrary.ts:470:          typeParameters: ast.typeParameters.map((\1: any) => getDescription(ast, path)),
+node_modules\effect\src\Arbitrary.ts:509:          spans: ast.spans.map((\1: any) => ({
+node_modules\effect\src\Arbitrary.ts:546:          elements: ast.elements.map((element, i) => ({
+node_modules\effect\src\Arbitrary.ts:550:          rest: ast.rest.map((element, i) => getDescription(element.type, [...path, i])),
+node_modules\effect\src\Arbitrary.ts:558:          propertySignatures: ast.propertySignatures.map((\1: any) => ({
+node_modules\effect\src\Arbitrary.ts:563:          indexSignatures: ast.indexSignatures.map((\1: any) => ({
+node_modules\effect\src\Arbitrary.ts:574:          members: ast.types.map((member, i) => getDescription(member, [...path, i])),
+node_modules\effect\src\Arbitrary.ts:790:    const filters = description.refinements.map((\1: any) => (a: any) =>
+node_modules\effect\src\Arbitrary.ts:803:      return applyFilters(filters, annotation(...description.typeParameters.map((\1: any) => go(p, ctx)), ctx))
+node_modules\effect\src\Arbitrary.ts:835:            return (\1: any) => fc.string().map((\1: any) => Symbol.for(s))
+node_modules\effect\src\Arbitrary.ts:841:        return (\1: any) => fc.oneof(...description.enums.map(([_, value]) => fc.constant(value)))
+node_modules\effect\src\Arbitrary.ts:863:                  return fc.oneof(...description.members.map(getTemplateLiteralSpanTypeArb))
+node_modules\effect\src\Arbitrary.ts:878:            return fc.tuple(...components).map((\1: any) => spans.join(""))
+node_modules\effect\src\Arbitrary.ts:910:        const rest = description.rest.map((\1: any) => go(d, ctx))
+node_modules\effect\src\Arbitrary.ts:915:          let output = fc.tuple(...elements.map((\1: any) => arb(fc)))
+node_modules\effect\src\Arbitrary.ts:918:              ...description.elements.map((\1: any) => element.isOptional ? fc.boolean() : fc.constant(true))
+node_modules\effect\src\Arbitrary.ts:921:              indexes.map((\1: any) => {
+node_modules\effect\src\Arbitrary.ts:969:              return arr.map((\1: any) => [...as, ...rest])
+node_modules\effect\src\Arbitrary.ts:975:              output = output.chain((\1: any) => tail[j](fc).map((\1: any) => [...as, a]))
+node_modules\effect\src\Arbitrary.ts:991:        const indexSignatures = description.indexSignatures.map((\1: any) =>
+node_modules\effect\src\Arbitrary.ts:1026:              return arr.map((\1: any) => ({ ...Object.fromEntries(tuples), ...o }))
+node_modules\effect\src\Arbitrary.ts:1034:        const members = description.members.map((\1: any) => go(member, ctx))
+node_modules\effect\src\Arbitrary.ts:1035:        return (\1: any) => fc.oneof(...members.map((\1: any) => arb(fc)))
+node_modules\effect\src\Array.ts:2758:    Array.from(self).map((\1: any) => [a, f(a)] as const).sort(([, a], [, b]) => order(a, b)).map(([_]) => _)
+node_modules\effect\src\Array.ts:4752:} = dual(2, <A, B>(self: ReadonlyArray<A>, f: (a: A, i: number) => B): Array<B> => self.map(f))
+node_modules\effect\src\Array.ts:5705:  <A, B>(self: ReadonlyArray<A>, f: (as: ReadonlyArray<A>) => B): Array<B> => self.map((_, i, as) => f(as.slice(i)))
+node_modules\effect\src\Array.ts:6235:    flatMap(self, (\1: any) => map(that, (\1: any) => f(a, b)))
+node_modules\effect\src\Array.ts:6319: *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Array.ts:6368: *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Array.ts:6416:   *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Array.ts:6466:   *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Array.ts:6520: *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Array.ts:6568:   *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Array.ts:6616:   *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Array.ts:6679:   *   Array.map(({ x, y }) => [x, y] as const) // transformation
+node_modules\effect\src\Chunk.ts:135:      values: toReadonlyArray(this).map(toJSON)
+node_modules\effect\src\Chunk.ts:1304: * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\src\Chunk.ts:1323:   * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\src\Chunk.ts:1342:   * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\src\Chunk.ts:1361:   * const result = Chunk.map(Chunk.make(1, 2), (\1: any) => n + 1)
+node_modules\effect\src\Chunk.ts:1374:    unsafeFromArray(pipe(toReadonlyArray(self), RA.map((a, i) => f(a, i)))))
+node_modules\effect\src\Cron.ts:274:  }).pipe(Either.map(make))
+node_modules\effect\src\DateTime.ts:1475:  Effect.map(CurrentTimeZone, (\1: any) => setZone(self, zone))
+node_modules\effect\src\Duration.ts:1127:  const [years, months, weeks, days, hours, mins, secs] = result.slice(1, 8).map((\1: any) => _ ? Number(_) : 0)
+node_modules\effect\src\Effect.ts:950: * const iterableOfEffects: Iterable<Effect.Effect<number>> = [1, 2, 3].map(
+node_modules\effect\src\Effect.ts:3352: *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\src\Effect.ts:3404:   *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\src\Effect.ts:3456:   *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\src\Effect.ts:3516: *         .pipe(Effect.map((\1: any) => acc + order.price)),
+node_modules\effect\src\Effect.ts:3568:   *         .pipe(Effect.map((\1: any) => acc + order.price)),
+node_modules\effect\src\Effect.ts:3623:   *         .pipe(Effect.map((\1: any) => acc + order.price)),
+node_modules\effect\src\Effect.ts:3679: *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\src\Effect.ts:3730:   *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\src\Effect.ts:3781:   *       .pipe(Effect.map((\1: any) => acc + order.price))
+node_modules\effect\src\Effect.ts:9822: * const mappedEffect = pipe(myEffect, Effect.map(transformation))
+node_modules\effect\src\Effect.ts:9824: * const mappedEffect = Effect.map(myEffect, transformation)
+node_modules\effect\src\Effect.ts:9826: * const mappedEffect = myEffect.pipe(Effect.map(transformation))
+node_modules\effect\src\Effect.ts:9849: *   Effect.map(addServiceCharge)
+node_modules\effect\src\Effect.ts:9870:   * const mappedEffect = pipe(myEffect, Effect.map(transformation))
+node_modules\effect\src\Effect.ts:9872:   * const mappedEffect = Effect.map(myEffect, transformation)
+node_modules\effect\src\Effect.ts:9874:   * const mappedEffect = myEffect.pipe(Effect.map(transformation))
+node_modules\effect\src\Effect.ts:9897:   *   Effect.map(addServiceCharge)
+node_modules\effect\src\Effect.ts:9918:   * const mappedEffect = pipe(myEffect, Effect.map(transformation))
+node_modules\effect\src\Effect.ts:9920:   * const mappedEffect = Effect.map(myEffect, transformation)
+node_modules\effect\src\Effect.ts:9922:   * const mappedEffect = myEffect.pipe(Effect.map(transformation))
+node_modules\effect\src\Effect.ts:9945:   *   Effect.map(addServiceCharge)
+node_modules\effect\src\Effect.ts:13037: *     Effect.map((\1: any) => `Current time is: ${currentTime}`),
+node_modules\effect\src\Effect.ts:18146: *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\src\Effect.ts:18222:   *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\src\Effect.ts:18302:   *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\src\Effect.ts:18382:   *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\src\Effect.ts:18460:   *   Effect.map((\1: any) => amount * 2),
+node_modules\effect\src\Effect.ts:24851: * const nodeConfigs = ["node1", "node2", "node3", "node4"].map(remoteConfig)
+node_modules\effect\src\Effect.ts:27607:  return option_.isNone(self) ? succeedNone : map(self.value, option_.some)
+node_modules\effect\src\Effect.ts:27715:>(2, (self, f) => option_.isNone(self) ? succeedNone : map(f(self.value), option_.some))
+node_modules\effect\src\Effect.ts:28055:              return layer.fromEffect(TagClass, map(maker.effect.apply(null, arguments), (\1: any) => new this(_)))
+node_modules\effect\src\Effect.ts:28058:          return layerCache ??= layer.fromEffect(TagClass, map(maker.effect, (\1: any) => new this(_)))
+node_modules\effect\src\Effect.ts:28067:              return layer.scoped(TagClass, map(maker.scoped.apply(null, arguments), (\1: any) => new this(_)))
+node_modules\effect\src\Effect.ts:28070:          return layerCache ??= layer.scoped(TagClass, map(maker.scoped, (\1: any) => new this(_)))
+node_modules\effect\src\Either.ts:1188:    flatMap(self, (\1: any) => map(that, (\1: any) => f(r, r2)))
+node_modules\effect\src\Either.ts:1615:  return option_.isNone(self) ? right(option_.none) : map(self.value, option_.some)
+node_modules\effect\src\Either.ts:1723:>(2, (self, f) => option_.isNone(self) ? right(option_.none) : map(f(self.value), option_.some))
+node_modules\effect\src\Encoding.ts:39:export const decodeBase64String = (str: string) => Either.map(decodeBase64(str), (\1: any) => Common.decoder.decode(_))
+node_modules\effect\src\Encoding.ts:64:export const decodeBase64UrlString = (str: string) => Either.map(decodeBase64Url(str), (\1: any) => Common.decoder.decode(_))
+node_modules\effect\src\Encoding.ts:89:export const decodeHexString = (str: string) => Either.map(decodeHex(str), (\1: any) => Common.decoder.decode(_))
+node_modules\effect\src\ExecutionPlan.ts:184:  makeProto(steps.map((options, i) => {
+node_modules\effect\src\ExecutionPlan.ts:272:      makeProto(self.steps.map((\1: any) => ({
+node_modules\effect\src\FiberHandle.ts:112:    Effect.map(Deferred.make<void, E>(), (\1: any) => unsafeMake<A, E>(deferred)),
+node_modules\effect\src\FiberHandle.ts:479:  Effect.map(
+node_modules\effect\src\FiberHandle.ts:524:  Effect.map(
+node_modules\effect\src\FiberMap.ts:122:    Effect.map(Deferred.make<void, E>(), (\1: any) =>
+node_modules\effect\src\FiberMap.ts:133:          Iterable.map(state.backing, ([, fiber]) => fiber),
+node_modules\effect\src\FiberMap.ts:667:  Effect.map(
+node_modules\effect\src\FiberMap.ts:714:  Effect.map(
+node_modules\effect\src\FiberSet.ts:119:    Effect.map(Deferred.make<void, unknown>(), (\1: any) => unsafeMake(new Set(), deferred)),
+node_modules\effect\src\FiberSet.ts:430:  Effect.map(
+node_modules\effect\src\FiberSet.ts:469:  Effect.map(
+node_modules\effect\src\Function.ts:652: * as.map(f).filter(g)
+node_modules\effect\src\Function.ts:660: * pipe(as, Array.map(f), Array.filter(g))
+node_modules\effect\src\HashSet.ts:1776: *   HashSet.map(String) // HashSet.HashSet<string>
+node_modules\effect\src\HashSet.ts:1780: * HashSet.make(0, 1, 2).pipe(HashSet.map(String))
+node_modules\effect\src\HashSet.ts:1783: * HashSet.map(HashSet.make(0, 1, 2), String)
+node_modules\effect\src\HashSet.ts:1797:   *     HashSet.map((\1: any) => String(n + 1)) // HashSet.HashSet<String>
+node_modules\effect\src\HashSet.ts:1813:   *   HashSet.map(
+node_modules\effect\src\Inspectable.ts:41:      return x.map(toJSON)
+node_modules\effect\src\internal\blockedRequests.ts:388:        Option.map(_, Chunk.append(blockedRequest.blockedRequest)),
+node_modules\effect\src\internal\blockedRequests.ts:419:): SequentialCollection => sequentialCollectionMake(HashMap.map(self.map, (\1: any) => Chunk.of(x)) as any)
+node_modules\effect\src\internal\cache.ts:327:    return core.map(this.getEither(key), Either.merge)
+node_modules\effect\src\internal\cache.ts:412:        return core.map(this.lookupValueOf(key, deferred!), Either.right)
+node_modules\effect\src\internal\cache.ts:578:          return core.map(value.exit, Option.some)
+node_modules\effect\src\internal\cache.ts:586:          return core.map(Deferred.await(value.deferred), Option.some)
+node_modules\effect\src\internal\cache.ts:595:            return core.map(Deferred.await(value.deferred), Option.some)
+node_modules\effect\src\internal\cache.ts:597:          return core.map(value.complete.exit, Option.some)
+node_modules\effect\src\internal\cache.ts:709:  core.map(
+node_modules\effect\src\internal\cause.ts:263:    onFail: Option.map(fail),
+node_modules\effect\src\internal\cause.ts:307:      HashSet.flatMap(leftSet, (\1: any) => HashSet.map(rightSet, (\1: any) => sequential(leftCause, rightCause))),
+node_modules\effect\src\internal\cause.ts:309:      HashSet.flatMap(leftSet, (\1: any) => HashSet.map(rightSet, (\1: any) => parallel(leftCause, rightCause)))
+node_modules\effect\src\internal\cause.ts:362:>(2, (self, error) => map(self, () => error))
+node_modules\effect\src\internal\cause.ts:878:  return prettyErrors<E>(cause).map(function(e) {
+node_modules\effect\src\internal\channel\channelExecutor.ts:451:      Effect.map(([[exit1, exit2], exit3]) => pipe(exit1, Exit.zipRight(exit2), Exit.zipRight(exit3))),
+node_modules\effect\src\internal\channel\channelExecutor.ts:480:    const finalizerEffect = runFinalizers(finalizers.map((\1: any) => f.finalizer), Exit.succeed(value))!
+node_modules\effect\src\internal\channel\channelExecutor.ts:519:    const finalizerEffect = runFinalizers(finalizers.map((\1: any) => f.finalizer), Exit.failCause(cause))!
+node_modules\effect\src\internal\channel\channelExecutor.ts:818:            Effect.map(() => {
+node_modules\effect\src\internal\channel\channelExecutor.ts:909:              Effect.map(() => this.replaceSubexecutor(drain))
+node_modules\effect\src\internal\channel\channelExecutor.ts:920:          pipe(exit, Exit.map((\1: any) => subexecutor.combineWithChildResult(subexecutor.lastDone, a))),
+node_modules\effect\src\internal\channel\channelExecutor.ts:1010:    Effect.map((\1: any) => pipe(Exit.all(exits), Option.getOrElse(() => Exit.void))),
+node_modules\effect\src\internal\channel\singleProducerAsyncInput.ts:203:      (\1: any) => Exit.failCause(Cause.map(cause, Either.left)),
+node_modules\effect\src\internal\channel\singleProducerAsyncInput.ts:258:    Effect.map((\1: any) => new SingleProducerAsyncInputImpl(ref))
+node_modules\effect\src\internal\channel\subexecutor.ts:107:      ...this.activeChildExecutors.map((\1: any) =>
+node_modules\effect\src\internal\channel\subexecutor.ts:174:      ...this.activeChildExecutors.map((\1: any) => (child !== undefined ?
+node_modules\effect\src\internal\channel.ts:81:): Channel.Channel<OutElem, InElem, OutErr, InErr, OutDone2, InDone, Env> => map(self, () => value))
+node_modules\effect\src\internal\channel.ts:86:): Channel.Channel<OutElem, InElem, OutErr, InErr, void, InDone, Env> => map(self, constVoid)
+node_modules\effect\src\internal\channel.ts:477:): Channel.Channel<never, unknown, never, unknown, OutDone, unknown, Env> => map(context<Env>(), f)
+node_modules\effect\src\internal\channel.ts:687:  unwrapScoped(Effect.map(PubSub.subscribe(pubsub), fromQueue))
+node_modules\effect\src\internal\channel.ts:693:  Effect.map(PubSub.subscribe(pubsub), fromQueue)
+node_modules\effect\src\internal\channel.ts:824:): Channel.Channel<OutElem, InElem, OutErr2, InErr, OutDone, InDone, Env> => mapErrorCause(self, Cause.map(f)))
+node_modules\effect\src\internal\channel.ts:939:                  yield* Queue.offer(queue, Effect.map(Deferred.await(deferred), Either.right))
+node_modules\effect\src\internal\channel.ts:1657:            return Effect.map(
+node_modules\effect\src\internal\channel.ts:1734:              Effect.map(
+node_modules\effect\src\internal\channel.ts:1752:              Effect.map(
+node_modules\effect\src\internal\channel.ts:2002:    Effect.map(Layer.buildWithScope(layer, scope), (\1: any) => core.provideContext(self, context))
+node_modules\effect\src\internal\channel.ts:2075:      Effect.map(Scope.make(), (\1: any) =>
+node_modules\effect\src\internal\channel.ts:2090:  unwrapScoped(Effect.map(Effect.scope, (\1: any) => core.flatMap(core.fromEffect(f(scope)), core.write)))
+node_modules\effect\src\internal\channel.ts:2101:): Channel.Channel<never, unknown, never, unknown, OutDone, unknown, I> => map(service(tag), f)
+node_modules\effect\src\internal\channel.ts:2131:      Chunk.map(chunk, (\1: any) => {
+node_modules\effect\src\internal\channel.ts:2245:    Effect.map(([executor]) =>
+node_modules\effect\src\internal\channel.ts:2476:      core.flatMap(self, (\1: any) => map(that, (\1: any) => [a, b] as const))
+node_modules\effect\src\internal\channel.ts:2530:      map(zip(self, that, { concurrent: true }), (\1: any) => tuple[0]) :
+node_modules\effect\src\internal\channel.ts:2585:      map(zip(self, that, { concurrent: true }), (\1: any) => tuple[1]) :
+node_modules\effect\src\internal\config.ts:225:  return pipe(chunk(config, name), map(Chunk.toArray))
+node_modules\effect\src\internal\config.ts:230:  return map(name === undefined ? repeat(config) : nested(repeat(config), name), Chunk.unsafeFromArray)
+node_modules\effect\src\internal\config.ts:307:  const valuesString = literals.map(String).join(", ")
+node_modules\effect\src\internal\config.ts:433:    map(Option.some),
+node_modules\effect\src\internal\config.ts:472:  return map(config, redacted_.make)
+node_modules\effect\src\internal\config.ts:497:        configError.InvalidData([], brandErrors.map((\1: any) => brandError.message).join("\n"))
+node_modules\effect\src\internal\config.ts:504:  const newConfig = map(chunk(config), HashSet.fromIterable)
+node_modules\effect\src\internal\config.ts:554:  let result = pipe(entries[0][1], map((\1: any) => ({ [entries[0][0]]: value })))
+node_modules\effect\src\internal\config.ts:611:    return map(tuple[0], (\1: any) => [x]) as any
+node_modules\effect\src\internal\config.ts:613:  let result = map(tuple[0], (\1: any) => [x])
+node_modules\effect\src\internal\config.ts:633:      Object.entries(wrapped).map(([k, a]) => [k, unwrap(a as any)])
+node_modules\effect\src\internal\configProvider\pathPatch.ts:69:        output = RA.map(output, patch.f)
+node_modules\effect\src\internal\configProvider.ts:135:      const keyPaths = keys.map((\1: any) => unmakePathString(value.toUpperCase()))
+node_modules\effect\src\internal\configProvider.ts:184:      const keyPaths = Arr.fromIterable(mapWithIndexSplit.keys()).map(unmakePathString)
+node_modules\effect\src\internal\configProvider.ts:333:                  core.map(fromFlatLoop(flat, prefix, op.config, true), Arr.of)
+node_modules\effect\src\internal\configProvider.ts:341:                core.map((\1: any) => {
+node_modules\effect\src\internal\configProvider.ts:372:                  core.map((\1: any) => {
+node_modules\effect\src\internal\configProvider.ts:378:                      Arr.map((\1: any) => HashMap.fromIterable(Arr.zip(Arr.fromIterable(keys), values)))
+node_modules\effect\src\internal\configProvider.ts:413:                    pipe(left.right, Arr.map(Either.right)),
+node_modules\effect\src\internal\configProvider.ts:414:                    pipe(right.right, Arr.map(Either.right))
+node_modules\effect\src\internal\configProvider.ts:422:                        core.map(([left, right]) => op.zip(left, right))
+node_modules\effect\src\internal\configProvider.ts:625:  return Object.keys(array[0]).map((\1: any) => array.map((\1: any) => row[column as any]))
+node_modules\effect\src\internal\configProvider.ts:636:    core.map(Either.merge)
+node_modules\effect\src\internal\configProvider.ts:721:  const indexedEntries = Arr.map(
+node_modules\effect\src\internal\console.ts:14:export const console: Effect.Effect<Console.Console> = core.map(
+node_modules\effect\src\internal\context.ts:157:      services: Array.from(this.unsafeMap).map(toJSON)
+node_modules\effect\src\internal\context.ts:316:    const tagSet = new Set<string>(tags.map((\1: any) => _.key))
+node_modules\effect\src\internal\core-effect.ts:75:  core.map(self, Option.some)
+node_modules\effect\src\internal\core-effect.ts:468:      return core.map(dropping, () => builder)
+node_modules\effect\src\internal\core-effect.ts:497:          core.map(d ? predicate(a, index) : core.succeed(false), (\1: any) => {
+node_modules\effect\src\internal\core-effect.ts:504:      return core.map(dropping, () => builder)
+node_modules\effect\src\internal\core-effect.ts:510:  core.map(core.context<R>(), f)
+node_modules\effect\src\internal\core-effect.ts:526:  core.map(
+node_modules\effect\src\internal\core-effect.ts:1017:    : core.map(loopInternal(initial, options.while, options.step, options.body), Arr.fromIterable)
+node_modules\effect\src\internal\core-effect.ts:1028:        core.map(
+node_modules\effect\src\internal\core-effect.ts:1076:        core.map(f(state, value, index), ([z, b]) => {
+node_modules\effect\src\internal\core-effect.ts:1081:    return core.map(result, (\1: any) => [z, builder])
+node_modules\effect\src\internal\core-effect.ts:1110:        core.map((\1: any) =>
+node_modules\effect\src\internal\core-effect.ts:1134:  core.map(self, (\1: any) => !b)
+node_modules\effect\src\internal\core-effect.ts:1153:  core.map(
+node_modules\effect\src\internal\core-effect.ts:1409:      (\1: any) => core.flatMap(self, (\1: any) => core.map(summary, (\1: any) => [f(start, end), value]))
+node_modules\effect\src\internal\core-effect.ts:1430:      : Object.entries<string>(arguments[1]).map(([k, v]) => metricLabel.make(k, v))
+node_modules\effect\src\internal\core-effect.ts:1475:      return core.map(effect, () => builder)
+node_modules\effect\src\internal\core-effect.ts:1503:            core.map((\1: any) => {
+node_modules\effect\src\internal\core-effect.ts:1511:      return core.map(taking, () => builder)
+node_modules\effect\src\internal\core-effect.ts:1816:      ? core.map(self, Option.some)
+node_modules\effect\src\internal\core-effect.ts:1840:        ? core.map(self, (\1: any) => [s, Option.some(a)])
+node_modules\effect\src\internal\core-effect.ts:1860:        ? core.map(self, (\1: any) => [s, Option.some(a)])
+node_modules\effect\src\internal\core-effect.ts:1889:  core.map(getService, (\1: any) => f(a)(...args))
+node_modules\effect\src\internal\core-effect.ts:1939:export const serviceOption = <I, S>(tag: Context.Tag<I, S>) => core.map(core.context<never>(), Context.getOption(tag))
+node_modules\effect\src\internal\core-effect.ts:2273:    core.map(self, Option.some),
+node_modules\effect\src\internal\core.ts:1384:      return pipe(self, map(Option.some))
+node_modules\effect\src\internal\core.ts:1511:): Effect.Effect<[A, A2], E | E2, R | R2> => flatMap(self, (\1: any) => map(that, (\1: any) => [a, b])))
+node_modules\effect\src\internal\core.ts:1527:): Effect.Effect<[...A, A2], E | E2, R | R2> => flatMap(self, (\1: any) => map(that, (\1: any) => [...a, b])))
+node_modules\effect\src\internal\core.ts:1572:): Effect.Effect<B, E | E2, R | R2> => flatMap(self, (\1: any) => map(that, (\1: any) => f(a, b))))
+node_modules\effect\src\internal\core.ts:2196:  const option = pipe(self, internalCause.failureOption, Option.map(f))
+node_modules\effect\src\internal\core.ts:2205:              Arr.fromIterable(FiberId.ids(fiberId)).map((\1: any) => `#${id}`)
+node_modules\effect\src\internal\core.ts:2612:      return exitFailCause(pipe(self.effect_instruction_i0, internalCause.map(onFailure)))
+node_modules\effect\src\internal\core.ts:2625:      return exitFailCause(pipe(self.effect_instruction_i0, internalCause.map(f)))
+node_modules\effect\src\internal\core.ts:3022:): Effect.Effect<A, never, R0> => map(context<R0>(), f)
+node_modules\effect\src\internal\dataSource.ts:19:  new core.RequestResolverImpl((\1: any) => runAll(requests.map((\1: any) => _.map((\1: any) => _.request))))
+node_modules\effect\src\internal\dataSource.ts:34:          const filtered = block.filter((\1: any) => !_.state.completed).map((\1: any) => _.request)
+node_modules\effect\src\internal\dataSource.ts:41:        const filtered = requests[0].filter((\1: any) => !_.state.completed).map((\1: any) => _.request)
+node_modules\effect\src\internal\dataSource.ts:91:      const flatRequests = requests.flatMap((\1: any) => chunk.map((\1: any) => entry.request))
+node_modules\effect\src\internal\dataSource.ts:119:          Array.from(Chunk.map(
+node_modules\effect\src\internal\dateTime.ts:304:export const now: Effect.Effect<DateTime.Utc> = core.map(Clock.currentTimeMillis, makeUtc)
+node_modules\effect\src\internal\dateTime.ts:307:export const nowAsDate: Effect.Effect<Date> = core.map(Clock.currentTimeMillis, (\1: any) => new Date(millis))
+node_modules\effect\src\internal\dateTime.ts:443:  }): Option.Option<DateTime.Zoned> => Option.map(zoneMakeNamed(zoneId), (\1: any) => setZone(self, zone, options))
+node_modules\effect\src\internal\dateTime.ts:535:export const isFuture = (self: DateTime.DateTime): Effect.Effect<boolean> => core.map(now, lessThan(self))
+node_modules\effect\src\internal\dateTime.ts:541:export const isPast = (self: DateTime.DateTime): Effect.Effect<boolean> => core.map(now, greaterThan(self))
+node_modules\effect\src\internal\defaultServices.ts:141:  return core.map(
+node_modules\effect\src\internal\doNotation.ts:41:    map(self, (\1: any) => ({ ...a, [name]: f(a) }) as any))
+node_modules\effect\src\internal\doNotation.ts:56:  ): Kind<F, R, O, E, { [K in N]: A }> => map(self, (\1: any) => ({ [name]: a } as { [K in N]: A })))
+node_modules\effect\src\internal\doNotation.ts:79:      (\1: any) => map(f(a), (\1: any) => ({ ...a, [name]: b }) as { [K in keyof A | N]: K extends keyof A ? A[K] : B })
+node_modules\effect\src\internal\effect\circular.ts:206:    core.map(cachedInvalidateWithTTL(self, timeToLive), (\1: any) => tuple[0])
+node_modules\effect\src\internal\effect\circular.ts:228:        core.map(
+node_modules\effect\src\internal\effect\circular.ts:250:    core.map((\1: any) => Option.some([start + timeToLiveMillis, deferred]))
+node_modules\effect\src\internal\effect\circular.ts:358:    core.map(core.forEachSequential(effects, fiberRuntime.fork), fiberRuntime.fiberAll))
+node_modules\effect\src\internal\effect\circular.ts:431:    core.map((\1: any) => (a: A) =>
+node_modules\effect\src\internal\effect\circular.ts:445:              core.map((\1: any) => [deferred, pipe(map, MutableHashMap.set(new Key(a, eq), deferred))] as const)
+node_modules\effect\src\internal\effect\circular.ts:710:        return core.map(result.value, (\1: any) => [a, a] as const)
+node_modules\effect\src\internal\effect\circular.ts:773:            Option.map((\1: any) =>
+node_modules\effect\src\internal\effect\circular.ts:879:          core.map((\1: any) => Object.assign({}, a, record))
+node_modules\effect\src\internal\fiber.ts:100:  core.map(self.status, (\1: any) => ({ id: self.id(), status }))
+node_modules\effect\src\internal\fiber.ts:115:  core.map(core.exit(effect), done)
+node_modules\effect\src\internal\fiber.ts:178:            core.map(Option.some)
+node_modules\effect\src\internal\fiber.ts:200:  core.map(
+node_modules\effect\src\internal\fiber.ts:292:>(2, (self, that) => orElse(map(self, Either.left), map(that, Either.right)))
+node_modules\effect\src\internal\fiber.ts:332:    core.map(dump(self), (\1: any) => {
+node_modules\effect\src\internal\fiber.ts:344:            ? `waiting on ` + Array.from(ids).map((\1: any) => `${id}`).join(", ")
+node_modules\effect\src\internal\fiberId.ts:222:  const identifiers = Array.from(ids(self)).map((\1: any) => `#${n}`).join(",")
+node_modules\effect\src\internal\fiberRuntime.ts:1654:    return core.map(effect, Option.some)
+node_modules\effect\src\internal\fiberRuntime.ts:1806:    const predicate_ = options?.negate ? (a: A, i: number) => core.map(predicate(a, i), Boolean.not) : predicate
+node_modules\effect\src\internal\fiberRuntime.ts:1822:        core.map(
+node_modules\effect\src\internal\fiberRuntime.ts:1825:            (a, i) => core.map(predicate_(a, i), (\1: any) => (b ? Option.some(a) : Option.none())),
+node_modules\effect\src\internal\fiberRuntime.ts:1845:    keys.map((\1: any) => input[k]),
+node_modules\effect\src\internal\fiberRuntime.ts:1932:  return core.map(
+node_modules\effect\src\internal\fiberRuntime.ts:1968:    ? core.map(
+node_modules\effect\src\internal\fiberRuntime.ts:1998:  core.map(
+node_modules\effect\src\internal\fiberRuntime.ts:1999:    all(RA.fromIterable(elements).map(core.exit), options),
+node_modules\effect\src\internal\fiberRuntime.ts:2206:            .map(({ exit }) => exit)
+node_modules\effect\src\internal\fiberRuntime.ts:2302:                    const requests = residual.map((\1: any) => blocked.effect_instruction_i0).reduce(RequestBlock_.par)
+node_modules\effect\src\internal\fiberRuntime.ts:2311:                          ...residual.map((\1: any) => blocked.effect_instruction_i1)
+node_modules\effect\src\internal\fiberRuntime.ts:2382:    const fn = (a: A, i: number) => core.map(f(a, i), (\1: any) => array[i] = b)
+node_modules\effect\src\internal\fiberRuntime.ts:2552:    core.map((\1: any) => core.partitionMap(chunk, identity))
+node_modules\effect\src\internal\fiberRuntime.ts:2654:                  core.map((\1: any) => Chunk.unsafeFromArray(fibers)),
+node_modules\effect\src\internal\fiberRuntime.ts:2655:                  core.map((\1: any) => pipe(tail, Chunk.prepend(head)) as Chunk.Chunk<Fiber.RuntimeFiber<A, E>>),
+node_modules\effect\src\internal\fiberRuntime.ts:2788:          core.map((\1: any) => {
+node_modules\effect\src\internal\fiberRuntime.ts:3066:        core.map((\1: any) => [
+node_modules\effect\src\internal\fiberRuntime.ts:3196:  core.map(
+node_modules\effect\src\internal\fiberRuntime.ts:3293:              Option.map(core.exitAsVoid),
+node_modules\effect\src\internal\fiberRuntime.ts:3304:              Option.map(core.exitAsVoid),
+node_modules\effect\src\internal\fiberRuntime.ts:3314:              Option.map(core.exitAsVoid),
+node_modules\effect\src\internal\fiberRuntime.ts:3474:    children: core.map(forEachParUnbounded(fibers, (\1: any) => fiber.children, false), RA.flatten),
+node_modules\effect\src\internal\fiberRuntime.ts:3476:    poll: core.map(
+node_modules\effect\src\internal\fiberRuntime.ts:3756:            const counts = entries.map((\1: any) => _.listeners.count)
+node_modules\effect\src\internal\fiberRuntime.ts:3785:            const cleanup = entries.map((r, i) => {
+node_modules\effect\src\internal\groupBy.ts:112:      stream.map((\1: any) => tuple[0])
+node_modules\effect\src\internal\groupBy.ts:175:              Effect.map((\1: any) => Option.fromNullable(map.get(key))),
+node_modules\effect\src\internal\groupBy.ts:190:                                  Exit.map((\1: any) => Chunk.of(tuple[1]))
+node_modules\effect\src\internal\groupBy.ts:310:    Effect.map(
+node_modules\effect\src\internal\groupBy.ts:366:    return pipe(Queue.take(this.dequeue), Effect.map((\1: any) => this.f(a)))
+node_modules\effect\src\internal\groupBy.ts:370:    return pipe(Queue.takeAll(this.dequeue), Effect.map(Chunk.map((\1: any) => this.f(a))))
+node_modules\effect\src\internal\groupBy.ts:374:    return pipe(Queue.takeUpTo(this.dequeue, max), Effect.map(Chunk.map((\1: any) => this.f(a))))
+node_modules\effect\src\internal\groupBy.ts:378:    return pipe(Queue.takeBetween(this.dequeue, min, max), Effect.map(Chunk.map((\1: any) => this.f(a))))
+node_modules\effect\src\internal\groupBy.ts:382:    return pipe(Queue.takeN(this.dequeue, n), Effect.map(Chunk.map((\1: any) => this.f(a))))
+node_modules\effect\src\internal\groupBy.ts:386:    return pipe(Queue.poll(this.dequeue), Effect.map(Option.map((\1: any) => this.f(a))))
+node_modules\effect\src\internal\groupBy.ts:530:    builder.map((\1: any) => [tuple[0], Chunk.unsafeFromArray(tuple[1])])
+node_modules\effect\src\internal\hashMap\bitwise.ts:25:export function toBitmap(x: number) {
+node_modules\effect\src\internal\hashMap\bitwise.ts:30:export function fromBitmap(bitmap: number, bit: number) {
+node_modules\effect\src\internal\hashMap\node.ts:203:    const bit = toBitmap(frag)
+node_modules\effect\src\internal\hashMap\node.ts:204:    const indx = fromBitmap(mask, bit)
+node_modules\effect\src\internal\hashMap\node.ts:358:    return (\1: any) => new IndexedNode(edit, toBitmap(subH1) | toBitmap(subH2), [child])
+node_modules\effect\src\internal\hashMap\node.ts:361:    return new IndexedNode(edit, toBitmap(subH1) | toBitmap(subH2), children)
+node_modules\effect\src\internal\hashMap.ts:85:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\internal\hashMap.ts:244:        const bit = toBitmap(frag)
+node_modules\effect\src\internal\hashMap.ts:246:          node = node.children[fromBitmap(node.mask, bit)]!
+node_modules\effect\src\internal\hashMap.ts:391:>(3, (self, key, f) => modifyAt(self, key, Option.map(f)))
+node_modules\effect\src\internal\hashSet.ts:49:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\internal\keyedPool.ts:109:    core.map(([context, fiberId, map, scope]) => {
+node_modules\effect\src\internal\layer\circular.ts:56:    core.map(effect, addLogger)
+node_modules\effect\src\internal\layer\circular.ts:64:    core.map(effect, addLogger)
+node_modules\effect\src\internal\layer.ts:229:                  core.map((\1: any) => {
+node_modules\effect\src\internal\layer.ts:310:  core.map(
+node_modules\effect\src\internal\layer.ts:495:  map(self, () => Context.empty())
+node_modules\effect\src\internal\layer.ts:571:  return fromEffectContext(core.map(effect, (\1: any) => Context.make(tag, service)))
+node_modules\effect\src\internal\layer.ts:576:  fromEffectContext(core.map(effect, () => Context.empty()))
+node_modules\effect\src\internal\layer.ts:630:): Layer.Layer<I2, never, I1> => fromEffectContext(core.map(tagA, (\1: any) => Context.make(tagB, f(a))))
+node_modules\effect\src\internal\layer.ts:718:    core.map(
+node_modules\effect\src\internal\layer.ts:787:>(4, (self, tagA, tagB, f) => map(self, (\1: any) => Context.make(tagB, f(Context.unsafeGet(context, tagA)))))
+node_modules\effect\src\internal\layer.ts:870:  return scopedContext(core.map(effect, (\1: any) => Context.make(tag, service)))
+node_modules\effect\src\internal\layer.ts:890:  core.map(
+node_modules\effect\src\internal\layer.ts:1245:      core.map(
+node_modules\effect\src\internal\layer.ts:1258:      core.map(
+node_modules\effect\src\internal\logger.ts:150:>(2, (self, that) => map(zip(self, that), (\1: any) => tuple[0]))
+node_modules\effect\src\internal\logger.ts:163:>(2, (self, that) => map(zip(self, that), (\1: any) => tuple[1]))
+node_modules\effect\src\internal\logger.ts:249:      message: messageArr.length === 1 ? structuredMessage(messageArr[0]) : messageArr.map(structuredMessage),
+node_modules\effect\src\internal\logger.ts:275:export const jsonLogger = map(structuredLogger, Inspectable.stringifyCircular)
+node_modules\effect\src\internal\matcher.ts:124:    const predicates = pattern.map(makePredicate)
+node_modules\effect\src\internal\matcher.ts:141:    const keysAndPredicates = Object.entries(pattern).map(
+node_modules\effect\src\internal\matcher.ts:168:  const predicates = patterns.map(makePredicate)
+node_modules\effect\src\internal\matcher.ts:185:  const predicates = patterns.map(makePredicate)
+node_modules\effect\src\internal\metric\hook.ts:152:    Arr.map((n, i) => {
+node_modules\effect\src\internal\metric\hook.ts:345:  return Arr.map(resolved, (\1: any) => [rq.quantile, rq.value] as const)
+node_modules\effect\src\internal\metric\polling.ts:57:          metrics.map((\1: any) => pollingMetric.metric.unsafeValue(extraTags))
+node_modules\effect\src\internal\metric.ts:305:  map(
+node_modules\effect\src\internal\pool.ts:354:    core.map(internalQueue.unbounded<PoolItem<A, E>>(), (\1: any) => {
+node_modules\effect\src\internal\pool.ts:387:  core.map(internalQueue.unbounded<PoolItem<A, E>>(), (\1: any) => {
+node_modules\effect\src\internal\pubsub.ts:189:  core.map(core.deferredMake<void>(), (\1: any) =>
+node_modules\effect\src\internal\pubsub.ts:969:    return core.map(this.size, (\1: any) => size === 0)
+node_modules\effect\src\internal\pubsub.ts:1094:        return pipe(self.take, core.map((\1: any) => pipe(acc, Chunk.appendAll(bs), Chunk.append(b))))
+node_modules\effect\src\internal\pubsub.ts:1148:    return core.map(this.size, (\1: any) => size === this.capacity())
+node_modules\effect\src\internal\pubsub.ts:1152:    return core.map(this.size, (\1: any) => size === 0)
+node_modules\effect\src\internal\pubsub.ts:1239:    return core.map(
+node_modules\effect\src\internal\pubsub.ts:1266:      core.map(core.deferredMake<void>(), (\1: any) =>
+node_modules\effect\src\internal\query.ts:29:      () => core.map(core.deferredMake<any, any>(), (\1: any) => ({ listeners: new Listeners(), handle })),
+node_modules\effect\src\internal\queue.ts:114:    return core.map(this.size, (\1: any) => size <= 0)
+node_modules\effect\src\internal\queue.ts:118:    return core.map(this.size, (\1: any) => size >= this.capacity())
+node_modules\effect\src\internal\queue.ts:323:          core.map((\1: any) => pipe(acc, Chunk.appendAll(bs), Chunk.append(b)))
+node_modules\effect\src\internal\queue.ts:399:    core.map((\1: any) =>
+node_modules\effect\src\internal\queue.ts:484:  core.map(self.takeUpTo(1), Chunk.head)
+node_modules\effect\src\internal\random.ts:35:    return core.map(this.next, (\1: any) => n > 0.5)
+node_modules\effect\src\internal\random.ts:43:    return core.map(this.next, (\1: any) => (max - min) * n + min)
+node_modules\effect\src\internal\random.ts:72:              core.map((\1: any) => swap(buffer, n - 1, k))
+node_modules\effect\src\internal\rcRef.ts:123:            core.map(({ scope, value }) => {
+node_modules\effect\src\internal\rcRef.ts:174:    core.map(({ state }) => state.value)
+node_modules\effect\src\internal\redBlackTree\iterator.ts:86:    return Option.map(Arr.last(this.stack), (\1: any) => [node.key, node.value])
+node_modules\effect\src\internal\redBlackTree.ts:71:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\internal\reloadable.ts:39:      core.map(Context.unsafeGet(reloadableTag(tag))),
+node_modules\effect\src\internal\reloadable.ts:72:          core.map(Context.unsafeGet(reloadableTag(tag)))
+node_modules\effect\src\internal\reloadable.ts:100:          scopedRef.fromAcquire(pipe(layer_.build(options.layer), core.map(Context.unsafeGet(tag)))),
+node_modules\effect\src\internal\reloadable.ts:101:          core.map((\1: any) => ({
+node_modules\effect\src\internal\reloadable.ts:105:              scopedRef.set(ref, pipe(layer_.build(options.layer), core.map(Context.unsafeGet(tag)))),
+node_modules\effect\src\internal\resource.ts:59:      core.map((\1: any) => {
+node_modules\effect\src\internal\resource.ts:75:    core.map(self.acquire, core.exitSucceed)
+node_modules\effect\src\internal\runtimeFlags.ts:163:    .map((\1: any) => print(flag))
+node_modules\effect\src\internal\runtimeFlags.ts:166:    .map((\1: any) => print(flag))
+node_modules\effect\src\internal\schedule.ts:137:    return core.map(ref.get(this.ref), (\1: any) => tuple[1])
+node_modules\effect\src\internal\schedule.ts:163:      core.map(ref.get(this.ref), (\1: any) => tuple[1]),
+node_modules\effect\src\internal\schedule.ts:232:    core.map(
+node_modules\effect\src\internal\schedule.ts:254:>(2, (self, that) => map(andThenEither(self, that), Either.merge))
+node_modules\effect\src\internal\schedule.ts:277:            return core.map(that.step(now, input, state[1]), ([rState, out, decision]) =>
+node_modules\effect\src\internal\schedule.ts:292:        core.map(that.step(now, input, state[1]), ([rState, out, decision]) =>
+node_modules\effect\src\internal\schedule.ts:304:>(2, (self, out) => map(self, () => out))
+node_modules\effect\src\internal\schedule.ts:309:): Schedule.Schedule<void, In, R> => map(self, constVoid)
+node_modules\effect\src\internal\schedule.ts:368:        return core.map(test(input, out), (\1: any) =>
+node_modules\effect\src\internal\schedule.ts:417:          core.map(that.step(now, out, state[1]), ([rState, out2, rDecision]) =>
+node_modules\effect\src\internal\schedule.ts:636:>(2, (self, { onInput, onOutput }) => map(mapInput(self, onInput), onOutput))
+node_modules\effect\src\internal\schedule.ts:661:    core.map((\1: any) => new ScheduleDriverImpl(self, ref))
+node_modules\effect\src\internal\schedule.ts:732:    map(forever, (\1: any) => Duration.times(base, Math.pow(factor, i)))
+node_modules\effect\src\internal\schedule.ts:745:      map((\1: any) => out[0])
+node_modules\effect\src\internal\schedule.ts:794:    [[delay, ...delays].map((\1: any) => Duration.decode(_)) as Array<Duration.Duration>, true as boolean] as const,
+node_modules\effect\src\internal\schedule.ts:819:export const fromFunction = <A, B>(f: (a: A) => B): Schedule.Schedule<B, A> => map(identity<A>(), f)
+node_modules\effect\src\internal\schedule.ts:1013:    core.map(Random.next, (\1: any) => {
+node_modules\effect\src\internal\schedule.ts:1023:  return delayedSchedule(map(forever, (\1: any) => Duration.times(base, i + 1)))
+node_modules\effect\src\internal\schedule.ts:1051:        core.map(
+node_modules\effect\src\internal\schedule.ts:1115:        return core.map(f(out, delay), (\1: any) => {
+node_modules\effect\src\internal\schedule.ts:1153:      core.map(([state, _, decision]) => [state, input, decision] as const)
+node_modules\effect\src\internal\schedule.ts:1209:  untilOutput(map(identity<A>(), pf), Option.isSome)
+node_modules\effect\src\internal\schedule.ts:1261:          : core.map(f(z, out), (\1: any) => [[s, z2], z, decision] as const))
+node_modules\effect\src\internal\schedule.ts:1303:    map((\1: any) => out[0])
+node_modules\effect\src\internal\schedule.ts:1335:    core.map((\1: any) => Chunk.reverse(list))
+node_modules\effect\src\internal\schedule.ts:1397:export const succeed = <A>(value: A): Schedule.Schedule<A> => map(forever, () => value)
+node_modules\effect\src\internal\schedule.ts:1400:export const sync = <A>(evaluate: LazyArg<A>): Schedule.Schedule<A> => map(forever, evaluate)
+node_modules\effect\src\internal\schedule.ts:1631:>(2, (self, that) => map(intersect(self, that), (\1: any) => out[0]))
+node_modules\effect\src\internal\schedule.ts:1642:>(2, (self, that) => map(intersect(self, that), (\1: any) => out[1]))
+node_modules\effect\src\internal\schedule.ts:1655:>(3, (self, that, f) => map(intersect(self, that), ([out, out2]) => f(out, out2)))
+node_modules\effect\src\internal\schedule.ts:1915:      intersect(withUntil, recurs(options.times)).pipe(map((\1: any) => intersectionPair[0])) :
+node_modules\effect\src\internal\schema\util.ts:58:    return `[${u.map((\1: any) => formatUnknown(i, checkCircular)).join(",")}]`
+node_modules\effect\src\internal\schema\util.ts:92:      ownKeys(u).map((\1: any) =>
+node_modules\effect\src\internal\schema\util.ts:122:  isNonEmpty(path) ? path.map(formatPathKey).join("") : formatPathKey(path)
+node_modules\effect\src\internal\scopedCache.ts:284:          return core.map(
+node_modules\effect\src\internal\scopedCache.ts:331:      HashSet.fromIterable(Array.from(this.cacheState.map).map(([key]) => key)),
+node_modules\effect\src\internal\scopedCache.ts:419:          core.map(value.scoped, effect.asSome)
+node_modules\effect\src\internal\scopedCache.ts:430:            core.map(value.scoped, effect.asSome)
+node_modules\effect\src\internal\scopedCache.ts:449:            core.map((\1: any) => [exit, ((\1: any) => Scope.close(scope, exit)) as Scope.Scope.Finalizer] as const)
+node_modules\effect\src\internal\scopedRef.ts:68:  core.map(ref.get(self.ref), (\1: any) => tuple[1])
+node_modules\effect\src\internal\secret.ts:53:  redacted_.redactedRegistry.set(secret, bytes.map((\1: any) => String.fromCharCode(byte)).join(""))
+node_modules\effect\src\internal\secret.ts:62:  make(Arr.fromIterable(iterable).map((\1: any) => char.charCodeAt(0)))
+node_modules\effect\src\internal\secret.ts:69:  return make(text.split("").map((\1: any) => char.charCodeAt(0)))
+node_modules\effect\src\internal\secret.ts:77:  return self.raw.map((\1: any) => String.fromCharCode(byte)).join("")
+node_modules\effect\src\internal\sink.ts:73:  (self, a) => pipe(self, map(() => a))
+node_modules\effect\src\internal\sink.ts:187:    map((\1: any) => tuple[0])
+node_modules\effect\src\internal\sink.ts:197:      ([chunk, _], input) => pipe(p(input), Effect.map((\1: any) => [pipe(chunk, Chunk.append(input)), !bool]))
+node_modules\effect\src\internal\sink.ts:199:    map((\1: any) => tuple[0])
+node_modules\effect\src\internal\sink.ts:246:        core.fromEffect(pipe(input, Effect.takeWhile(predicate), Effect.map(Chunk.unsafeFromArray))),
+node_modules\effect\src\internal\sink.ts:352:  new SinkImpl(pipe(core.collectElements(toChannel(self)), channel.map(([chunks, z]) => [z, Chunk.flatten(chunks)])))
+node_modules\effect\src\internal\sink.ts:361:    pipe(self, mapInputChunks(Chunk.map(f)))
+node_modules\effect\src\internal\sink.ts:382:        Effect.map(
+node_modules\effect\src\internal\sink.ts:472:  ): Sink.Sink<A2, In0, L, E, R> => map(mapInput(self, options.onInput), options.onDone)
+node_modules\effect\src\internal\sink.ts:517:    map(
+node_modules\effect\src\internal\sink.ts:592:        Effect.map((\1: any) => {
+node_modules\effect\src\internal\sink.ts:641:        Effect.map((\1: any) => {
+node_modules\effect\src\internal\sink.ts:690:): Sink.Sink<Z, unknown, never, never, R> => pipe(context<R>(), map(f))
+node_modules\effect\src\internal\sink.ts:747:      (\1: any) => Effect.map(Effect.filter(chunk, f), Chunk.unsafeFromArray)
+node_modules\effect\src\internal\sink.ts:1081:    map((\1: any) => tuple[0])
+node_modules\effect\src\internal\sink.ts:1094:      ([output, count], input: In) => pipe(f(output, input), Effect.map((\1: any) => [s, count + 1] as const))
+node_modules\effect\src\internal\sink.ts:1096:    map((\1: any) => tuple[0])
+node_modules\effect\src\internal\sink.ts:1293:    Effect.map((\1: any) => cost + newCost),
+node_modules\effect\src\internal\sink.ts:1312:              Effect.map((\1: any) => [s, total, true, pipe(input, Chunk.drop(index + 1))])
+node_modules\effect\src\internal\sink.ts:1442:  new SinkImpl(channel.unwrapScoped(pipe(push, Effect.map(fromPushPull))))
+node_modules\effect\src\internal\sink.ts:1485:      Effect.map(
+node_modules\effect\src\internal\sink.ts:1521:  return new SinkImpl(pipe(toChannel(self), channel.map(f)))
+node_modules\effect\src\internal\sink.ts:1553:  (self, f) => new SinkImpl(pipe(toChannel(self), channel.mapOut(Chunk.map(f))))
+node_modules\effect\src\internal\sink.ts:1599:  (self, that) => pipe(self, raceBoth(that), map(Either.merge))
+node_modules\effect\src\internal\sink.ts:1624:      onSelfDone: (\1: any) => mergeDecision.Done(Effect.map(selfDone, Either.left)),
+node_modules\effect\src\internal\sink.ts:1625:      onOtherDone: (\1: any) => mergeDecision.Done(Effect.map(thatDone, Either.right)),
+node_modules\effect\src\internal\sink.ts:1751:): Sink.Sink<Z, unknown, never, never, I> => fromEffect(Effect.map(tag, f))
+node_modules\effect\src\internal\sink.ts:1764:  new SinkImpl(pipe(Effect.map(tag, (\1: any) => toChannel(f(service))), channel.unwrap))
+node_modules\effect\src\internal\sink.ts:1886:              channel.map((\1: any) => [done, f(start, end)])
+node_modules\effect\src\internal\sink.ts:1926:    channel.unwrap(pipe(effect, Effect.map((\1: any) => toChannel(sink))))
+node_modules\effect\src\internal\sink.ts:1935:      Effect.map((\1: any) => toChannel(sink))
+node_modules\effect\src\internal\sink.ts:1946:        Effect.map((\1: any) => toChannel(sink))
+node_modules\effect\src\internal\sink.ts:2086:      flatMap(self, (\1: any) => map(that, (\1: any) => f(z, z2)))
+node_modules\effect\src\internal\sink.ts:2109:      Chunk.map(elems, (\1: any) => {
+node_modules\effect\src\internal\sink.ts:2112:    map(() => strings.join(""))
+node_modules\effect\src\internal\sink.ts:2119:  map((\1: any) => tuple[1])
+node_modules\effect\src\internal\stm\core.ts:417:  map(context<R0>(), f)
+node_modules\effect\src\internal\stm\core.ts:698:    map(Either.right),
+node_modules\effect\src\internal\stm\core.ts:699:    catchAll((\1: any) => pipe(onFailure(e), map(Either.left))),
+node_modules\effect\src\internal\stm\core.ts:793:>(2, (self, that) => pipe(self, flatMap((\1: any) => pipe(that, map(() => a)))))
+node_modules\effect\src\internal\stm\core.ts:816:  (self, that, f) => pipe(self, flatMap((\1: any) => pipe(that, map((\1: any) => f(a, b)))))
+node_modules\effect\src\internal\stm\stm.ts:90:>(2, (self, value) => pipe(self, core.map(() => value)))
+node_modules\effect\src\internal\stm\stm.ts:94:  pipe(self, core.map(Option.some))
+node_modules\effect\src\internal\stm\stm.ts:101:export const asVoid = <A, E, R>(self: STM.STM<A, E, R>): STM.STM<void, E, R> => pipe(self, core.map(constVoid))
+node_modules\effect\src\internal\stm\stm.ts:129:    core.map(
+node_modules\effect\src\internal\stm\stm.ts:152:    core.map(self, (\1: any) => ({ [tag]: a } as Record<N, A>))
+node_modules\effect\src\internal\stm\stm.ts:175:  core.map(
+node_modules\effect\src\internal\stm\stm.ts:285:    (\1: any) => Option.map(pf(a), core.succeed)
+node_modules\effect\src\internal\stm\stm.ts:772:    core.map(loopLoop(initial, options.while, options.step, options.body), (\1: any) => Array.from(a))
+node_modules\effect\src\internal\stm\stm.ts:783:      core.flatMap((\1: any) => pipe(loopLoop(inc(initial), cont, inc, body), core.map(Chunk.append(a))))
+node_modules\effect\src\internal\stm\stm.ts:860:export const negate = <E, R>(self: STM.STM<boolean, E, R>): STM.STM<boolean, E, R> => pipe(self, core.map((\1: any) => !b))
+node_modules\effect\src\internal\stm\stm.ts:916:    orElse(core.map(self, Either.left), () => core.map(that(), Either.right))
+node_modules\effect\src\internal\stm\stm.ts:1119:    (\1: any) => Option.map(pf(a), core.fail)
+node_modules\effect\src\internal\stm\stm.ts:1224:    core.map((\1: any) => effectCore.partitionMap(as, identity))
+node_modules\effect\src\internal\stm\stm.ts:1248:  return core.map(
+node_modules\effect\src\internal\stm\stm.ts:1251:      ([_, e]) => core.map(e, (\1: any) => [_, a] as const)
+node_modules\effect\src\internal\stm\stm.ts:1285:      core.map(
+node_modules\effect\src\internal\stm\tArray.ts:37:    (\1: any) => pipe(pf(a), Option.map(core.succeed))
+node_modules\effect\src\internal\stm\tArray.ts:69:          onSome: core.map(Option.some)
+node_modules\effect\src\internal\stm\tArray.ts:100:    (n, a) => core.map(predicate(a), (\1: any) => bool ? n + 1 : n)
+node_modules\effect\src\internal\stm\tArray.ts:117:  core.map(
+node_modules\effect\src\internal\stm\tArray.ts:240:  return core.map(
+node_modules\effect\src\internal\stm\tArray.ts:248:            core.map(
+node_modules\effect\src\internal\stm\tArray.ts:319:  return core.map(
+node_modules\effect\src\internal\stm\tArray.ts:327:            core.map(
+node_modules\effect\src\internal\stm\tArray.ts:347:  core.map(
+node_modules\effect\src\internal\stm\tArray.ts:367:    core.map(tRef.get(self.chunk[0]), Option.some)
+node_modules\effect\src\internal\stm\tArray.ts:373:    core.map(tRef.get(self.chunk[self.chunk.length - 1]), Option.some)
+node_modules\effect\src\internal\stm\tArray.ts:445:        ? core.map(f(acc.value, curr), Option.some)
+node_modules\effect\src\internal\stm\tArray.ts:474:  core.map(
+node_modules\effect\src\internal\stm\tArray.ts:483:>(2, (self, predicate) => core.map(countSTM(self, predicate), (\1: any) => n > 0))
+node_modules\effect\src\internal\stm\tDeferred.ts:67:  core.map(
+node_modules\effect\src\internal\stm\tMap.ts:86:            core.map((\1: any) => new TMapImpl(tBuckets, tSize))
+node_modules\effect\src\internal\stm\tMap.ts:170:  core.map(
+node_modules\effect\src\internal\stm\tMap.ts:214:      Option.map((\1: any) => entry[1])
+node_modules\effect\src\internal\stm\tMap.ts:223:  core.map(
+node_modules\effect\src\internal\stm\tMap.ts:232:>(2, (self, key) => core.map(get(self, key), Option.isSome))
+node_modules\effect\src\internal\stm\tMap.ts:236:  core.map(tRef.get(self.tSize), (\1: any) => size === 0)
+node_modules\effect\src\internal\stm\tMap.ts:240:  core.map(toReadonlyArray(self), RA.map((\1: any) => entry[0]))
+node_modules\effect\src\internal\stm\tMap.ts:477:      const newBucket = Chunk.map(bucket, (\1: any) =>
+node_modules\effect\src\internal\stm\tMap.ts:562:    findSTM(self, (key, value) => core.map(pf(key, value), (\1: any) => [key, a] as const)),
+node_modules\effect\src\internal\stm\tMap.ts:635:      (key, value) => core.map(pf(key, value), (\1: any) => [key, a] as const)
+node_modules\effect\src\internal\stm\tMap.ts:637:    core.map((\1: any) =>
+node_modules\effect\src\internal\stm\tMap.ts:649:        removeAll(self, entries.map((\1: any) => entry[0])),
+node_modules\effect\src\internal\stm\tMap.ts:650:        RA.map(entries, (\1: any) => entry[1]) as RA.NonEmptyArray<A>
+node_modules\effect\src\internal\stm\tMap.ts:798:    (key, value) => core.map(f(value), (\1: any) => [key, value])
+node_modules\effect\src\internal\stm\tMap.ts:824:  core.map(toReadonlyArray(self), RA.map((\1: any) => entry[1]))
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:37:    core.map((\1: any) => new TPriorityQueueImpl(ref))
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:64:      core.map((\1: any) => new TPriorityQueueImpl(ref))
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:69:  core.map(tRef.get(self.ref), SortedMap.isEmpty)
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:73:  core.map(tRef.get(self.ref), SortedMap.isNonEmpty)
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:129:    Option.map(SortedMap.headOption(map), (\1: any) => elements[0]),
+node_modules\effect\src\internal\stm\tPubSub.ts:82:  isEmpty: STM.STM<boolean> = core.map(this.size, (\1: any) => size === 0)
+node_modules\effect\src\internal\stm\tPubSub.ts:84:  isFull: STM.STM<boolean> = core.map(this.size, (\1: any) => size === this.capacity())
+node_modules\effect\src\internal\stm\tPubSub.ts:159:    return core.map(
+node_modules\effect\src\internal\stm\tPubSub.ts:231:  isEmpty: STM.STM<boolean> = core.map(this.size, (\1: any) => size === 0)
+node_modules\effect\src\internal\stm\tPubSub.ts:233:  isFull: STM.STM<boolean> = core.map(this.size, (\1: any) => size === this.capacity())
+node_modules\effect\src\internal\stm\tPubSub.ts:429:        core.map(([publisherHead, publisherTail, subscriberCount, subscribers]) =>
+node_modules\effect\src\internal\stm\tPubSub.ts:473:        core.map(([subscriberHead]) =>
+node_modules\effect\src\internal\stm\tQueue.ts:107:  isFull: STM.STM<boolean> = core.map(this.size, (\1: any) => size === this.requestedCapacity)
+node_modules\effect\src\internal\stm\tQueue.ts:109:  isEmpty: STM.STM<boolean> = core.map(this.size, (\1: any) => size === 0)
+node_modules\effect\src\internal\stm\tQueue.ts:298:  pipe(self.takeUpTo(1), core.map(RA.head))
+node_modules\effect\src\internal\stm\tQueue.ts:351:                core.map((\1: any) => pipe(acc, Chunk.appendAll(Chunk.unsafeFromArray(taken)), Chunk.append(a)))
+node_modules\effect\src\internal\stm\tQueue.ts:370:      return core.map(takeRemainder(min, max, Chunk.empty<A>()), (\1: any) => Array.from(c))
+node_modules\effect\src\internal\stm\tQueue.ts:390:  core.map(
+node_modules\effect\src\internal\stm\tRandom.ts:116:    core.map((\1: any) => new TRandomImpl(seed)),
+node_modules\effect\src\internal\stm\tReentrantLock.ts:239:export const make: STM.STM<TReentrantLock.TReentrantLock> = core.map(
+node_modules\effect\src\internal\stm\tReentrantLock.ts:253:  core.map(
+node_modules\effect\src\internal\stm\tReentrantLock.ts:260:  core.map(
+node_modules\effect\src\internal\stm\tReentrantLock.ts:342:  core.map(
+node_modules\effect\src\internal\stm\tReentrantLock.ts:349:  core.map(
+node_modules\effect\src\internal\stm\tSemaphore.ts:27:  STM.map(tRef.make(permits), (\1: any) => new TSemaphoreImpl(permits))
+node_modules\effect\src\internal\stm\tSet.ts:61:  core.map(
+node_modules\effect\src\internal\stm\tSet.ts:62:    tMap.fromIterable(Array.from(iterable).map((a): [A, void] => [a, void 0])),
+node_modules\effect\src\internal\stm\tSet.ts:150:      core.map(RA.map((\1: any) => entry[0]))
+node_modules\effect\src\internal\stm\tSet.ts:180:      core.map(RA.map((\1: any) => entry[0]))
+node_modules\effect\src\internal\stm\tSet.ts:184:export const size = <A>(self: TSet.TSet<A>): STM.STM<number> => core.map(toChunk(self), (\1: any) => chunk.length)
+node_modules\effect\src\internal\stm\tSet.ts:217:  tMap.keys(self.tMap).pipe(STM.map(Chunk.unsafeFromArray))
+node_modules\effect\src\internal\stm\tSet.ts:237:  core.map(toArray(self), (\1: any) => new Set(values))
+node_modules\effect\src\internal\stm\tSet.ts:252:    (key, value) => core.map(f(key), (\1: any) => [a, value])
+node_modules\effect\src\internal\stm\tSubscriptionRef.ts:143:      STM.map(f),
+node_modules\effect\src\internal\stm\tSubscriptionRef.ts:162:    STM.map(([pubsub, ref]) => new TSubscriptionRefImpl(ref, pubsub))
+node_modules\effect\src\internal\stm\tSubscriptionRef.ts:286:  stream.unwrap(Effect.map(self.changes, stream.fromTQueue))
+node_modules\effect\src\internal\stream\emit.ts:41:      return this(Effect.failCause(pipe(cause, Cause.map(Option.some))))
+node_modules\effect\src\internal\stream\handoff.ts:102:    Effect.map((ref): Handoff<A> => ({
+node_modules\effect\src\internal\stream.ts:238:              Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:255:                        Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:316:                Effect.map(Ref.get(sinkEndReason), (\1: any) => {
+node_modules\effect\src\internal\stream.ts:325:                        Effect.map(([wasConsumed, sinkFiber, scheduleFiber]) => {
+node_modules\effect\src\internal\stream.ts:348:                        Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:368:                    Effect.map(([leftovers, b]) => handleSide(leftovers, b, Option.none()))
+node_modules\effect\src\internal\stream.ts:387:                                Effect.map(([leftovers, b]) => handleSide(leftovers, b, Option.none()))
+node_modules\effect\src\internal\stream.ts:401:                                Effect.map(([leftovers, b]) => handleSide(leftovers, b, Option.none()))
+node_modules\effect\src\internal\stream.ts:417:                          Effect.map(([leftovers, b]) => handleSide(leftovers, b, Option.some(c)))
+node_modules\effect\src\internal\stream.ts:437:                    Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:457:>(2, <A, E, R, B>(self: Stream.Stream<A, E, R>, value: B): Stream.Stream<B, E, R> => map(self, () => value))
+node_modules\effect\src\internal\stream.ts:515:        Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:571:            Effect.map(() => {
+node_modules\effect\src\internal\stream.ts:629:    Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:678:                Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:793:    Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:794:      tuple.map((\1: any) => flattenTake(fromQueue(queue, { shutdown: true }))) as Types.TupleOf<N, Stream.Stream<A, E>>
+node_modules\effect\src\internal\stream.ts:832:  Effect.map(toPubSub(self, maximumLag), (\1: any) => flattenTake(fromPubSub(pubsub))))
+node_modules\effect\src\internal\stream.ts:877:    Effect.map(
+node_modules\effect\src\internal\stream.ts:971:  Effect.map(toPubSub(self, maximumLag), PubSub.subscribe))
+node_modules\effect\src\internal\stream.ts:1011:      Effect.map(queue, (\1: any) => {
+node_modules\effect\src\internal\stream.ts:1051:      Effect.map(queue, (\1: any) => {
+node_modules\effect\src\internal\stream.ts:1114:      Effect.map(queue, (\1: any) => {
+node_modules\effect\src\internal\stream.ts:1437:                  Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:1544:              Exit.failCause(pipe(cause, Cause.map(Option.some)))
+node_modules\effect\src\internal\stream.ts:1584:        Effect.map(([left, right, latchL, latchR]) => {
+node_modules\effect\src\internal\stream.ts:1675:        Effect.map(([left, right, latchL, latchR]) => {
+node_modules\effect\src\internal\stream.ts:1779:  ): Stream.Stream<A, EL | ER, RL | RR> => pipe(left, flatMap((\1: any) => pipe(right, map((\1: any) => f(a, b)))))
+node_modules\effect\src\internal\stream.ts:1799:            Effect.map((\1: any) => consumer(DebounceState.previous(fiber)))
+node_modules\effect\src\internal\stream.ts:1832:                  Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:1889:                                  Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:1907:                  Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:1998:                Chunk.map(
+node_modules\effect\src\internal\stream.ts:2000:                  (\1: any) => Effect.map(next, ([key, queue]) => [[key, id], queue] as const)
+node_modules\effect\src\internal\stream.ts:2003:              Effect.map(Chunk.unsafeFromArray),
+node_modules\effect\src\internal\stream.ts:2019:                    Effect.map(options.decide(a), (\1: any) => (key: number) => pipe(f(mappings.get(key)!)))),
+node_modules\effect\src\internal\stream.ts:2221:            onFailure: (\1: any) => finalize(Exit.failCause(pipe(cause, Cause.map(Option.some)))),
+node_modules\effect\src\internal\stream.ts:2347:          Effect.map(Chunk.unsafeFromArray),
+node_modules\effect\src\internal\stream.ts:2348:          Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:2408:          Effect.map(Chunk.unsafeFromArray),
+node_modules\effect\src\internal\stream.ts:2409:          Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:2433:  pipe(self, map(Either.right), catchAll((\1: any) => make(Either.left(error))))
+node_modules\effect\src\internal\stream.ts:2466:  pipe(context<R>(), map(f))
+node_modules\effect\src\internal\stream.ts:2537:          Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:2593:              onSome: Effect.map((\1: any) => core.flatMap(core.write(Chunk.of(a2)), () => loop(iterator)))
+node_modules\effect\src\internal\stream.ts:2657:              onSome: Effect.map(
+node_modules\effect\src\internal\stream.ts:2712:          Effect.map(Option.match({
+node_modules\effect\src\internal\stream.ts:2774:                Chunk.map((\1: any) => toChannel(f(a))),
+node_modules\effect\src\internal\stream.ts:2965:  pipe(self, map(Chunk.fromIterable), flattenChunks)
+node_modules\effect\src\internal\stream.ts:2969:  flattenChunks(flattenExitOption(pipe(self, map((\1: any) => take.exit))))
+node_modules\effect\src\internal\stream.ts:2985:    Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:3031:    const effect = Effect.map(PubSub.subscribe(pubsub), fromChunkQueue)
+node_modules\effect\src\internal\stream.ts:3032:    return options.shutdown ? Effect.map(effect, ensuring(PubSub.shutdown(pubsub))) : effect
+node_modules\effect\src\internal\stream.ts:3097:    const effect = Effect.map(
+node_modules\effect\src\internal\stream.ts:3102:    return options.shutdown ? Effect.map(effect, ensuring(PubSub.shutdown(pubsub))) : effect
+node_modules\effect\src\internal\stream.ts:3113:  return unwrapScoped(Effect.map(
+node_modules\effect\src\internal\stream.ts:3130:): Stream.Stream<A, E, R> => pipe(effect, Effect.map(fromIterable), unwrap)
+node_modules\effect\src\internal\stream.ts:3184:): Stream.Stream<A, E, Exclude<R, Scope.Scope> | R2> => pipe(effect, Effect.map(repeatEffectChunkOption), unwrapScoped)
+node_modules\effect\src\internal\stream.ts:3214:    Effect.map(Chunk.of),
+node_modules\effect\src\internal\stream.ts:3232:    Effect.map((\1: any) => repeatEffectOption(driver.next(void 0))),
+node_modules\effect\src\internal\stream.ts:3262:  return unwrapScoped(Effect.map(
+node_modules\effect\src\internal\stream.ts:3314:  return unwrapScoped(Effect.map(
+node_modules\effect\src\internal\stream.ts:3505:        Effect.map(Option.match({
+node_modules\effect\src\internal\stream.ts:3523:          Effect.map((\1: any) => toChannel(self).pipe(core.pipeTo(writer(fiber))))
+node_modules\effect\src\internal\stream.ts:3549:      Effect.map(Option.match({
+node_modules\effect\src\internal\stream.ts:3653:          Effect.map(([left, right]) => {
+node_modules\effect\src\internal\stream.ts:3822:    new StreamImpl(pipe(toChannel(self), channel.mapOut(Chunk.map(f))))
+node_modules\effect\src\internal\stream.ts:3936:  ): Stream.Stream<A2, E2, R> => pipe(self, mapError(options.onFailure), map(options.onSuccess))
+node_modules\effect\src\internal\stream.ts:4020:    pipe(self, mapEffectSequential((\1: any) => pipe(f(a), Effect.map(Chunk.fromIterable))), mapConcatChunk(identity))
+node_modules\effect\src\internal\stream.ts:4051:          Effect.map(f(value), (\1: any) =>
+node_modules\effect\src\internal\stream.ts:4182:  const values = keys.map((\1: any) => streams[key].pipe(map((\1: any) => ({ _tag: key, value })))) as any
+node_modules\effect\src\internal\stream.ts:4278:      channel.mergeWith(toChannel(map(self, options.onSelf)), {
+node_modules\effect\src\internal\stream.ts:4279:        other: toChannel(map(other, options.onOther)),
+node_modules\effect\src\internal\stream.ts:4413:    pipe(self, map(Either.left), orElse(() => pipe(that(), map(Either.right))))
+node_modules\effect\src\internal\stream.ts:4519:      Effect.map(f(s), ([chunk, option]) =>
+node_modules\effect\src\internal\stream.ts:4533:  paginateChunkEffect(s, (\1: any) => pipe(f(s), Effect.map(([a, s]) => [Chunk.of(a), s] as const)))
+node_modules\effect\src\internal\stream.ts:4573:        Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:4618:            Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:4640:            Effect.map((\1: any) => [z, new StreamImpl(producer)] as [A2, StreamImpl<A, E>])
+node_modules\effect\src\internal\stream.ts:4882:          Effect.map((\1: any) => pipe(toChannel(self), core.provideContext(env)))
+node_modules\effect\src\internal\stream.ts:5043:    Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:5046:        streams.map((stream, index) =>
+node_modules\effect\src\internal\stream.ts:5227:      Effect.map(effect, (\1: any) => Option.some([chunk, effect] as const)),
+node_modules\effect\src\internal\stream.ts:5236:  repeatEffectChunkOption(pipe(effect, Effect.map(Chunk.of)))
+node_modules\effect\src\internal\stream.ts:5309:      Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:5339:                Effect.map(() =>
+node_modules\effect\src\internal\stream.ts:5398:      Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:5404:        const process = pipe(self, provideLastIterationInfo, map(options.onElement), toChannel)
+node_modules\effect\src\internal\stream.ts:5448:              Effect.map(provideLastIterationInfo(effect), (\1: any) => Option.some([nextA, nextA] as const))
+node_modules\effect\src\internal\stream.ts:5470:      Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:5937:          core.fromEffect(Queue.offerAll(queue, Chunk.map(input, Exit.succeed))),
+node_modules\effect\src\internal\stream.ts:5940:      onFailure: (\1: any) => core.fromEffect(Queue.offer(queue, Exit.failCause(Cause.map(cause, Option.some)))),
+node_modules\effect\src\internal\stream.ts:6052:              Effect.map((\1: any) => [Option.some<A | A2>(b), b] as const)
+node_modules\effect\src\internal\stream.ts:6126:              Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:6180:            mapAccumEffect(s, (s, a) => pipe(f(s, a), Effect.map((\1: any) => [s, s])))
+node_modules\effect\src\internal\stream.ts:6191:  new StreamImpl(channel.ensuring(channel.scoped(pipe(effect, Effect.map(Chunk.of))), Effect.void))
+node_modules\effect\src\internal\stream.ts:6199:      Effect.map(Chunk.of)
+node_modules\effect\src\internal\stream.ts:6214:    pipe(self, map(Option.getOrElse(fallback)))
+node_modules\effect\src\internal\stream.ts:6475:      Effect.map((\1: any) => {
+node_modules\effect\src\internal\stream.ts:6541:        Effect.map((\1: any) =>
+node_modules\effect\src\internal\stream.ts:6830:          Effect.map(([weight, currentTimeMillis]) => {
+node_modules\effect\src\internal\stream.ts:6851:    Effect.map((\1: any) => loop(units, currentTimeMillis)),
+node_modules\effect\src\internal\stream.ts:6873:          Effect.map(([weight, currentTimeMillis]) => {
+node_modules\effect\src\internal\stream.ts:6901:    Effect.map((\1: any) => loop(units, currentTimeMillis)),
+node_modules\effect\src\internal\stream.ts:6918:    Effect.map(Effect.timeoutFail<Option.Option<E>>({
+node_modules\effect\src\internal\stream.ts:6965:      Effect.map(
+node_modules\effect\src\internal\stream.ts:6967:          onTimeout: () => Cause.map(cause(), Option.some),
+node_modules\effect\src\internal\stream.ts:7077:  Effect.map(channel.toPull(toChannel(self)), (\1: any) =>
+node_modules\effect\src\internal\stream.ts:7189:  ) => Effect.map(Effect.runtime<R>(), (\1: any) => toReadableStreamRuntime(self, runtime, options))
+node_modules\effect\src\internal\stream.ts:7397:  Effect.map(Effect.runtime<R>(), (\1: any) => toAsyncIterableRuntime(self, runtime))
+node_modules\effect\src\internal\stream.ts:7401:  unfoldChunk(s, (\1: any) => pipe(f(s), Option.map(([a, s]) => [Chunk.of(a), s])))
+node_modules\effect\src\internal\stream.ts:7424:        Effect.map(
+node_modules\effect\src\internal\stream.ts:7440:  unfoldChunkEffect(s, (\1: any) => pipe(f(s), Effect.map(Option.map(([a, s]) => [Chunk.of(a), s]))))
+node_modules\effect\src\internal\stream.ts:7861:                    Chunk.map(leftChunk, ([k, a]) => [k, options.onSelf(a)]),
+node_modules\effect\src\internal\stream.ts:7876:                    Chunk.map(rightChunk, ([k, a2]) => [k, options.onOther(a2)]),
+node_modules\effect\src\internal\stream.ts:7909:                        pipe(leftOption.value, Chunk.map(([k, a]) => [k, options.onSelf(a)])),
+node_modules\effect\src\internal\stream.ts:7922:                        pipe(rightOption.value, Chunk.map(([k, a2]) => [k, options.onOther(a2)])),
+node_modules\effect\src\internal\stream.ts:7939:                    pipe(state.rightChunk, Chunk.map(([k, a2]) => [k, options.onOther(a2)])),
+node_modules\effect\src\internal\stream.ts:7967:                      Chunk.map(state.leftChunk, ([k, a]) => [k, options.onSelf(a)]),
+node_modules\effect\src\internal\stream.ts:8128:                  Chunk.map(leftChunk, options.onSelf),
+node_modules\effect\src\internal\stream.ts:8140:                  Chunk.map(rightChunk, options.onOther),
+node_modules\effect\src\internal\stream.ts:8168:                      Chunk.map(leftOption.value, options.onSelf),
+node_modules\effect\src\internal\stream.ts:8176:                      Chunk.map(rightOption.value, options.onOther),
+node_modules\effect\src\internal\stream.ts:8192:                    Chunk.map(state.rightChunk, options.onOther),
+node_modules\effect\src\internal\stream.ts:8221:                      Chunk.map(state.leftChunk, options.onSelf),
+node_modules\effect\src\internal\stream.ts:8307:    return map(streams[0]!, (\1: any) => [x]) as any
+node_modules\effect\src\internal\stream.ts:8341:      Effect.map(pullNonEmpty),
+node_modules\effect\src\internal\stream.ts:8342:      Effect.zip(pipe(toPull(right), Effect.map(pullNonEmpty))),
+node_modules\effect\src\internal\stream.ts:8368:                      pipe(r, Chunk.map((\1: any) => f(Chunk.unsafeLast(l), a2))) :
+node_modules\effect\src\internal\stream.ts:8369:                      pipe(l, Chunk.map((\1: any) => f(a, Chunk.unsafeLast(r))))
+node_modules\effect\src\internal\stream.ts:8380:                                pipe(leftChunk, Chunk.map((\1: any) => f(a, rightLatest))),
+node_modules\effect\src\internal\stream.ts:8388:                                pipe(rightChunk, Chunk.map((\1: any) => f(leftLatest, a2))),
+node_modules\effect\src\internal\stream.ts:8624:          (prev, curr) => [Option.some(curr), pipe(prev, Option.map((\1: any) => [a, curr] as const))] as const
+node_modules\effect\src\internal\stream.ts:8670:    map(([[prev, curr], next]) => [prev, curr, pipe(next, Option.map((\1: any) => tuple[1]))])
+node_modules\effect\src\internal\stream.ts:8733:    map(
+node_modules\effect\src\internal\stream.ts:8779:    return map(self, (\1: any) => decoder.decode(s))
+node_modules\effect\src\internal\stream.ts:8786:    return map(self, (\1: any) => encoder.encode(s))
+node_modules\effect\src\internal\string-utils.ts:55:  return result.slice(start, end).split("\0").map(transform).join(delimiter)
+node_modules\effect\src\internal\subscriptionRef.ts:51:        Effect.map(
+node_modules\effect\src\internal\subscriptionRef.ts:94:    Effect.map(([pubsub, ref, semaphore]) => new SubscriptionRefImpl(ref, pubsub, semaphore))
+node_modules\effect\src\internal\supervisor.ts:68:    return new ProxySupervisor(this, pipe(this.value, core.map(f)))
+node_modules\effect\src\internal\supervisor.ts:122:    return new ProxySupervisor(this, pipe(this.value, core.map(f)))
+node_modules\effect\src\internal\supervisor.ts:170:    return new ProxySupervisor(this, pipe(this.value, core.map(f)))
+node_modules\effect\src\internal\supervisor.ts:221:    return new ProxySupervisor(this, pipe(this.value, core.map(f)))
+node_modules\effect\src\internal\supervisor.ts:269:    return new ProxySupervisor(this, pipe(this.value, core.map(f)))
+node_modules\effect\src\internal\synchronizedRef.ts:13:    (\1: any) => core.map(f(value), (\1: any) => [value, result] as const)
+node_modules\effect\src\internal\synchronizedRef.ts:33:        return core.map(result.value, (\1: any) => [value, newValue] as const)
+node_modules\effect\src\internal\synchronizedRef.ts:79:    core.map(
+node_modules\effect\src\internal\synchronizedRef.ts:91:    (\1: any) => core.map(f(value), (\1: any) => [result, result] as const)
+node_modules\effect\src\internal\synchronizedRef.ts:111:        return core.map(result.value, (\1: any) => [void 0, a] as const)
+node_modules\effect\src\internal\take.ts:57:  new TakeImpl(Exit.failCause(pipe(cause, Cause.map(Option.some))))
+node_modules\effect\src\internal\take.ts:181:    new TakeImpl(pipe(self.exit, Exit.map(Chunk.map(f))))
+node_modules\effect\src\internal\trie.ts:60:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\Iterable.ts:1092:  <A, B>(self: Iterable<A>, f: (a: A, i: number) => Iterable<B>): Iterable<B> => flatten(map(self, f))
+node_modules\effect\src\Iterable.ts:1513:    flatMap(self, (\1: any) => map(that, (\1: any) => f(a, b)))
+node_modules\effect\src\JSONSchema.ts:644:      const elements = ast.elements.map((e, i) => ({
+node_modules\effect\src\JSONSchema.ts:648:      const rest = ast.rest.map((\1: any) => ({
+node_modules\effect\src\JSONSchema.ts:798:              anyOf: anyOf.map(addEnumType),
+node_modules\effect\src\JSONSchema.ts:841:      const anyOf = ast.enums.map((\1: any) => addEnumType({ title: e[0], enum: [e[1]] }))
+node_modules\effect\src\Layer.ts:1550:    map(context(), (\1: any) => Context.add(c, tag, f(Context.unsafeGet(c, tag))))
+node_modules\effect\src\LayerMap.ts:147:        Effect.map(([patch, context]) => ({
+node_modules\effect\src\LayerMap.ts:180:    get: (\1: any) => Layer.unwrapScoped(Effect.map(RcMap.get(rcMap, key), ({ layer }) => layer)),
+node_modules\effect\src\LayerMap.ts:357:  TagClass_.get = (key: string) => Layer.unwrapScoped(Effect.map(TagClass_, (\1: any) => layerMap.get(key)))
+node_modules\effect\src\List.ts:110:      values: toArray(this).map(toJSON)
+node_modules\effect\src\Micro.ts:1296:} = dual(2, <A, E, R, B>(self: Micro<A, E, R>, value: B): Micro<B, E, R> => map(self, (\1: any) => value))
+node_modules\effect\src\Micro.ts:1305:export const asSome = <A, E, R>(self: Micro<A, E, R>): Micro<Option.Option<A>, E, R> => map(self, Option.some)
+node_modules\effect\src\Micro.ts:2474:    ? map(all([self, that], { concurrency: 2 }), ([a, a2]) => f(a, a2))
+node_modules\effect\src\Micro.ts:2475:    : flatMap(self, (\1: any) => map(that, (\1: any) => f(a, a2))))
+node_modules\effect\src\Micro.ts:3015:    Option.map(self(attempt, elapsed), (\1: any) => duration + f())
+node_modules\effect\src\Micro.ts:3048:    Option.map(self(attempt, elapsed), (\1: any) => Math.min(duration, max))
+node_modules\effect\src\Micro.ts:4890:        map(effect, (\1: any) => {
+node_modules\effect\src\Micro.ts:5097:    map(f(a), (\1: any) => {
+node_modules\effect\src\Micro.ts:5123:        map(f(a), (\1: any) => {
+node_modules\effect\src\MutableHashMap.ts:46:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\MutableHashSet.ts:124:      .map(([_]) => _)[Symbol.iterator]()
+node_modules\effect\src\MutableHashSet.ts:132:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\MutableHashSet.ts:296:    MutableHashMap.fromIterable(Array.from(keys).map((\1: any) => [k, true]))
+node_modules\effect\src\MutableList.ts:63:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\MutableQueue.ts:59:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\Option.ts:943:    isNone(self) ? map(that(), either.right) : map(self, either.left)
+node_modules\effect\src\Option.ts:1293: * console.log(Option.map(someValue, (\1: any) => n * 2))
+node_modules\effect\src\Option.ts:1299: * console.log(Option.map(noneValue, (\1: any) => n * 2))
+node_modules\effect\src\Option.ts:1328:   * console.log(Option.map(someValue, (\1: any) => n * 2))
+node_modules\effect\src\Option.ts:1334:   * console.log(Option.map(noneValue, (\1: any) => n * 2))
+node_modules\effect\src\Option.ts:1363:   * console.log(Option.map(someValue, (\1: any) => n * 2))
+node_modules\effect\src\Option.ts:1369:   * console.log(Option.map(noneValue, (\1: any) => n * 2))
+node_modules\effect\src\Option.ts:1484:} = dual(2, <X, B>(self: Option<X>, b: B): Option<B> => map(self, () => b))
+node_modules\effect\src\Option.ts:2389:} = dual(2, <A, X>(self: Option<A>, f: (a: A) => Option<X>): Option<A> => flatMap(self, (\1: any) => map(f(a), () => a)))
+node_modules\effect\src\Option.ts:2626:    map(product(self, that), ([a, b]) => f(a, b))
+node_modules\effect\src\ParseResult.ts:353:    Either.map(self, f) :
+node_modules\effect\src\ParseResult.ts:354:    Effect.map(self, f)
+node_modules\effect\src\ParseResult.ts:921:      const elements = ast.elements.map((\1: any) => goMemo(e.type, isDecoding))
+node_modules\effect\src\ParseResult.ts:922:      const rest = ast.rest.map((\1: any) => goMemo(annotatedAST.type, isDecoding))
+node_modules\effect\src\ParseResult.ts:928:      const expectedIndexes = ast.elements.length > 0 ? ast.elements.map((_, i) => i).join(" | ") : "never"
+node_modules\effect\src\ParseResult.ts:1156:      const indexSignatures = ast.indexSignatures.map((\1: any) =>
+node_modules\effect\src\ParseResult.ts:1164:        ast.indexSignatures.map((is): AST.AST => is.parameter).concat(
+node_modules\effect\src\ParseResult.ts:1165:          expectedKeys.map((\1: any) => Predicate.isSymbol(key) ? new AST.UniqueSymbol(key) : new AST.Literal(key))
+node_modules\effect\src\ParseResult.ts:1701:  return es.sort(compare).map((\1: any) => t[1])
+node_modules\effect\src\ParseResult.ts:1747:          out = map(out, f)
+node_modules\effect\src\ParseResult.ts:1786:  formatIssue: (\1: any) => map(formatTree(issue), drawTree),
+node_modules\effect\src\ParseResult.ts:1852:          return Effect.map(union, (\1: any) => ({ message, override: false }))
+node_modules\effect\src\ParseResult.ts:1857:        return Effect.map(union.message, (\1: any) => ({ message, override: union.override }))
+node_modules\effect\src\ParseResult.ts:1918:  map(
+node_modules\effect\src\ParseResult.ts:1943:      return map(formatTypeMessage(issue), makeTree)
+node_modules\effect\src\ParseResult.ts:1949:      return map(formatMissingMessage(issue), makeTree)
+node_modules\effect\src\ParseResult.ts:1955:        return map(
+node_modules\effect\src\ParseResult.ts:1965:        return map(
+node_modules\effect\src\ParseResult.ts:1971:      return map(formatTree(issue.issue), (\1: any) => makeTree(util_.formatPath(issue.path), [tree]))
+node_modules\effect\src\ParseResult.ts:1979:          ? map(Effect.forEach(issue.issues, formatTree), (\1: any) => makeTree(parseIssueTitle, forest))
+node_modules\effect\src\ParseResult.ts:1980:          : map(formatTree(issue.issues), (\1: any) => makeTree(parseIssueTitle, [tree]))
+node_modules\effect\src\ParseResult.ts:2036:      return map(formatTypeMessage(issue), (\1: any) => [makeArrayFormatterIssue(parentTag ?? _tag, path, message)])
+node_modules\effect\src\ParseResult.ts:2042:      return map(formatMissingMessage(issue), (\1: any) => [makeArrayFormatterIssue(_tag, path, message)])
+node_modules\effect\src\ParseResult.ts:2051:          ? map(Effect.forEach(issue.issues, (\1: any) => getArrayFormatterIssues(issue, undefined, path)), Arr.flatten)
+node_modules\effect\src\Pretty.ts:55:      return annotation.value(...ast.typeParameters.map((\1: any) => go(tp, path)))
+node_modules\effect\src\Pretty.ts:85:    const elements = ast.elements.map((e, i) => go(e.type, path.concat(i)))
+node_modules\effect\src\Pretty.ts:86:    const rest = ast.rest.map((\1: any) => go(annotatedAST.type, path))
+node_modules\effect\src\Pretty.ts:127:    const propertySignaturesTypes = ast.propertySignatures.map((\1: any) => go(ps.type, path.concat(ps.name)))
+node_modules\effect\src\Pretty.ts:128:    const indexSignatureTypes = ast.indexSignatures.map((\1: any) => go(is.type, path))
+node_modules\effect\src\Pretty.ts:172:    const types = ast.types.map((\1: any) => [ParseResult.is({ ast } as any), go(ast, path)] as const)
+node_modules\effect\src\Readable.ts:72:  <A, E, R, B>(self: Readable<A, E, R>, f: (a: NoInfer<A>) => B): Readable<B, E, R> => make(core.map(self.get, f))
+node_modules\effect\src\Record.ts:796: * assert.deepStrictEqual(map({ a: 3, b: 5 }, f), { a: "-3", b: "-5" })
+node_modules\effect\src\Record.ts:800: * assert.deepStrictEqual(map({ a: 3, b: 5 }, g), { a: "A-3", b: "B-5" })
+node_modules\effect\src\Record.ts:817:   * assert.deepStrictEqual(map({ a: 3, b: 5 }, f), { a: "-3", b: "-5" })
+node_modules\effect\src\Record.ts:821:   * assert.deepStrictEqual(map({ a: 3, b: 5 }, g), { a: "A-3", b: "B-5" })
+node_modules\effect\src\Record.ts:838:   * assert.deepStrictEqual(map({ a: 3, b: 5 }, f), { a: "-3", b: "-5" })
+node_modules\effect\src\Record.ts:842:   * assert.deepStrictEqual(map({ a: 3, b: 5 }, g), { a: "A-3", b: "B-5" })
+node_modules\effect\src\Request.ts:354:      core.map(core.deferredMake<unknown, unknown>(), (\1: any) => ({ listeners: new internal.Listeners(), handle }))
+node_modules\effect\src\Schema.ts:160:  Effect.map(ParseResult.ArrayFormatter.formatIssue(issue), (\1: any) => ({
+node_modules\effect\src\Schema.ts:161:    issues: issues.map((\1: any) => ({
+node_modules\effect\src\Schema.ts:759:    ).map((\1: any) => [key, enums[key]])
+node_modules\effect\src\Schema.ts:1001:      typeParameters.map((\1: any) => tp.ast),
+node_modules\effect\src\Schema.ts:1002:      (...typeParameters) => options.decode(...typeParameters.map(make) as any),
+node_modules\effect\src\Schema.ts:1003:      (...typeParameters) => options.encode(...typeParameters.map(make) as any),
+node_modules\effect\src\Schema.ts:1134:          option_.some(new ParseResult.Type(ast, a, either.left.map((\1: any) => v.message).join(", "))) :
+node_modules\effect\src\Schema.ts:1278:  AST.Union.make(members.map((\1: any) => m.ast))
+node_modules\effect\src\Schema.ts:1505:    elements.map((\1: any) => isSchema(el) ? new AST.OptionalType(el.ast, false) : el.ast),
+node_modules\effect\src\Schema.ts:1506:    rest.map((\1: any) => isSchema(el) ? new AST.Type(el.ast) : el.ast),
+node_modules\effect\src\Schema.ts:3514:  asts.map((\1: any) => new AST.Refinement(ast, refinement.filter, preserveRefinementAnnotations(refinement)))
+node_modules\effect\src\Schema.ts:3613:                          ParseResult.map(
+node_modules\effect\src\Schema.ts:3618:                          ParseResult.map(
+node_modules\effect\src\Schema.ts:4408:  return Union(...pairs.map(([from, to]) => transformLiteral(from, to)))
+node_modules\effect\src\Schema.ts:5386:  arbitrary: (): LazyArbitrary<URL> => (\1: any) => fc.webUrl().map((\1: any) => new URL(s)),
+node_modules\effect\src\Schema.ts:6271:  value(fc).map(redacted_.make)
+node_modules\effect\src\Schema.ts:6363:        fc.bigInt({ min: 0n }).map((\1: any) => duration_.nanos(_)),
+node_modules\effect\src\Schema.ts:6364:        fc.maxSafeNat().map((\1: any) => duration_.millis(_))
+node_modules\effect\src\Schema.ts:7359:      fc.date({ noInvalidDate: true }).map((\1: any) => dateTime.unsafeFromDate(date)),
+node_modules\effect\src\Schema.ts:7419:  fc.integer({ min: -12 * 60 * 60 * 1000, max: 14 * 60 * 60 * 1000 }).map(dateTime.zoneMakeOffset)
+node_modules\effect\src\Schema.ts:7454:  fc.constantFrom(...Intl.supportedValuesOf("timeZone")).map(dateTime.zoneUnsafeMakeNamed)
+node_modules\effect\src\Schema.ts:7545:      ).map(([millis, timeZone]) => dateTime.unsafeMakeZoned(millis, { timeZone })),
+node_modules\effect\src\Schema.ts:7611:    ).map(optionDecode)
+node_modules\effect\src\Schema.ts:7853:  ).map(eitherDecode)
+node_modules\effect\src\Schema.ts:8034:    return (ctx.depthIdentifier !== undefined ? fc.oneof(ctx, fc.constant([]), items) : items).map((\1: any) => new Map(as))
+node_modules\effect\src\Schema.ts:8045:      .map(([k, v]) => `[${key(k)}, ${value(v)}]`)
+node_modules\effect\src\Schema.ts:8232:    return (ctx.depthIdentifier !== undefined ? fc.oneof(ctx, fc.constant([]), items) : items).map((\1: any) => new Set(as))
+node_modules\effect\src\Schema.ts:8236:  `new Set([${Array.from(set.values()).map((\1: any) => item(a)).join(", ")}])`
+node_modules\effect\src\Schema.ts:8366:    .map(([value, scale]) => bigDecimal_.make(value, scale))
+node_modules\effect\src\Schema.ts:8703:    return (ctx.depthIdentifier !== undefined ? fc.oneof(ctx, fc.constant([]), items) : items).map(chunk_.fromIterable)
+node_modules\effect\src\Schema.ts:8707:  `Chunk(${chunk_.toReadonlyArray(c).map(item).join(", ")})`
+node_modules\effect\src\Schema.ts:8790:  fastCheck_.array(item(fc), { minLength: 1 }).map((\1: any) => chunk_.unsafeFromNonEmptyArray(as as any))
+node_modules\effect\src\Schema.ts:8793:  `NonEmptyChunk(${chunk_.toReadonlyArray(c).map(item).join(", ")})`
+node_modules\effect\src\Schema.ts:8853:(\1: any) => item(fc).map(decodeData)
+node_modules\effect\src\Schema.ts:9323:            .map((p: any) => `${util_.formatPropertyKey(p)}: ${util_.formatUnknown((this)[p])}`)
+node_modules\effect\src\Schema.ts:9456:              : ParseResult.map(
+node_modules\effect\src\Schema.ts:9465:          arbitrary: (\1: any) => (\1: any) => arb(fc).map((\1: any) => new this(props)),
+node_modules\effect\src\Schema.ts:9589:          util_.ownKeys(fields).map((p: any) => `${util_.formatPropertyKey(p)}: ${util_.formatUnknown(this[p])}`)
+node_modules\effect\src\Schema.ts:9647:  })).FiberId.map(fiberIdDecode)
+node_modules\effect\src\Schema.ts:9824:  })).Cause.map(causeDecode)
+node_modules\effect\src\Schema.ts:10072:  ).map(exitDecode)
+node_modules\effect\src\Schema.ts:10194:    return (ctx.depthIdentifier !== undefined ? fc.oneof(ctx, fc.constant([]), items) : items).map(
+node_modules\effect\src\Schema.ts:10200:  `HashSet(${Array.from(set).map((\1: any) => item(a)).join(", ")})`
+node_modules\effect\src\Schema.ts:10283:  return (ctx.depthIdentifier !== undefined ? fc.oneof(ctx, fc.constant([]), items) : items).map(hashMap_.fromIterable)
+node_modules\effect\src\Schema.ts:10293:      .map(([k, v]) => `[${key(k)}, ${value(v)}]`)
+node_modules\effect\src\Schema.ts:10381:    return (ctx.depthIdentifier !== undefined ? fc.oneof(ctx, fc.constant([]), items) : items).map(list_.fromIterable)
+node_modules\effect\src\Schema.ts:10385:  `List(${Array.from(set).map((\1: any) => item(a)).join(", ")})`
+node_modules\effect\src\Schema.ts:10468:  return (ctx.depthIdentifier !== undefined ? fc.oneof(ctx, fc.constant([]), items) : items).map((\1: any) =>
+node_modules\effect\src\Schema.ts:10474:  `new SortedSet([${Array.from(sortedSet_.values(set)).map((\1: any) => item(a)).join(", ")}])`
+node_modules\effect\src\Schema.ts:11186:        return hook.value(...ast.typeParameters.map((\1: any) => go(tp, path)))
+node_modules\effect\src\Schema.ts:11221:      const elements = ast.elements.map((element, i) => go(element.type, path.concat(i)))
+node_modules\effect\src\Schema.ts:11222:      const rest = ast.rest.map((\1: any) => go(annotatedAST.type, path))
+node_modules\effect\src\Schema.ts:11267:      const propertySignatures = ast.propertySignatures.map((\1: any) => go(ps.type, path.concat(ps.name)))
+node_modules\effect\src\Schema.ts:11268:      const indexSignatures = ast.indexSignatures.map((\1: any) => go(is.type, path))
+node_modules\effect\src\Schema.ts:11346:        const tuples = candidates.map((\1: any) => [go(ast, path), ParseResult.is({ ast } as any)] as const)
+node_modules\effect\src\Schema.ts:11371:    encode: (a, _, ast) => ParseResult.map(encodeSymbol(a, ast), (\1: any) => SymbolStruct.make({ key }))
+node_modules\effect\src\SchemaAST.ts:509:      typeParameters: this.typeParameters.map((\1: any) => ast.toJSON()),
+node_modules\effect\src\SchemaAST.ts:1084:      () => `<enum ${this.enums.length} value(s): ${this.enums.map(([_, value]) => JSON.stringify(value)).join(" | ")}>`
+node_modules\effect\src\SchemaAST.ts:1133:      return type.types.map(templateLiteralSpanUnionTypeToString).join(" | ")
+node_modules\effect\src\SchemaAST.ts:1148:      return "${" + type.types.map(templateLiteralSpanUnionTypeToString).join(" | ") + "}"
+node_modules\effect\src\SchemaAST.ts:1212:      spans: this.spans.map((\1: any) => span.toJSON()),
+node_modules\effect\src\SchemaAST.ts:1219:  "`" + ast.head + ast.spans.map(String).join("") +
+node_modules\effect\src\SchemaAST.ts:1284:const getRestASTs = (rest: ReadonlyArray<Type>): ReadonlyArray<AST> => rest.map((\1: any) => annotatedAST.type)
+node_modules\effect\src\SchemaAST.ts:1327:      elements: this.elements.map((\1: any) => e.toJSON()),
+node_modules\effect\src\SchemaAST.ts:1328:      rest: this.rest.map((\1: any) => ast.toJSON()),
+node_modules\effect\src\SchemaAST.ts:1336:  const formattedElements = ast.elements.map(String)
+node_modules\effect\src\SchemaAST.ts:1345:        const formattedTail = tail.map(String).join(", ")
+node_modules\effect\src\SchemaAST.ts:1527:      propertySignatures: this.propertySignatures.map((\1: any) => ps.toJSON()),
+node_modules\effect\src\SchemaAST.ts:1528:      indexSignatures: this.indexSignatures.map((\1: any) => ps.toJSON()),
+node_modules\effect\src\SchemaAST.ts:1534:const formatIndexSignatures = (iss: ReadonlyArray<IndexSignature>): string => iss.map(String).join("; ")
+node_modules\effect\src\SchemaAST.ts:1538:    const pss = ast.propertySignatures.map(String).join("; ")
+node_modules\effect\src\SchemaAST.ts:1701:    return Option.getOrElse(getExpected(this), () => this.types.map(String).join(" | "))
+node_modules\effect\src\SchemaAST.ts:1709:      types: this.types.map((\1: any) => ast.toJSON()),
+node_modules\effect\src\SchemaAST.ts:1716:export const mapMembers = <A, B>(members: Members<A>, f: (a: A) => B): Members<B> => members.map(f) as any
+node_modules\effect\src\SchemaAST.ts:2123:      return type.types.map((\1: any) => getTemplateLiteralSpanTypePattern(type, capture)).join("|")
+node_modules\effect\src\SchemaAST.ts:2198:  return getPropertyKeys(ast).map((\1: any) => getPropertyKeyIndexedAccess(ast, name))
+node_modules\effect\src\SchemaAST.ts:2238:      return Union.make(ast.types.map(getNumberIndexedAccess))
+node_modules\effect\src\SchemaAST.ts:2302:        Union.make(ast.types.map((\1: any) => getPropertyKeyIndexedAccess(ast, name).type)),
+node_modules\effect\src\SchemaAST.ts:2321:      return ast.propertySignatures.map((\1: any) => ps.name)
+node_modules\effect\src\SchemaAST.ts:2412:      return new TypeLiteral(keys.map((\1: any) => getPropertyKeyIndexedAccess(ast, name)), [])
+node_modules\effect\src\SchemaAST.ts:2480:        ast.elements.map((\1: any) => new OptionalType(exact ? e.type : orUndefined(e.type), true)),
+node_modules\effect\src\SchemaAST.ts:2489:        ast.propertySignatures.map((\1: any) =>
+node_modules\effect\src\SchemaAST.ts:2492:        ast.indexSignatures.map((\1: any) => new IndexSignature(is.parameter, orUndefined(is.type), is.isReadonly))
+node_modules\effect\src\SchemaAST.ts:2495:      return Union.make(ast.types.map((\1: any) => partial(member, options)))
+node_modules\effect\src\SchemaAST.ts:2523:        ast.elements.map((\1: any) => new OptionalType(e.type, false)),
+node_modules\effect\src\SchemaAST.ts:2529:        ast.propertySignatures.map((\1: any) => new PropertySignature(f.name, f.type, false, f.isReadonly, f.annotations)),
+node_modules\effect\src\SchemaAST.ts:2533:      return Union.make(ast.types.map((\1: any) => required(member)))
+node_modules\effect\src\SchemaAST.ts:2674:        new TupleType(elements, rest.map((\1: any) => new Type(type)), ast.isReadonly, ast.annotations)
+node_modules\effect\src\SchemaAST.ts:2777:          rest.map((\1: any) => new Type(ast)),
+node_modules\effect\src\SchemaAST.ts:2913:      return ast.propertySignatures.map((p): AST =>
+node_modules\effect\src\SchemaAST.ts:2915:      ).concat(ast.indexSignatures.map((\1: any) => getEncodedParameter(is.parameter)))
+node_modules\effect\src\SchemaAST.ts:2956:          ast.propertySignatures.map((\1: any) => {
+node_modules\effect\src\SchemaAST.ts:2972:      return Union.make(ast.types.map((\1: any) => rename(ast, mapping)))
+node_modules\effect\src\SchemaAST.ts:2986:    onSome: (\1: any) => brands.map((\1: any) => ` & Brand<${util_.formatUnknown(brand)}>`).join("")
+node_modules\effect\src\SchemaAST.ts:2994:    Option.map((\1: any) => s + getBrands(ast))
+node_modules\effect\src\SortedMap.ts:62:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\SortedSet.ts:62:      values: Array.from(this).map(toJSON)
+node_modules\effect\src\SortedSet.ts:126:    fromTree(RBT.fromIterable(Array.from(iterable).map((\1: any) => [k, true]), ord))
+node_modules\effect\src\Stream.ts:3752: *       Stream.map((\1: any) => [key, words] as const)
+node_modules\effect\src\Stream.ts:3788:   *       Stream.map((\1: any) => [key, words] as const)
+node_modules\effect\src\Stream.ts:3829:   *       Stream.map((\1: any) => [key, words] as const)
+node_modules\effect\src\Stream.ts:4672: * const stream = Stream.make(1, 2, 3).pipe(Stream.map((\1: any) => n + 1))
+node_modules\effect\src\Stream.ts:4689:   * const stream = Stream.make(1, 2, 3).pipe(Stream.map((\1: any) => n + 1))
+node_modules\effect\src\Stream.ts:4706:   * const stream = Stream.make(1, 2, 3).pipe(Stream.map((\1: any) => n + 1))
+node_modules\effect\src\Stream.ts:4903: *   Stream.map((\1: any) => parseInt(s))
+node_modules\effect\src\Stream.ts:4924:   *   Stream.map((\1: any) => parseInt(s))
+node_modules\effect\src\Stream.ts:4945:   *   Stream.map((\1: any) => parseInt(s))
+node_modules\effect\src\Stream.ts:5609: *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:5634:   *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:5659:   *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:5748: *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:5773:   *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:5798:   *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:8875: *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:8902:   *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:8929:   *   Stream.map((\1: any) => n * 2),
+node_modules\effect\src\Stream.ts:9843: *     Effect.map((\1: any) => (b ? Option.some([n, -n]) : Option.some([n, n])))
+node_modules\effect\src\Subscribable.ts:73:    get: Effect.map(self.get, f),
+node_modules\effect\src\Subscribable.ts:74:    changes: Stream.map(self.changes, f)
+node_modules\effect\src\Subscribable.ts:113:    changes: Stream.unwrap(Effect.map(effect, (\1: any) => s.changes))
+node_modules\effect\src\Supervisor.ts:215:    return new internal.ProxySupervisor(this, core.map(this.value, f))
+node_modules\effect\src\TestAnnotations.ts:74:    return core.map(Ref.get(this.ref), TestAnnotationMap.get(key))
+node_modules\effect\src\TestAnnotations.ts:90:              core.map(RA.reduce(SortedSet.empty(fiber.Order), (a, b) => SortedSet.union(a, b))),
+node_modules\effect\src\TestAnnotations.ts:91:              core.map(SortedSet.filter((\1: any) => !Equal.equals(fiber.id(), descriptor.id)))
+node_modules\effect\src\TestClock.ts:140:    this.currentTimeMillis = core.map(
+node_modules\effect\src\TestClock.ts:144:    this.currentTimeNanos = core.map(
+node_modules\effect\src\TestClock.ts:179:    return core.map(ref.get(this.clockState), (\1: any) => ref.set(this.clockState, data))
+node_modules\effect\src\TestClock.ts:219:    return core.map(
+node_modules\effect\src\TestClock.ts:221:      (\1: any) => Chunk.map(data.sleeps, (\1: any) => _[0])
+node_modules\effect\src\TestClock.ts:289:            core.map((\1: any) => WarningData.pending(fiber))
+node_modules\effect\src\TestClock.ts:369:            core.map((\1: any) => SuspendedWarningData.pending(fiber))
+node_modules\effect\src\TestServices.ts:125:      core.map(Annotations.make),
+node_modules\effect\src\TestServices.ts:219:      core.map(Live.make),
+node_modules\effect\src\TestServices.ts:325:      core.map(Sized.fromFiberRef),
+node_modules\effect\src\Trie.ts:1173: * assert.equal(Equal.equals(Trie.map(trie, (\1: any) => v + 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1174: * assert.equal(Equal.equals(Trie.map(trie, (_, k) => k.length), trieMapK), true)
+node_modules\effect\src\Trie.ts:1207:   * assert.equal(Equal.equals(Trie.map(trie, (\1: any) => v + 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1208:   * assert.equal(Equal.equals(Trie.map(trie, (_, k) => k.length), trieMapK), true)
+node_modules\effect\src\Trie.ts:1241:   * assert.equal(Equal.equals(Trie.map(trie, (\1: any) => v + 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1242:   * assert.equal(Equal.equals(Trie.map(trie, (_, k) => k.length), trieMapK), true)
+node_modules\effect\src\Tuple.ts:78: *   Tuple.map((\1: any) => el.toString().toUpperCase())
+node_modules\effect\src\Tuple.ts:97:   *   Tuple.map((\1: any) => el.toString().toUpperCase())
+node_modules\effect\src\Tuple.ts:116:   *   Tuple.map((\1: any) => el.toString().toUpperCase())
+node_modules\effect\src\Tuple.ts:130:  ): TupleOf<N, B> => self.map((\1: any) => fn(element)) as TupleOf<N, B>
+node_modules\fast-check\lib\esm\types\check\arbitrary\definition\Arbitrary.d.ts:102:     * const color: Arbitrary<string> = rgbChannels.map(ch => `#${(ch.r*65536 + ch.g*256 + ch.b).toString(16).padStart(6, '0')}`);
+node_modules\fast-check\lib\types\check\arbitrary\definition\Arbitrary.d.ts:102:     * const color: Arbitrary<string> = rgbChannels.map(ch => `#${(ch.r*65536 + ch.g*256 + ch.b).toString(16).padStart(6, '0')}`);
+node_modules\next\dist\build\webpack\loaders\metadata\resolve-route-data.d.ts:3:export declare function resolveSitemap(data: MetadataRoute.Sitemap): string;
+node_modules\next\node_modules\postcss\lib\lazy-result.d.ts:144:  get map(): SourceMap
+node_modules\next\node_modules\postcss\lib\no-work-result.d.ts:36:  get map(): SourceMap
+node_modules\next-auth\src\core\lib\cookie.ts:178:    return sortedKeys.map((\1: any) => this.#chunks[key]).join("")
+node_modules\next-auth\src\core\lib\cookie.ts:202:      chunks: cookies.map((\1: any) => c.value.length + ESTIMATED_EMPTY_COOKIE_SIZE),
+node_modules\next-auth\src\core\pages\signin.tsx:143:        {providersToRender.map((provider, i: number) => {
+node_modules\next-auth\src\core\pages\signin.tsx:247:                  {Object.keys(provider.credentials).map((\1: any) => {
+node_modules\next-auth\src\next\index.ts:89:        (await cookies()).getAll().map((\1: any) => [c.name, c.value])
+node_modules\next-auth\src\next\index.ts:194:        (await cookies()).getAll().map((\1: any) => [c.name, c.value])
+node_modules\parse-json\node_modules\type-fest\source\entries.d.ts:23:const manipulatesEntries = (examples: Entries<Example>) => examples.map(example => [
+node_modules\parse-json\node_modules\type-fest\source\union-to-intersection.d.ts:36:const union = [new CommandOne(), new CommandTwo()].map(instance => instance.commands);
+node_modules\postcss\lib\lazy-result.d.ts:104:  get map(): SourceMap
+node_modules\postcss\lib\no-work-result.d.ts:31:  get map(): SourceMap
+node_modules\read-package-up\node_modules\type-fest\source\entries.d.ts:23:const manipulatesEntries = (examples: Entries<Example>) => examples.map(example => [
+node_modules\read-package-up\node_modules\type-fest\source\union-to-intersection.d.ts:36:const union = [new CommandOne(), new CommandTwo()].map(instance => instance.commands);
+node_modules\read-pkg\node_modules\type-fest\source\entries.d.ts:23:const manipulatesEntries = (examples: Entries<Example>) => examples.map(example => [
+node_modules\read-pkg\node_modules\type-fest\source\union-to-intersection.d.ts:36:const union = [new CommandOne(), new CommandTwo()].map(instance => instance.commands);
+node_modules\tailwind-merge\src\lib\sort-modifiers.ts:10:        config.orderSensitiveModifiers.map((\1: any) => [modifier, true]),
+node_modules\tsconfig-paths\src\mapping-entry.ts:34:      paths: paths[key].map((\1: any) =>
+node_modules\tsconfig-paths\src\try-path.ts:38:          ...extensions.map(
+node_modules\tsconfig-paths\src\try-path.ts:48:          ...extensions.map(
+node_modules\type-fest\source\entries.d.ts:23:const manipulatesEntries = (examples: Entries<Example>) => examples.map(example => [
+node_modules\type-fest\source\union-to-intersection.d.ts:36:const union = [new CommandOne(), new CommandTwo()].map(instance => instance.commands);
+node_modules\typescript\lib\lib.dom.d.ts:18659:     * The **`ImageBitmapRenderingContext.transferFromImageBitmap()`** method displays the given ImageBitmap in the canvas associated with this rendering context.
+node_modules\typescript\lib\lib.dom.d.ts:18663:    transferFromImageBitmap(bitmap: ImageBitmap | null): void;
+node_modules\typescript\lib\lib.dom.d.ts:22401:     * The **`OffscreenCanvas.transferToImageBitmap()`** method creates an ImageBitmap object from the most recently rendered image of the `OffscreenCanvas`.
+node_modules\typescript\lib\lib.dom.d.ts:22405:    transferToImageBitmap(): ImageBitmap;
+node_modules\typescript\lib\lib.dom.d.ts:35408:    generateMipmap(target: GLenum): void;
+node_modules\typescript\lib\lib.dom.d.ts:36914:    createImageBitmap(image: ImageBitmapSource, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+node_modules\typescript\lib\lib.dom.d.ts:36915:    createImageBitmap(image: ImageBitmapSource, sx: number, sy: number, sw: number, sh: number, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+node_modules\typescript\lib\lib.dom.d.ts:39139:declare function createImageBitmap(image: ImageBitmapSource, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+node_modules\typescript\lib\lib.dom.d.ts:39140:declare function createImageBitmap(image: ImageBitmapSource, sx: number, sy: number, sw: number, sh: number, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+node_modules\typescript\lib\lib.es2020.bigint.d.ts:280:    map(callbackfn: (value: bigint, index: number, array: BigInt64Array<TArrayBuffer>) => bigint, thisArg?: any): BigInt64Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es2020.bigint.d.ts:571:    map(callbackfn: (value: bigint, index: number, array: BigUint64Array<TArrayBuffer>) => bigint, thisArg?: any): BigUint64Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:2011:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Int8Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:2293:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Uint8Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:2575:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Uint8ClampedArray<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:2856:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Int16Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3138:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Uint16Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3419:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Int32Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3700:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Uint32Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3982:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Float32Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:4264:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Float64Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.esnext.float16.d.ts:211:    map(callbackfn: (value: number, index: number, array: this) => number, thisArg?: any): Float16Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.webworker.d.ts:5540:     * The **`ImageBitmapRenderingContext.transferFromImageBitmap()`** method displays the given ImageBitmap in the canvas associated with this rendering context.
+node_modules\typescript\lib\lib.webworker.d.ts:5544:    transferFromImageBitmap(bitmap: ImageBitmap | null): void;
+node_modules\typescript\lib\lib.webworker.d.ts:6420:     * The **`OffscreenCanvas.transferToImageBitmap()`** method creates an ImageBitmap object from the most recently rendered image of the `OffscreenCanvas`.
+node_modules\typescript\lib\lib.webworker.d.ts:6424:    transferToImageBitmap(): ImageBitmap;
+node_modules\typescript\lib\lib.webworker.d.ts:11043:    generateMipmap(target: GLenum): void;
+node_modules\typescript\lib\lib.webworker.d.ts:12000:    createImageBitmap(image: ImageBitmapSource, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+node_modules\typescript\lib\lib.webworker.d.ts:12001:    createImageBitmap(image: ImageBitmapSource, sx: number, sy: number, sw: number, sh: number, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+node_modules\typescript\lib\lib.webworker.d.ts:12986:declare function createImageBitmap(image: ImageBitmapSource, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+node_modules\typescript\lib\lib.webworker.d.ts:12987:declare function createImageBitmap(image: ImageBitmapSource, sx: number, sy: number, sw: number, sh: number, options?: ImageBitmapOptions): Promise<ImageBitmap>;
+scripts\seedReferralBatches.ts:23:    ["invitee1@test.com", "invitee2@test.com", "invitee3@test.com"].map((\1: any) =>
+scripts\seedReferralBatches.ts:41:        connect: invitees.map((\1: any) => ({ id: user.id })),
+scripts\seedReferralBatches.ts:51:      inviteeIds: invitees.map((\1: any) => u.id),
+app\api\commissions\route.ts:23:      .filter((p: any) => p.status === "pending")
+app\api\commissions\route.ts:27:      .filter((p: any) => p.status === "approved")
+app\api\commissions\route.ts:31:      .filter((p: any) => p.status === "paid")
+app\api\referrals\route.ts:34:      .filter((\1: any) => u.email !== user.email)
+lib\referrals\evaluateReferralBadges.ts:9:  const active = groups.filter((\1: any) => g.expiresAt > new Date());
+node_modules\@types\node\readline.d.ts:76:         *     values.filter((\1: any) => val.startsWith(rl.line)).join(' '),
+node_modules\@types\node\ts4.8\readline.d.ts:76:         *     values.filter((\1: any) => val.startsWith(rl.line)).join(' '),
+node_modules\effect\dist\dts\Array.d.ts:5421: *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Array.d.ts:5469: *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Array.d.ts:5517:     *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Array.d.ts:5567:     *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Array.d.ts:5618: *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Array.d.ts:5666:     *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Array.d.ts:5716:     *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Array.d.ts:5776: *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\dist\dts\Effect.d.ts:2086: *   const result = yield* Effect.filter(numbers, predicate)
+node_modules\effect\dist\dts\Effect.d.ts:2131:     *   const result = yield* Effect.filter(numbers, predicate)
+node_modules\effect\dist\dts\Effect.d.ts:2181:     *   const result = yield* Effect.filter(numbers, predicate)
+node_modules\effect\dist\dts\Function.d.ts:558: * as.map(f).filter(g)
+node_modules\effect\dist\dts\Function.d.ts:566: * pipe(as, Array.map(f), Array.filter(g))
+node_modules\effect\dist\dts\HashSet.d.ts:1987: *   HashSet.filter(filterPositiveNumbers)
+node_modules\effect\dist\dts\HashSet.d.ts:1991: * HashSet.make(-2, -1, 0, 1, 2).pipe(HashSet.filter(filterPositiveNumbers))
+node_modules\effect\dist\dts\HashSet.d.ts:1994: * HashSet.filter(HashSet.make(-2, -1, 0, 1, 2), filterPositiveNumbers)
+node_modules\effect\dist\dts\HashSet.d.ts:2009: *   HashSet.filter(stringRefinement)
+node_modules\effect\dist\dts\HashSet.d.ts:2014: *   .pipe(HashSet.filter(stringRefinement)) // HashSet.HashSet<string>
+node_modules\effect\dist\dts\HashSet.d.ts:2017: * HashSet.filter(
+node_modules\effect\dist\dts\HashSet.d.ts:2041:     *   HashSet.filter(stringRefinement)
+node_modules\effect\dist\dts\HashSet.d.ts:2063:     *     HashSet.filter(filterPositiveNumbers)
+node_modules\effect\dist\dts\HashSet.d.ts:2085:     * const stringHashSet: HashSet.HashSet<string> = HashSet.filter(
+node_modules\effect\dist\dts\HashSet.d.ts:2104:     *   HashSet.filter(HashSet.make(-2, -1, 0, 1, 2), filterPositiveNumbers),
+node_modules\effect\dist\dts\Number.d.ts:145: * const onlyNumbers = mixed.filter(Number.isNumber)
+node_modules\effect\dist\dts\Option.d.ts:2763: *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\dist\dts\Option.d.ts:2789:     *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\dist\dts\Option.d.ts:2815:     *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\dist\dts\Option.d.ts:2841:     *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\dist\dts\Option.d.ts:2867:     *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\dist\dts\Option.d.ts:3458: *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Option.d.ts:3492:     *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Option.d.ts:3528:     *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Option.d.ts:3574: *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Option.d.ts:3608: *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Option.d.ts:3642:     *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Option.d.ts:3678:     *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Option.d.ts:3715: *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\dist\dts\Record.d.ts:886: * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\dist\dts\Record.d.ts:902:     * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\dist\dts\Record.d.ts:918:     * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\dist\dts\Record.d.ts:934:     * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\dist\dts\Record.d.ts:950:     * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\dist\dts\Stream.d.ts:2477: * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\dist\dts\Stream.d.ts:2494:     * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\dist\dts\Stream.d.ts:2511:     * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\dist\dts\Stream.d.ts:2528:     * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\dist\dts\Stream.d.ts:2545:     * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\dist\dts\Trie.d.ts:1246: * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1247: * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\dist\dts\Trie.d.ts:1277:     * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1278:     * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\dist\dts\Trie.d.ts:1308:     * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1309:     * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\dist\dts\Trie.d.ts:1339:     * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1340:     * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\dist\dts\Trie.d.ts:1370:     * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\dist\dts\Trie.d.ts:1371:     * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\src\Arbitrary.ts:371:    Option.filter(Predicate.isReadonlyRecord),
+node_modules\effect\src\Arbitrary.ts:377:    Option.filter(Predicate.isReadonlyRecord),
+node_modules\effect\src\Arbitrary.ts:741:  return (\1: any) => filters.reduce((arb, filter) => arb.filter(filter), arb(fc))
+node_modules\effect\src\Arbitrary.ts:791:      Option.isNone(ast.filter(a, SchemaAST.defaultParseOption, ast))
+node_modules\effect\src\Array.ts:4543:    (self: Iterable<A>, that: Iterable<A>): Array<A> => fromIterable(self).filter((\1: any) => has(that, a))
+node_modules\effect\src\Array.ts:4621:    (self: Iterable<A>, that: Iterable<A>): Array<A> => fromIterable(self).filter((\1: any) => !has(that, a))
+node_modules\effect\src\Array.ts:6318: *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Array.ts:6367: *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Array.ts:6415:   *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Array.ts:6465:   *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Array.ts:6519: *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Array.ts:6567:   *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Array.ts:6615:   *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Array.ts:6678:   *   Array.filter(({ x, y }) => x < y), // condition
+node_modules\effect\src\Chunk.ts:993:  <A>(self: Chunk<A>, predicate: Predicate<A>): Chunk<A> => unsafeFromArray(RA.filter(self, predicate))
+node_modules\effect\src\Cron.ts:243:  const segments = cron.split(" ").filter(String.isNonEmpty)
+node_modules\effect\src\Effect.ts:2212: *   const result = yield* Effect.filter(numbers, predicate)
+node_modules\effect\src\Effect.ts:2257:   *   const result = yield* Effect.filter(numbers, predicate)
+node_modules\effect\src\Effect.ts:2310:   *   const result = yield* Effect.filter(numbers, predicate)
+node_modules\effect\src\Function.ts:652: * as.map(f).filter(g)
+node_modules\effect\src\Function.ts:660: * pipe(as, Array.map(f), Array.filter(g))
+node_modules\effect\src\HashSet.ts:2040: *   HashSet.filter(filterPositiveNumbers)
+node_modules\effect\src\HashSet.ts:2044: * HashSet.make(-2, -1, 0, 1, 2).pipe(HashSet.filter(filterPositiveNumbers))
+node_modules\effect\src\HashSet.ts:2047: * HashSet.filter(HashSet.make(-2, -1, 0, 1, 2), filterPositiveNumbers)
+node_modules\effect\src\HashSet.ts:2062: *   HashSet.filter(stringRefinement)
+node_modules\effect\src\HashSet.ts:2067: *   .pipe(HashSet.filter(stringRefinement)) // HashSet.HashSet<string>
+node_modules\effect\src\HashSet.ts:2070: * HashSet.filter(
+node_modules\effect\src\HashSet.ts:2094:   *   HashSet.filter(stringRefinement)
+node_modules\effect\src\HashSet.ts:2119:   *     HashSet.filter(filterPositiveNumbers)
+node_modules\effect\src\HashSet.ts:2142:   * const stringHashSet: HashSet.HashSet<string> = HashSet.filter(
+node_modules\effect\src\HashSet.ts:2165:   *   HashSet.filter(HashSet.make(-2, -1, 0, 1, 2), filterPositiveNumbers),
+node_modules\effect\src\internal\configProvider.ts:136:      const filteredKeyPaths = keyPaths.filter((\1: any) => {
+node_modules\effect\src\internal\configProvider.ts:185:      const filteredKeyPaths = keyPaths.filter((\1: any) => {
+node_modules\effect\src\internal\configProvider.ts:789:      .filter(([, value]) => Predicate.isNotNullable(value))
+node_modules\effect\src\internal\dataSource.ts:34:          const filtered = block.filter((\1: any) => !_.state.completed).map((\1: any) => _.request)
+node_modules\effect\src\internal\dataSource.ts:41:        const filtered = requests[0].filter((\1: any) => !_.state.completed).map((\1: any) => _.request)
+node_modules\effect\src\internal\dateTime.ts:562:  const parts = self.zone.format.formatToParts(self.epochMillis).filter((\1: any) => _.type !== "literal")
+node_modules\effect\src\internal\fiberRuntime.ts:537:    this._observers = this._observers.filter((\1: any) => o !== observer)
+node_modules\effect\src\internal\fiberRuntime.ts:2204:            .filter(({ exit }) => exit._tag === "Failure")
+node_modules\effect\src\internal\pool.ts:410:            Iterable.filter(pool.invalidated, (\1: any) => !item.disableReclaim)
+node_modules\effect\src\internal\pubsub.ts:1328:    pipe(unsafePollAllQueue(queue), Chunk.filter((\1: any) => elem !== value))
+node_modules\effect\src\internal\pubsub.ts:1506:      pipe(unsafePollAllQueue(this.publishers), Chunk.filter(([_, a]) => a !== deferred))
+node_modules\effect\src\internal\queue.ts:625:      pipe(unsafePollAll(this.putters), Chunk.filter(([, _]) => _ !== deferred))
+node_modules\effect\src\internal\queue.ts:736:    pipe(unsafePollAll(queue), Chunk.filter((\1: any) => a !== b))
+node_modules\effect\src\internal\request.ts:175:        requests.filter((\1: any) => !(map.get(request)?.state.completed === true))
+node_modules\effect\src\internal\runtimeFlags.ts:130:  new Set(allFlags.filter((\1: any) => isEnabled(self, flag)))
+node_modules\effect\src\internal\sink.ts:730:    pipe(self, mapInputChunks(Chunk.filter(f)))
+node_modules\effect\src\internal\sink.ts:747:      (\1: any) => Effect.map(Effect.filter(chunk, f), Chunk.unsafeFromArray)
+node_modules\effect\src\internal\sink.ts:900:              ref: pipe(leftovers, Chunk.filter(Chunk.isNonEmpty)) as Chunk.Chunk<Chunk.Chunk<L1 | L2>>
+node_modules\effect\src\internal\stm\stm.ts:421:    filter(iterable, (\1: any) => negate(predicate(a)))
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:150:          const filtered: ReadonlyArray<A> = Arr.filter(value, predicate)
+node_modules\effect\src\internal\stream.ts:2506:  <A, E, R>(self: Stream.Stream<A, E, R>, predicate: Predicate<A>) => mapChunks(self, Chunk.filter(predicate))
+node_modules\effect\src\internal\stream.ts:7288:        const concatenated = Chunk.appendAll(leftover, Chunk.filter(chunk, (\1: any) => chunk.length !== 0))
+node_modules\effect\src\internal\trie.ts:100:          if (this.filter(key, value)) {
+node_modules\effect\src\JSONSchema.ts:452:      out.allOf = out.allOf.filter(filter)
+node_modules\effect\src\JSONSchema.ts:658:        output.minItems = len - ast.elements.filter((\1: any) => element.isOptional).length
+node_modules\effect\src\JSONSchema.ts:814:            const nnes = s.enum.filter((\1: any) => e !== null)
+node_modules\effect\src\Number.ts:151: * const onlyNumbers = mixed.filter(Number.isNumber)
+node_modules\effect\src\Option.ts:2964: *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\src\Option.ts:2990:   *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\src\Option.ts:3016:   *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\src\Option.ts:3042:   *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\src\Option.ts:3068:   *   Option.filter(input, (\1: any) => value !== "")
+node_modules\effect\src\Option.ts:3686: *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\Option.ts:3724:   *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\Option.ts:3762:   *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\Option.ts:3811:   *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\Option.ts:3847: *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\Option.ts:3881:   *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\Option.ts:3915:   *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\Option.ts:3955: *   Option.filter(({ x, y }) => x * y > 5)
+node_modules\effect\src\ParseResult.ts:829:                  ast.filter(i, options, ast),
+node_modules\effect\src\ParseResult.ts:840:                ast.filter(a, options, ast),
+node_modules\effect\src\ParseResult.ts:923:      let requiredTypes: Array<AST.Type> = ast.elements.filter((\1: any) => !e.isOptional)
+node_modules\effect\src\Record.ts:1057: * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\src\Record.ts:1073:   * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\src\Record.ts:1089:   * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\src\Record.ts:1105:   * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\src\Record.ts:1121:   * assert.deepStrictEqual(filter(x, (\1: any) => n > 2), { c: 3, d: 4 })
+node_modules\effect\src\Schema.ts:757:    Object.keys(enums).filter(
+node_modules\effect\src\Schema.ts:2512:            decode: option_.filter(Predicate.isNotNull<A | null>),
+node_modules\effect\src\Schema.ts:2528:          { decode: option_.filter(Predicate.isNotNull<A | null>), encode: identity }
+node_modules\effect\src\Schema.ts:2576:            decode: option_.filter(Predicate.isNotUndefined<A | undefined>),
+node_modules\effect\src\Schema.ts:2586:          { decode: option_.filter(Predicate.isNotNull<A | null | undefined>), encode: identity }
+node_modules\effect\src\Schema.ts:4036:    function filter(input: A, options: AST.ParseOptions, ast: AST.Refinement) {
+node_modules\effect\src\Schema.ts:4688:    filter((\1: any) => a === a.trim(), {
+node_modules\effect\src\Schema.ts:4717:      filter(
+node_modules\effect\src\Schema.ts:4751:    filter(
+node_modules\effect\src\Schema.ts:4788:      filter((\1: any) => a.length >= minLength && a.length <= maxLength, {
+node_modules\effect\src\Schema.ts:4798:    filter((\1: any) => a.length === minLength, {
+node_modules\effect\src\Schema.ts:4825:    filter(
+node_modules\effect\src\Schema.ts:4860:    filter(
+node_modules\effect\src\Schema.ts:4891:    filter(
+node_modules\effect\src\Schema.ts:4922:    filter(
+node_modules\effect\src\Schema.ts:4952:      filter((\1: any) => a === a.toLowerCase(), {
+node_modules\effect\src\Schema.ts:4985:      filter((\1: any) => a === a.toUpperCase(), {
+node_modules\effect\src\Schema.ts:5018:      filter((\1: any) => a[0]?.toUpperCase() === a[0], {
+node_modules\effect\src\Schema.ts:5051:      filter((\1: any) => a[0]?.toLowerCase() === a[0], {
+node_modules\effect\src\Schema.ts:5446:      filter(Number.isFinite, {
+node_modules\effect\src\Schema.ts:5479:    filter((\1: any) => a > exclusiveMinimum, {
+node_modules\effect\src\Schema.ts:5512:    filter((\1: any) => a >= minimum, {
+node_modules\effect\src\Schema.ts:5538:    filter((\1: any) => number_.remainder(a, divisor) === 0, {
+node_modules\effect\src\Schema.ts:5570:      filter((\1: any) => Number.isSafeInteger(a), {
+node_modules\effect\src\Schema.ts:5601:      filter((\1: any) => a < exclusiveMaximum, {
+node_modules\effect\src\Schema.ts:5634:    filter((\1: any) => a <= maximum, {
+node_modules\effect\src\Schema.ts:5668:    filter((\1: any) => a >= minimum && a <= maximum, {
+node_modules\effect\src\Schema.ts:5697:      filter((\1: any) => !Number.isNaN(a), {
+node_modules\effect\src\Schema.ts:5961:    filter((\1: any) => a > min, {
+node_modules\effect\src\Schema.ts:5992:    filter((\1: any) => a >= min, {
+node_modules\effect\src\Schema.ts:6025:    filter((\1: any) => a < max, {
+node_modules\effect\src\Schema.ts:6056:    filter((\1: any) => a <= max, {
+node_modules\effect\src\Schema.ts:6088:    filter((\1: any) => a >= min && a <= max, {
+node_modules\effect\src\Schema.ts:6379:  DurationFromSelf.pipe(filter((\1: any) => duration_.isFinite(duration), { description: "a finite duration" })),
+node_modules\effect\src\Schema.ts:6540:    filter((\1: any) => duration_.lessThan(a, max), {
+node_modules\effect\src\Schema.ts:6567:    filter((\1: any) => duration_.lessThanOrEqualTo(a, max), {
+node_modules\effect\src\Schema.ts:6592:    filter((\1: any) => duration_.greaterThan(a, min), {
+node_modules\effect\src\Schema.ts:6619:    filter((\1: any) => duration_.greaterThanOrEqualTo(a, min), {
+node_modules\effect\src\Schema.ts:6645:    filter((\1: any) => duration_.between(a, { minimum, maximum }), {
+node_modules\effect\src\Schema.ts:6884:    filter(
+node_modules\effect\src\Schema.ts:6926:    filter((\1: any) => a.length <= maxItems, {
+node_modules\effect\src\Schema.ts:6965:    filter((\1: any) => a.length === itemsCount, {
+node_modules\effect\src\Schema.ts:7101:      filter((\1: any) => !Number.isNaN(a.getTime()), {
+node_modules\effect\src\Schema.ts:7126:    filter((a: Date) => a < max, {
+node_modules\effect\src\Schema.ts:7153:    filter((a: Date) => a <= max, {
+node_modules\effect\src\Schema.ts:7178:    filter((a: Date) => a > min, {
+node_modules\effect\src\Schema.ts:7205:    filter((a: Date) => a >= min, {
+node_modules\effect\src\Schema.ts:7231:    filter((a: Date) => a <= max && a >= min, {
+node_modules\effect\src\Schema.ts:7794:  decode: (\1: any) => option_.filter(option_.some(i.trim()), string_.isNonEmpty),
+node_modules\effect\src\Schema.ts:8433:      filter((\1: any) => bigDecimal_.greaterThan(a, min), {
+node_modules\effect\src\Schema.ts:8460:      filter((\1: any) => bigDecimal_.greaterThanOrEqualTo(a, min), {
+node_modules\effect\src\Schema.ts:8485:      filter((\1: any) => bigDecimal_.lessThan(a, max), {
+node_modules\effect\src\Schema.ts:8512:      filter((\1: any) => bigDecimal_.lessThanOrEqualTo(a, max), {
+node_modules\effect\src\Schema.ts:8538:      filter((\1: any) => bigDecimal_.isPositive(a), {
+node_modules\effect\src\Schema.ts:8570:      filter((\1: any) => a.value >= 0n, {
+node_modules\effect\src\Schema.ts:8602:      filter((\1: any) => bigDecimal_.isNegative(a), {
+node_modules\effect\src\Schema.ts:8634:      filter((\1: any) => a.value <= 0n, {
+node_modules\effect\src\Schema.ts:8669:    filter((\1: any) => bigDecimal_.between(a, { minimum, maximum }), {
+node_modules\effect\src\SchemaAST.ts:2460:      indexSignatures = indexSignatures.filter((\1: any) => !isTemplateLiteral(getEncodedParameter(is.parameter)))
+node_modules\effect\src\SchemaAST.ts:2464:  return pick(ast, getPropertyKeys(ast).filter((\1: any) => !keys.includes(name)))
+node_modules\effect\src\Stream.ts:2681: * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\src\Stream.ts:2698:   * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\src\Stream.ts:2715:   * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\src\Stream.ts:2732:   * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\src\Stream.ts:2749:   * const stream = Stream.range(1, 11).pipe(Stream.filter((\1: any) => n % 2 === 0))
+node_modules\effect\src\String.ts:369:    Option.filter(Option.some(self.charCodeAt(index)), (\1: any) => !isNaN(charCode))
+node_modules\effect\src\String.ts:468:  (self: string, index: number): Option.Option<string> => Option.filter(Option.some(self.charAt(index)), isNonEmpty)
+node_modules\effect\src\String.ts:521:  Option.filter(Option.some(self.indexOf(searchString)), number.greaterThanOrEqualTo(0))
+node_modules\effect\src\String.ts:536:  Option.filter(Option.some(self.lastIndexOf(searchString)), number.greaterThanOrEqualTo(0))
+node_modules\effect\src\String.ts:691:    Option.filter(Option.some(self.search(regexp)), number.greaterThanOrEqualTo(0))
+node_modules\effect\src\TestAnnotations.ts:91:              core.map(SortedSet.filter((\1: any) => !Equal.equals(fiber.id(), descriptor.id)))
+node_modules\effect\src\Trie.ts:1274: * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1275: * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\src\Trie.ts:1305:   * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1306:   * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\src\Trie.ts:1336:   * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1337:   * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\src\Trie.ts:1367:   * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1368:   * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\effect\src\Trie.ts:1398:   * assert.equal(Equal.equals(Trie.filter(trie, (\1: any) => v > 1), trieMapV), true)
+node_modules\effect\src\Trie.ts:1399:   * assert.equal(Equal.equals(Trie.filter(trie, (_, k) => k.length > 3), trieMapK), true)
+node_modules\fast-check\lib\esm\types\check\arbitrary\definition\Arbitrary.d.ts:64:     * const evenIntegerGenerator: Arbitrary<number> = integerGenerator.filter(e => e % 2 === 0);
+node_modules\fast-check\lib\esm\types\check\arbitrary\definition\Arbitrary.d.ts:85:     * const evenIntegerGenerator: Arbitrary<number> = integerGenerator.filter(e => e % 2 === 0);
+node_modules\fast-check\lib\esm\types\check\arbitrary\definition\Arbitrary.d.ts:94:    filter(predicate: (t: T) => boolean): Arbitrary<T>;
+node_modules\fast-check\lib\esm\types\stream\Stream.d.ts:99:    filter(f: (v: T) => boolean): Stream<T>;
+node_modules\fast-check\lib\types\check\arbitrary\definition\Arbitrary.d.ts:64:     * const evenIntegerGenerator: Arbitrary<number> = integerGenerator.filter(e => e % 2 === 0);
+node_modules\fast-check\lib\types\check\arbitrary\definition\Arbitrary.d.ts:85:     * const evenIntegerGenerator: Arbitrary<number> = integerGenerator.filter(e => e % 2 === 0);
+node_modules\fast-check\lib\types\check\arbitrary\definition\Arbitrary.d.ts:94:    filter(predicate: (t: T) => boolean): Arbitrary<T>;
+node_modules\fast-check\lib\types\stream\Stream.d.ts:99:    filter(f: (v: T) => boolean): Stream<T>;
+node_modules\ignore\index.d.ts:22:  filter(pathnames: readonly Pathname[]): Pathname[]
+node_modules\next-auth\src\core\lib\assert.ts:134:    ].filter((\1: any) => !adapter[method])
+node_modules\next-auth\src\core\pages\signin.tsx:67:  const providersToRender = providers.filter((\1: any) => {
+node_modules\next-auth\src\providers\boxyhq-saml.ts:31:        name: [profile.firstName, profile.lastName].filter(Boolean).join(" "),
+node_modules\next-auth\src\providers\email.ts:137:      const failed = result.rejected.concat(result.pending).filter(Boolean)
+node_modules\next-auth\src\providers\vk.ts:303:        name: [profile.first_name, profile.last_name].filter(Boolean).join(" "),
+node_modules\postcss-selector-parser\postcss-selector-parser.d.ts:296:        filter(callback: (node: Child) => boolean): Child[];
+node_modules\tinyglobby\node_modules\fdir\dist\builder\index.d.ts:24:    filter(predicate: FilterPredicate): this;
+node_modules\typescript\lib\lib.es2020.bigint.d.ts:203:    filter(predicate: (value: bigint, index: number, array: BigInt64Array<TArrayBuffer>) => any, thisArg?: any): BigInt64Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es2020.bigint.d.ts:494:    filter(predicate: (value: bigint, index: number, array: BigUint64Array<TArrayBuffer>) => any, thisArg?: any): BigUint64Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:1287:    filter(predicate: (value: T, index: number, array: readonly T[]) => unknown, thisArg?: any): T[];
+node_modules\typescript\lib\lib.es5.d.ts:1482:    filter(predicate: (value: T, index: number, array: T[]) => unknown, thisArg?: any): T[];
+node_modules\typescript\lib\lib.es5.d.ts:1942:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Int8Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:2224:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Uint8Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:2506:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Uint8ClampedArray<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:2788:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Int16Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3069:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Uint16Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3350:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Int32Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3632:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Uint32Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:3913:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Float32Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.es5.d.ts:4195:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Float64Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.esnext.float16.d.ts:91:    filter(predicate: (value: number, index: number, array: this) => any, thisArg?: any): Float16Array<ArrayBuffer>;
+node_modules\typescript\lib\lib.esnext.iterator.d.ts:62:        filter(predicate: (value: T, index: number) => unknown): IteratorObject<T, undefined, unknown>;
+app\api\commissions\route.ts:24:      .reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
+app\api\commissions\route.ts:28:      .reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
+app\api\commissions\route.ts:32:      .reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
+lib\engines\autoPayoutEngine.ts:44:    const totalAmount = approvedCommissions.reduce((sum, c) => sum + c.amount, 0);
+lib\payouts\autoPayoutEngine.ts:35:    const totalApproved = approvedPayouts.reduce((sum, p) => sum + p.amount, 0);
+lib\payouts\autoPayoutEngine.ts:83:  return all.reduce((sum, log) => sum + log.amount, 0);
+node_modules\effect\dist\dts\Array.d.ts:4540: * const result = Array.reduce([1, 2, 3], 0, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Array.d.ts:4556:     * const result = Array.reduce([1, 2, 3], 0, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Array.d.ts:4572:     * const result = Array.reduce([1, 2, 3], 0, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Effect.d.ts:3163: * const program = Effect.reduce(
+node_modules\effect\dist\dts\Effect.d.ts:3215:     * const program = Effect.reduce(
+node_modules\effect\dist\dts\Effect.d.ts:3267:     * const program = Effect.reduce(
+node_modules\effect\dist\dts\HashSet.d.ts:1922: * pipe(HashSet.make(0, 1, 2), HashSet.reduce(0, sum))
+node_modules\effect\dist\dts\HashSet.d.ts:1925: * HashSet.make(0, 1, 2).pipe(HashSet.reduce(0, sum))
+node_modules\effect\dist\dts\HashSet.d.ts:1928: * HashSet.reduce(HashSet.make(0, 1, 2), 0, sum)
+node_modules\effect\dist\dts\HashSet.d.ts:1942:     *     HashSet.reduce(10, (accumulator, value) => accumulator + value)
+node_modules\effect\dist\dts\HashSet.d.ts:1957:     *   HashSet.reduce(
+node_modules\effect\dist\dts\Trie.d.ts:1021: *     Trie.reduce(0, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Trie.d.ts:1027: *     Trie.reduce(10, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Trie.d.ts:1033: *     Trie.reduce("", (acc, _, key) => acc + key)
+node_modules\effect\dist\dts\Trie.d.ts:1059:     *     Trie.reduce(0, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Trie.d.ts:1065:     *     Trie.reduce(10, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Trie.d.ts:1071:     *     Trie.reduce("", (acc, _, key) => acc + key)
+node_modules\effect\dist\dts\Trie.d.ts:1097:     *     Trie.reduce(0, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Trie.d.ts:1103:     *     Trie.reduce(10, (acc, n) => acc + n)
+node_modules\effect\dist\dts\Trie.d.ts:1109:     *     Trie.reduce("", (acc, _, key) => acc + key)
+node_modules\effect\src\Arbitrary.ts:672:    : description.constraints.reduce(mergeStringConstraints)
+node_modules\effect\src\Arbitrary.ts:690:    : description.constraints.reduce(mergeNumberConstraints)
+node_modules\effect\src\Arbitrary.ts:703:    : description.constraints.reduce(mergeBigIntConstraints)
+node_modules\effect\src\Arbitrary.ts:717:    : description.constraints.reduce(mergeDateConstraints)
+node_modules\effect\src\Arbitrary.ts:732:    : description.constraints.reduce(mergeArrayConstraints)
+node_modules\effect\src\Arbitrary.ts:741:  return (\1: any) => filters.reduce((arb, filter) => arb.filter(filter), arb(fc))
+node_modules\effect\src\Array.ts:5302: * const result = Array.reduce([1, 2, 3], 0, (acc, n) => acc + n)
+node_modules\effect\src\Array.ts:5318:   * const result = Array.reduce([1, 2, 3], 0, (acc, n) => acc + n)
+node_modules\effect\src\Array.ts:5334:   * const result = Array.reduce([1, 2, 3], 0, (acc, n) => acc + n)
+node_modules\effect\src\Array.ts:5345:    fromIterable(self).reduce((b, a, i) => f(b, a, i), b)
+node_modules\effect\src\Array.ts:5753:} = dual(2, <A>(self: NonEmptyReadonlyArray<A>, O: Order.Order<A>): A => self.reduce(Order.min(O)))
+node_modules\effect\src\Array.ts:5800:} = dual(2, <A>(self: NonEmptyReadonlyArray<A>, O: Order.Order<A>): A => self.reduce(Order.max(O)))
+node_modules\effect\src\Effect.ts:3347: * const program = Effect.reduce(
+node_modules\effect\src\Effect.ts:3399:   * const program = Effect.reduce(
+node_modules\effect\src\Effect.ts:3451:   * const program = Effect.reduce(
+node_modules\effect\src\HashSet.ts:1973: * pipe(HashSet.make(0, 1, 2), HashSet.reduce(0, sum))
+node_modules\effect\src\HashSet.ts:1976: * HashSet.make(0, 1, 2).pipe(HashSet.reduce(0, sum))
+node_modules\effect\src\HashSet.ts:1979: * HashSet.reduce(HashSet.make(0, 1, 2), 0, sum)
+node_modules\effect\src\HashSet.ts:1993:   *     HashSet.reduce(10, (accumulator, value) => accumulator + value)
+node_modules\effect\src\HashSet.ts:2009:   *   HashSet.reduce(
+node_modules\effect\src\internal\blockedRequests.ts:94:): RequestBlock.RequestBlock => reduce(self, MapRequestResolversReducer(f))
+node_modules\effect\src\internal\blockedRequests.ts:134:  const result = List.reduce(output, List.empty<Z>(), (acc, current) => {
+node_modules\effect\src\internal\blockedRequests.ts:175:    const [parallel, sequential] = List.reduce(
+node_modules\effect\src\internal\blockedRequests.ts:398:  new ParallelImpl(HashMap.reduce(self.map, that.map, (map, value, key) =>
+node_modules\effect\src\internal\blockedRequests.ts:460:  new SequentialImpl(HashMap.reduce(that.map, self.map, (map, value, key) =>
+node_modules\effect\src\internal\cause.ts:168:  return reduce(self, true, (acc, cause) => {
+node_modules\effect\src\internal\cause.ts:226:  reduce(self, HashSet.empty<FiberId.FiberId>(), (set, cause) =>
+node_modules\effect\src\internal\cause.ts:415:  return reduce(self, false, (accumulator, cause) => {
+node_modules\effect\src\internal\cause.ts:427:      reduce(
+node_modules\effect\src\internal\cause.ts:442:      reduce(
+node_modules\effect\src\internal\cause.ts:488:      Arr.reduce(
+node_modules\effect\src\internal\channel\channelExecutor.ts:955:          upstreamPullRequest.NoUpstream(rest.reduce((n, curr) => curr !== undefined ? n + 1 : n, 0))
+node_modules\effect\src\internal\channel\subexecutor.ts:114:    const result = fins.reduce(
+node_modules\effect\src\internal\channel\subexecutor.ts:180:    const result = fins.reduce(
+node_modules\effect\src\internal\configProvider.ts:591:  const unnest = Arr.reduce(path, self, (provider, name) => unnested(provider, name))
+node_modules\effect\src\internal\core-effect.ts:65:          Object.entries(args[1] as Record<string, unknown>).reduce(
+node_modules\effect\src\internal\core-effect.ts:736:      Arr.reduce(Chunk.headNonEmpty(list), (left, right) => core.orElse(left, () => right) as Eff)
+node_modules\effect\src\internal\core-effect.ts:1283:    Arr.fromIterable(elements).reduce(
+node_modules\effect\src\internal\core-effect.ts:2007:          Object.entries(args[1] as Record<string, unknown>).reduce(
+node_modules\effect\src\internal\core.ts:1900:): BlockedRequests.RequestBlock => blockedRequests_.reduce(self, LocallyReducer(ref, value))
+node_modules\effect\src\internal\core.ts:2810:    Arr.reduce(
+node_modules\effect\src\internal\dataSource.ts:120:            RA.reduce(
+node_modules\effect\src\internal\differ\hashMapPatch.ts:124:  const [removed, patch] = HashMap.reduce(
+node_modules\effect\src\internal\differ\hashMapPatch.ts:145:  return HashMap.reduce(
+node_modules\effect\src\internal\differ\hashSetPatch.ts:107:  const [removed, patch] = HashSet.reduce(
+node_modules\effect\src\internal\differ\hashSetPatch.ts:116:  return HashSet.reduce(patch, (patch, value: Value) => combine(makeRemove(value))(patch))(removed)
+node_modules\effect\src\internal\fiberId.ts:186:  return pipe(fiberIds, HashSet.reduce(none as FiberId.FiberId, (a, b) => combine(b)(a)))
+node_modules\effect\src\internal\fiberRuntime.ts:2302:                    const requests = residual.map((\1: any) => blocked.effect_instruction_i0).reduce(RequestBlock_.par)
+node_modules\effect\src\internal\fiberRuntime.ts:2513:        RA.fromIterable(elements).reduce(
+node_modules\effect\src\internal\fiberRuntime.ts:2659:                      RA.reduce(core.void, (effect, fiber) =>
+node_modules\effect\src\internal\fiberRuntime.ts:2679:                          RA.reduce(
+node_modules\effect\src\internal\fiberRuntime.ts:2723:              RA.reduce(
+node_modules\effect\src\internal\fiberRuntime.ts:2769:    () => RA.fromIterable(elements).reduce((acc, a, i) => core.zipWith(acc, a, (acc, a) => f(acc, a, i)), zero),
+node_modules\effect\src\internal\fiberRuntime.ts:3472:      RA.fromIterable(fibers).reduce((id, fiber) => FiberId.combine(id, fiber.id()), FiberId.none as FiberId.FiberId),
+node_modules\effect\src\internal\hashMap.ts:435:  reduce(
+node_modules\effect\src\internal\hashMap.ts:450:    reduce(self, empty(), (zero, value, key) =>
+node_modules\effect\src\internal\hashMap.ts:461:>(2, (self, f) => reduce(self, void 0 as void, (_, value, key) => f(value, key)))
+node_modules\effect\src\internal\hashSet.ts:271:  HM.reduce(
+node_modules\effect\src\internal\layer.ts:1174:          Object.entries(args[1] as Record<string, unknown>).reduce(
+node_modules\effect\src\internal\layer.ts:1207:          Object.entries(args[1] as Record<string, unknown>).reduce(
+node_modules\effect\src\internal\runtimeFlags.ts:106:  flags.reduce((a, b) => a | b, 0) as RuntimeFlags.RuntimeFlags
+node_modules\effect\src\internal\schedule\intervals.ts:28:  Array.from(intervals).reduce(
+node_modules\effect\src\internal\schedule.ts:381:  reduce(self, Chunk.empty<Out>(), (outs, out) => pipe(outs, Chunk.append(out)))
+node_modules\effect\src\internal\schedule.ts:1284:  reduce(self, 0, (n, _) => n + 1)
+node_modules\effect\src\internal\sink.ts:132:        Chunk.reduce(map, (map, input) => {
+node_modules\effect\src\internal\sink.ts:167:    (acc, chunk) => pipe(chunk, Chunk.reduce(acc, (acc, input) => pipe(acc, HashSet.add(input))))
+node_modules\effect\src\internal\sink.ts:1860:  (acc, chunk) => acc + Chunk.reduce(chunk, 0, (s, a) => s + a)
+node_modules\effect\src\internal\stm\stm.ts:396:    Array.from(iterable).reduce(
+node_modules\effect\src\internal\stm\stm.ts:594:      RA.fromIterable(iterable).reduce(
+node_modules\effect\src\internal\stm\stm.ts:852:      Array.from(iterable).reduce(
+node_modules\effect\src\internal\stm\stm.ts:1036:      Array.from(iterable).reduce(
+node_modules\effect\src\internal\stm\stm.ts:1062:    Array.from(iterable).reduce(
+node_modules\effect\src\internal\stm\tArray.ts:86:  reduce(
+node_modules\effect\src\internal\stm\tArray.ts:463:    stm.reduce(zero, f)
+node_modules\effect\src\internal\stm\tMap.ts:275:        result = Chunk.reduce(items, result, (acc, entry) => f(acc, entry[1], entry[0]))
+node_modules\effect\src\internal\stm\tMap.ts:296:    stm.reduce(zero, (acc, entry) => f(acc, entry[1], entry[0]))
+node_modules\effect\src\internal\stm\tMap.ts:673:  reduce(
+node_modules\effect\src\internal\stm\tMap.ts:681:  reduce(
+node_modules\effect\src\internal\stm\tMap.ts:689:  reduce(
+node_modules\effect\src\internal\stm\tMap.ts:700:  reduce(
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:45:        Arr.fromIterable(iterable).reduce(
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:100:    Arr.fromIterable(values).reduce(
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:149:        SortedMap.reduce(map, SortedMap.empty(SortedMap.getOrder(map)), (map, value, key) => {
+node_modules\effect\src\internal\stm\tPriorityQueue.ts:162:    (\1: any) => [SortedMap.reduce(map, 0, (n, as) => n + as.length), map]
+node_modules\effect\src\internal\stm\tReentrantLock.ts:66:    return Array.from(this.readers).reduce((acc, curr) => acc + curr[1], 0)
+node_modules\effect\src\internal\stm\tSet.ts:95:  tMap.reduce(
+node_modules\effect\src\internal\stm\tSet.ts:221:  reduce(
+node_modules\effect\src\internal\stream.ts:1390:        const [newLast, newChunk] = Chunk.reduce(
+node_modules\effect\src\internal\stream.ts:1433:            Effect.reduce([last, Chunk.empty<A>()] as const, ([option, outputs], output) => {
+node_modules\effect\src\internal\stream.ts:1709:  suspend(() => pipe(streams, Chunk.reduce(empty as Stream.Stream<A, E, R>, (x, y) => concat(y)(x))))
+node_modules\effect\src\internal\stream.ts:2127:                    Effect.reduce(Chunk.empty<number>(), (acc, [id, queue]) => {
+node_modules\effect\src\internal\stream.ts:2775:                Chunk.reduce(
+node_modules\effect\src\internal\stream.ts:3888:                  Effect.reduce(s, (s, a) =>
+node_modules\effect\src\internal\stream.ts:6375:          Chunk.reduce(
+node_modules\effect\src\internal\string-utils.ts:26:    : re.reduce((input, re) => input.replace(re, value), input)
+node_modules\effect\src\internal\supervisor\patch.ts:168:    HashSet.reduce(
+node_modules\effect\src\internal\supervisor\patch.ts:176:    HashSet.reduce(
+node_modules\effect\src\internal\trie.ts:283:  reduce(
+node_modules\effect\src\internal\trie.ts:298:    reduce(
+node_modules\effect\src\internal\trie.ts:312:  reduce(
+node_modules\effect\src\internal\trie.ts:328:>(2, (self, f) => reduce(self, void 0 as void, (_, value, key) => f(value, key)))
+node_modules\effect\src\Iterable.ts:1428:    return self.reduce(f, b)
+node_modules\effect\src\Number.ts:312:export const sumAll = (collection: Iterable<number>): number => _Iterable.reduce(collection, 0, sum)
+node_modules\effect\src\SchemaAST.ts:2323:      return ast.types.slice(1).reduce(
+node_modules\effect\src\SchemaAST.ts:2919:      return ast.types.slice(1).reduce(
+node_modules\effect\src\SortedMap.ts:225:  reduce(
+node_modules\effect\src\SortedMap.ts:249:>(3, (self, zero, f) => RBT.reduce(self.tree, zero, f))
+node_modules\effect\src\STM.ts:3022:    return Chunk.reduce(
+node_modules\effect\src\TestAnnotations.ts:90:              core.map(RA.reduce(SortedSet.empty(fiber.Order), (a, b) => SortedSet.union(a, b))),
+node_modules\effect\src\TestClock.ts:260:        effect.reduce(HashMap.empty<FiberId.FiberId, FiberStatus.FiberStatus>(), (map, fiber) =>
+node_modules\effect\src\Trie.ts:1047: *     Trie.reduce(0, (acc, n) => acc + n)
+node_modules\effect\src\Trie.ts:1053: *     Trie.reduce(10, (acc, n) => acc + n)
+node_modules\effect\src\Trie.ts:1059: *     Trie.reduce("", (acc, _, key) => acc + key)
+node_modules\effect\src\Trie.ts:1085:   *     Trie.reduce(0, (acc, n) => acc + n)
+node_modules\effect\src\Trie.ts:1091:   *     Trie.reduce(10, (acc, n) => acc + n)
+node_modules\effect\src\Trie.ts:1097:   *     Trie.reduce("", (acc, _, key) => acc + key)
+node_modules\effect\src\Trie.ts:1123:   *     Trie.reduce(0, (acc, n) => acc + n)
+node_modules\effect\src\Trie.ts:1129:   *     Trie.reduce(10, (acc, n) => acc + n)
+node_modules\effect\src\Trie.ts:1135:   *     Trie.reduce("", (acc, _, key) => acc + key)
+node_modules\next-auth\src\next\utils.ts:34:    res.headers?.reduce((acc, { key, value }) => {
+node_modules\parse-json\node_modules\type-fest\source\non-empty-tuple.d.ts:8:const sum = (...numbers: NonEmptyTuple<number>) => numbers.reduce((total, value) => total + value, 0);
+node_modules\postcss-selector-parser\postcss-selector-parser.d.ts:268:        reduce(
+node_modules\postcss-selector-parser\postcss-selector-parser.d.ts:276:        reduce(
+node_modules\read-package-up\node_modules\type-fest\source\non-empty-tuple.d.ts:8:const sum = (...numbers: NonEmptyTuple<number>) => numbers.reduce((total, value) => total + value, 0);
+node_modules\read-pkg\node_modules\type-fest\source\non-empty-tuple.d.ts:8:const sum = (...numbers: NonEmptyTuple<number>) => numbers.reduce((total, value) => total + value, 0);
+node_modules\tailwind-merge\src\lib\create-tailwind-merge.ts:21:        const config = createConfigRest.reduce(
+node_modules\tsconfig-paths\src\tsconfig-loader.ts:137:      base = extendedConfig.reduce(
+node_modules\typescript\lib\lib.es2020.bigint.d.ts:292:    reduce(callbackfn: (previousValue: bigint, currentValue: bigint, currentIndex: number, array: BigInt64Array<TArrayBuffer>) => bigint): bigint;
+node_modules\typescript\lib\lib.es2020.bigint.d.ts:583:    reduce(callbackfn: (previousValue: bigint, currentValue: bigint, currentIndex: number, array: BigUint64Array<TArrayBuffer>) => bigint): bigint;
+node_modules\typescript\lib\lib.es5.d.ts:1293:    reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number, array: readonly T[]) => T): T;
+node_modules\typescript\lib\lib.es5.d.ts:1294:    reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number, array: readonly T[]) => T, initialValue: T): T;
+node_modules\typescript\lib\lib.es5.d.ts:1488:    reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number, array: T[]) => T): T;
+node_modules\typescript\lib\lib.es5.d.ts:1489:    reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number, array: T[]) => T, initialValue: T): T;
+node_modules\typescript\lib\lib.es5.d.ts:2023:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:2024:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:2305:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:2306:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:2587:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:2588:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:2868:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:2869:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3150:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3151:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3431:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3432:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3712:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3713:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3994:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:3995:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.es5.d.ts:4276:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.es5.d.ts:4277:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.esnext.float16.d.ts:223:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number): number;
+node_modules\typescript\lib\lib.esnext.float16.d.ts:224:    reduce(callbackfn: (previousValue: number, currentValue: number, currentIndex: number, array: this) => number, initialValue: number): number;
+node_modules\typescript\lib\lib.esnext.iterator.d.ts:87:        reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number) => T): T;
+node_modules\typescript\lib\lib.esnext.iterator.d.ts:88:        reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number) => T, initialValue: T): T;

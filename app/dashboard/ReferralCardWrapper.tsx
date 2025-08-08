@@ -42,7 +42,7 @@ export default function ReferralStatusCard({ userId }: Props) {
 
   return (
     <div className="space-y-4">
-      {batches.map((batch) => {
+      {batches.map((\1: any) => {
         const daysLeft = Math.max(
           0,
           Math.floor(

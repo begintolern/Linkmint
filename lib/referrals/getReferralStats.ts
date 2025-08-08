@@ -32,7 +32,7 @@ export async function getReferralStats(userId: string): Promise<ReferralStats> {
   const now = new Date();
   const isExpired = isAfter(now, batch.expiresAt);
   const daysLeft = Math.max(0, differenceInDays(batch.expiresAt, now));
-  const inviteeEmails = batch.users.map((u) => u.email);
+  const inviteeEmails = batch.users.map((\1: any) => u.email);
 
   return {
     activeBatch: {

@@ -31,7 +31,7 @@ export async function GET() {
     let approved = 0;
     let paid = 0;
 
-    payouts.forEach((payout) => {
+    payouts.forEach((\1: any) => {
       const status = payout.status.toLowerCase(); // ✅ Normalize here
 
       if (status === "pending") {

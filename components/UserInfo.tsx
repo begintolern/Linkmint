@@ -7,8 +7,8 @@ export default function UserInfo() {
 
   useEffect(() => {
     fetch('/api/user')
-      .then((res) => res.json())
-      .then((data) => {
+      .then((\1: any) => res.json())
+      .then((\1: any) => {
         if (!data.error) setUser(data);
       });
   }, []);

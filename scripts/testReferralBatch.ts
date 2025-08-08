@@ -23,5 +23,5 @@ async function main() {
 }
 
 main()
-  .catch((e) => console.error(e))
+  .catch((\1: any) => console.error(e))
   .finally(() => process.exit());

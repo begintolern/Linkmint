@@ -57,21 +57,21 @@ function SignupForm() {
           placeholder="Name"
           className="w-full mb-3 p-2 border rounded"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(\1: any) => setName(e.target.value)}
         />
         <input
           type="email"
           placeholder="Email"
           className="w-full mb-3 p-2 border rounded"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(\1: any) => setEmail(e.target.value)}
         />
         <input
           type="password"
           placeholder="Password"
           className="w-full mb-3 p-2 border rounded"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(\1: any) => setPassword(e.target.value)}
         />
 
         <button

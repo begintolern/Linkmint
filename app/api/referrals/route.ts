@@ -31,8 +31,8 @@ export async function GET() {
     }
 
     const referredUsers = user.referralGroup.users
-      .filter((u) => u.email !== user.email)
-      .map((u) => u.email);
+      .filter((\1: any) => u.email !== user.email)
+      .map((\1: any) => u.email);
 
     const startedAt = user.referralGroup.startedAt;
     const expiresAt = startedAt ? addDays(new Date(startedAt), 90) : null;

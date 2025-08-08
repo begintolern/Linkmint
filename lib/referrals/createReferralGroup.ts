@@ -12,7 +12,7 @@ export async function createReferralGroup(referrerId: string, referredUserIds: s
       referrerId,
       expiresAt,
       users: {
-        connect: referredUserIds.map((id) => ({ id })), // ✅ Correct relation field
+        connect: referredUserIds.map((\1: any) => ({ id })), // ✅ Correct relation field
       },
     },
   });

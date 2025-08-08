@@ -13,14 +13,14 @@ async function main() {
   });
 
   console.log('Users:');
-  users.forEach((user) => {
+  users.forEach((\1: any) => {
     console.log(`- ${user.email} | ID: ${user.id} | Code: ${user.referralCode} | Referred By: ${user.referredById}`);
   });
 
   await prisma.$disconnect();
 }
 
-main().catch((e) => {
+main().catch((\1: any) => {
   console.error(e);
   prisma.$disconnect();
   process.exit(1);

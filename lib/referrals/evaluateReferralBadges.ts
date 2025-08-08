@@ -6,7 +6,7 @@ export async function evaluateReferralBadges(userId: string) {
     include: { users: true },
   });
 
-  const active = groups.filter((g) => g.expiresAt > new Date());
+  const active = groups.filter((\1: any) => g.expiresAt > new Date());
   const total = groups.length;
 
   let badge: string | null = null;

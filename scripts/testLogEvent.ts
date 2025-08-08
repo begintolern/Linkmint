@@ -23,5 +23,5 @@ async function main() {
 }
 
 main()
-  .catch((e) => console.error("❌ Error:", e))
+  .catch((\1: any) => console.error("❌ Error:", e))
   .finally(() => prisma.$disconnect());

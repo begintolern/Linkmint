@@ -9,8 +9,8 @@ export default function AutoPayoutStatusCard() {
 
   useEffect(() => {
     fetch("/api/admin/get-auto-payout-setting")
-      .then((res) => res.json())
-      .then((data) => {
+      .then((\1: any) => res.json())
+      .then((\1: any) => {
         setStatus(data.value);
       })
       .catch(() => setStatus(null))
