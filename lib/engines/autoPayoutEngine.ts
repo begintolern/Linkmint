@@ -1,38 +1,42 @@
 // lib/engines/autoPayoutEngine.ts
 import { prisma } from "@/lib/db";
+import { sendPayoutAlert } from "@/lib/alerts/sendPayoutAlert";
 
-/**
- * Auto Payout Engine
- * - Finds users with APPROVED commissions
- * - Sums them
- * - Creates a payout
- * - Marks those commissions as Paid
- *
- * If your Commission.status enum uses different casing (e.g., APPROVED/PAID),
- * change the strings below to match.
- */
-export async function autoPayoutEngine() {
-  // Users who have at least one APPROVED commission
-  const usersWithApproved = await prisma.commission.findMany({
-    where: { status: "Approved" as any },
-    select: { userId: true },
-    distinct: ["userId"],
+export async function runAutoPayoutEngine() {
+  console.log("🚀 Auto payout engine starting...");
+
+  // Find users who have any unpaid commissions (paidOut = false)
+  // Use the correct relation name from your schema: `Commissions`
+  const eligibleUsers = await prisma.user.findMany({
+    where: {
+      Commissions: {
+        some: { paidOut: false },
+      },
+    },
+    include: {
+      Commissions: {
+        where: { paidOut: false }, // narrow at DB level
+        select: { id: true, amount: true, status: true },
+      },
+    },
   });
 
-  if (usersWithApproved.length === 0) {
-    return { success: true, processed: 0 };
-  }
+  console.log(`Found ${eligibleUsers.length} users with unpaid commissions.`);
 
-  let processed = 0;
+  for (const user of eligibleUsers) {
+    // Prisma include gives us `Commissions` (capital C)
+    const unpaid = (user as any).Commissions as Array<{
+      id: string;
+      amount: any;   // Prisma.Decimal | number
+      status: string;
+    }>;
 
-  for (const { userId } of usersWithApproved) {
-    // Pull the APPROVED commissions for this user
-    const approvedCommissions = await prisma.commission.findMany({
-      where: { userId, status: "Approved" as any },
-      select: { id: true, amount: true },
-    });
+    // Only pay out those that are actually "Approved" (case-insensitive)
+    const approvedCommissions = unpaid.filter(
+      (c) => String(c.status).toLowerCase() === "approved"
+    );
 
-    if (!approvedCommissions.length) continue;
+    if (approvedCommissions.length === 0) continue;
 
     // Sum amounts (Decimal-safe)
     const totalAmount = approvedCommissions.reduce((sum: number, c: any) => {
@@ -45,28 +49,36 @@ export async function autoPayoutEngine() {
 
     if (totalAmount <= 0) continue;
 
-    // Create payout and mark commissions Paid in a single transaction
+    console.log(
+      `Processing payout for ${user.email ?? user.id} — $${totalAmount.toFixed(2)}`
+    );
+
+    // Create payout + mark commissions as Paid & paidOut in a single transaction
     await prisma.$transaction(async (tx) => {
       await tx.payout.create({
         data: {
-          userId,
+          userId: (user as any).id,
           amount: totalAmount,
-          status: "Approved" as any, // or "Pending" if your flow requires review
+          status: "Approved" as any, // or "Pending" depending on your flow
           source: "AUTO_PAYOUT",
         } as any,
       });
 
-      const commissionIds = approvedCommissions.map((c) => c.id);
       await tx.commission.updateMany({
-        where: { id: { in: commissionIds } },
-        data: { status: "Paid" as any },
+        where: { id: { in: approvedCommissions.map((c: { id: string }) => c.id) } },
+        data: { status: "Paid" as any, paidOut: true },
       });
     });
 
-    processed += 1;
+    // Non-blocking alert (safe no-op if env not set)
+    try {
+      await sendPayoutAlert(String(user.email ?? user.id), totalAmount);
+    } catch (e) {
+      console.warn("sendPayoutAlert failed (non-blocking):", e);
+    }
   }
 
-  return { success: true, processed };
+  console.log("🏁 Auto payout engine finished.");
 }
 
-export default autoPayoutEngine;
+export default runAutoPayoutEngine;

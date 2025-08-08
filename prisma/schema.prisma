@@ -110,6 +110,7 @@ model Commission {
   amount      Float
   type        CommissionType // ✅ Uses the enum
   status      String // "pending", "approved", "paid"
+  paidOut     Boolean  @default(false)
   source      String? // Amazon, Rakuten, etc.
   description String?
   createdAt   DateTime       @default(now())
