@@ -3,19 +3,18 @@ import { prisma } from "@/lib/db";
 
 /**
  * Auto Payout Engine
- * - Finds users with APPROVED, unpaid commissions (by status)
- * - Sums them up
+ * - Finds users with APPROVED commissions
+ * - Sums them
  * - Creates a payout
  * - Marks those commissions as Paid
  *
- * If your Commission.status is an enum with different casing, adjust the strings below.
+ * If your Commission.status enum uses different casing (e.g., APPROVED/PAID),
+ * change the strings below to match.
  */
 export async function autoPayoutEngine() {
-  // Pull distinct users who have at least one APPROVED commission
+  // Users who have at least one APPROVED commission
   const usersWithApproved = await prisma.commission.findMany({
-    where: {
-      status: "Approved" as any, // adjust casing if your enum differs
-    },
+    where: { status: "Approved" as any },
     select: { userId: true },
     distinct: ["userId"],
   });
@@ -27,21 +26,15 @@ export async function autoPayoutEngine() {
   let processed = 0;
 
   for (const { userId } of usersWithApproved) {
-    // Get the list we’re going to aggregate & pay out
+    // Pull the APPROVED commissions for this user
     const approvedCommissions = await prisma.commission.findMany({
-      where: {
-        userId,
-        status: "Approved" as any,
-      },
-      select: {
-        id: true,
-        amount: true, // Prisma.Decimal | number
-      },
+      where: { userId, status: "Approved" as any },
+      select: { id: true, amount: true },
     });
 
     if (!approvedCommissions.length) continue;
 
-    // Typed reducer (handles Prisma.Decimal or number)
+    // Sum amounts (Decimal-safe)
     const totalAmount = approvedCommissions.reduce((sum: number, c: any) => {
       const amt =
         typeof c?.amount?.toNumber === "function"
@@ -52,19 +45,17 @@ export async function autoPayoutEngine() {
 
     if (totalAmount <= 0) continue;
 
-    // Do the payout + mark commissions Paid in a transaction
+    // Create payout and mark commissions Paid in a single transaction
     await prisma.$transaction(async (tx) => {
-      // Create the payout record
       await tx.payout.create({
         data: {
           userId,
           amount: totalAmount,
-          status: "Approved" as any, // or "Pending" depending on your payout flow
+          status: "Approved" as any, // or "Pending" if your flow requires review
           source: "AUTO_PAYOUT",
         } as any,
       });
 
-      // Mark all those commissions as Paid
       const commissionIds = approvedCommissions.map((c) => c.id);
       await tx.commission.updateMany({
         where: { id: { in: commissionIds } },
