@@ -3,23 +3,28 @@ import { prisma } from "@/lib/db";
 
 /**
  * Evaluate referral badge status for a referrer.
- * Simple rule-set:
- *  - 3+ total referrals => "Inviter"
- *  - 6+ total referrals => "Active Referrer"
- *  - 9+ total referrals => "Power Referrer"
+ * Rules (tweak as needed):
+ *  - 3+ total referrals  => "Inviter"
+ *  - 6+ total referrals  => "Active Referrer"
+ *  - 9+ total referrals  => "Power Referrer"
  */
 export async function evaluateReferralBadges(referrerId: string) {
   const groups = await prisma.referralGroup.findMany({
     where: { referrerId },
     include: { users: true },
+    orderBy: { startedAt: "desc" },
   });
 
   const now = new Date();
+
   const activeGroups = groups.filter(
-    (grp) => grp.expiresAt && grp.expiresAt > now
+    (grp) => !!grp.expiresAt && grp.expiresAt > now
   );
 
-  const totalReferrals = groups.reduce((sum, grp) => sum + grp.users.length, 0);
+  const totalReferrals = groups.reduce(
+    (sum: number, grp: { users: unknown[] }) => sum + (grp.users?.length ?? 0),
+    0
+  );
 
   let badge: string | null = null;
   if (totalReferrals >= 9) badge = "Power Referrer";
@@ -33,3 +38,5 @@ export async function evaluateReferralBadges(referrerId: string) {
     badge,
   };
 }
+
+export default evaluateReferralBadges;

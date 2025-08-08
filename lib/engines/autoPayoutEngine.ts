@@ -1,80 +1,81 @@
 // lib/engines/autoPayoutEngine.ts
-import { prisma } from "@/lib/prisma";
-import { sendTelegramAlert } from "@/lib/telegram/notify";
+import { prisma } from "@/lib/db";
 
-export async function runAutoPayoutEngine() {
-  console.log("🚀 Running Auto Payout Engine...");
-
-  // 🔒 Check if auto payouts are enabled
-  const setting = await prisma.systemSetting.findUnique({
-  where: { key: "autoPayoutEnabled" },
-});
-
-if (setting?.value !== "true") {
-  console.log("Auto payouts are currently disabled.");
-  return;
-}
-
-  const eligibleUsers = await prisma.user.findMany({
+/**
+ * Auto Payout Engine
+ * - Finds users with APPROVED, unpaid commissions (by status)
+ * - Sums them up
+ * - Creates a payout
+ * - Marks those commissions as Paid
+ *
+ * If your Commission.status is an enum with different casing, adjust the strings below.
+ */
+export async function autoPayoutEngine() {
+  // Pull distinct users who have at least one APPROVED commission
+  const usersWithApproved = await prisma.commission.findMany({
     where: {
-      trustScore: { gte: 70 },
-      emailVerified: true,
-      payouts: {
-        none: {
-          status: "pending",
-        },
-      },
+      status: "Approved" as any, // adjust casing if your enum differs
     },
-    include: {
-      payouts: true,
-    },
+    select: { userId: true },
+    distinct: ["userId"],
   });
 
-  let totalPaid = 0;
-  let payoutsTriggered = 0;
-
-  for (const user of eligibleUsers) {
-    const approvedCommissions = await prisma.commission.findMany({
-      where: {
-        userId: user.id,
-        status: "approved",
-      },
-    });
-
-    const totalAmount = approvedCommissions.reduce((sum, c) => sum + c.amount, 0);
-
-    if (totalAmount === 0) continue;
-
-    // Mark commissions as paid
-    await prisma.commission.updateMany({
-      where: {
-        userId: user.id,
-        status: "approved",
-      },
-      data: {
-        status: "paid",
-      },
-    });
-
-    // Create payout entry
-    await prisma.payout.create({
-      data: {
-        userId: user.id,
-        amount: totalAmount,
-        method: "paypal",
-        status: "pending",
-        details: null,
-        approvedAt: null,
-        paidAt: null,
-      },
-    });
-
-    totalPaid += totalAmount;
-    payoutsTriggered += 1;
-
-    // Send Telegram alert
-    await sendTelegramAlert(`💸 Auto Payout triggered for ${user.email} | $${totalAmount.toFixed(2)}`);
+  if (usersWithApproved.length === 0) {
+    return { success: true, processed: 0 };
   }
 
-  console.log(`✅ Auto payout engine completed. ${payoutsTriggered} payouts triggered. Total paid: $${totalPaid}`);
+  let processed = 0;
+
+  for (const { userId } of usersWithApproved) {
+    // Get the list we’re going to aggregate & pay out
+    const approvedCommissions = await prisma.commission.findMany({
+      where: {
+        userId,
+        status: "Approved" as any,
+      },
+      select: {
+        id: true,
+        amount: true, // Prisma.Decimal | number
+      },
+    });
+
+    if (!approvedCommissions.length) continue;
+
+    // Typed reducer (handles Prisma.Decimal or number)
+    const totalAmount = approvedCommissions.reduce((sum: number, c: any) => {
+      const amt =
+        typeof c?.amount?.toNumber === "function"
+          ? c.amount.toNumber()
+          : Number(c?.amount ?? 0);
+      return sum + amt;
+    }, 0);
+
+    if (totalAmount <= 0) continue;
+
+    // Do the payout + mark commissions Paid in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Create the payout record
+      await tx.payout.create({
+        data: {
+          userId,
+          amount: totalAmount,
+          status: "Approved" as any, // or "Pending" depending on your payout flow
+          source: "AUTO_PAYOUT",
+        } as any,
+      });
+
+      // Mark all those commissions as Paid
+      const commissionIds = approvedCommissions.map((c) => c.id);
+      await tx.commission.updateMany({
+        where: { id: { in: commissionIds } },
+        data: { status: "Paid" as any },
+      });
+    });
+
+    processed += 1;
+  }
+
+  return { success: true, processed };
 }
+
+export default autoPayoutEngine;

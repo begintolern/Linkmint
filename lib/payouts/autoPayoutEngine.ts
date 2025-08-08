@@ -32,7 +32,13 @@ export async function runAutoPayoutEngine() {
       },
     });
 
-    const totalApproved = approvedPayouts.reduce((sum, p) => sum + p.amount, 0);
+    const totalApproved = approvedPayouts.reduce((sum: number, p: any) => {
+  const amt =
+    typeof p?.amount?.toNumber === "function"
+      ? p.amount.toNumber()
+      : Number(p?.amount ?? 0);
+  return sum + amt;
+}, 0);
 
     if (totalApproved > 0 && floatUsage + totalApproved <= FLOAT_CAP) {
       try {

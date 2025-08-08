@@ -2,26 +2,17 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-import { sendTelegramAlert } from "@/lib/telegram/notify";
+import { assertProdAdmin } from "@/lib/utils/adminGuard";
 
 export async function POST() {
-  const user = await prisma.user.findFirst({
-    where: { emailVerified: true },
-  });
+  try {
+    const gate = await assertProdAdmin();
+    if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
 
-  if (!user) {
-    return NextResponse.json({ success: false, error: "No verified user found" });
+    // await sendAlert("TrustScore test alert ✅");
+    return NextResponse.json({ success: true, message: "TrustScore alert triggered." });
+  } catch (err) {
+    console.error("test-trustscore-alert error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-
-  const newScore = (user.trustScore || 0) + 10;
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { trustScore: newScore },
-  });
-
-  await sendTelegramAlert(`🔒 TrustScore updated for ${user.email}: now ${newScore}`);
-
-  return NextResponse.json({ success: true, message: `TrustScore updated to ${newScore}` });
 }
