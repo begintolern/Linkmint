@@ -2,26 +2,29 @@
 import { prisma } from "@/lib/db";
 
 async function main() {
-  const user = await prisma.user.findFirst({
-    where: { email: "refbase@test.com" },
-  });
+  const email = "seeduser@test.com";
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new Error(`User not found: ${email}`);
 
-  if (!user) {
-    console.error("User not found.");
-    return;
-  }
-
-  const testLog = await prisma.eventLogs.create({
+  const log = await prisma.eventLogs.create({
     data: {
       userId: user.id,
       type: "test",
-      detail: "This is a test log event.",
+      detail: "Test event log from script",
+      message: "This is a test log entry",
     },
   });
 
-  console.log("✅ Log created:", testLog.id);
+  console.log("Created event log:", log.id, log.type, log.createdAt);
 }
 
 main()
-  .catch((\1: any) => console.error("❌ Error:", e))
-  .finally(() => prisma.$disconnect());
+  .then(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (e) => {
+    console.error("Error:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

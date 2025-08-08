@@ -1,24 +1,28 @@
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcrypt';
+// scripts/seedUser.ts
+import { prisma } from "@/lib/db";
 
 async function main() {
-  const hashedPassword = await bcrypt.hash('test123', 10);
+  const email = "seeduser@test.com";
+  const user =
+    (await prisma.user.findUnique({ where: { email } })) ??
+    (await prisma.user.create({
+      data: {
+        email,
+        name: "Seed User",
+        trustScore: 0,
+      },
+    }));
 
-  await prisma.user.upsert({
-    where: { email: 'testuser@example.com' },
-    update: { password: hashedPassword },
-    create: {
-      email: 'testuser@example.com',
-      password: hashedPassword,
-    },
-  });
-
-  console.log('✅ Test user seeded');
+  console.log("Seeded user:", user.id, user.email);
 }
 
 main()
-  .then(() => process.exit(0))
-  .catch((\1: any) => {
-    console.error(e);
+  .then(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (e) => {
+    console.error("Seed user failed:", e);
+    await prisma.$disconnect();
     process.exit(1);
   });

@@ -5,69 +5,104 @@ import { useEffect, useState } from "react";
 
 type Payout = {
   id: string;
+  userEmail: string;
   amount: number;
-  status: string;
+  status: "Pending" | "Approved" | "Paid";
   createdAt: string;
-  user: {
-    email: string;
-  };
 };
 
 export default function PayoutList() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchPayouts() {
-      const res = await fetch("/api/admin/payouts");
-      const data = await res.json();
-      setPayouts(data.payouts);
-      setLoading(false);
-    }
-
-    fetchPayouts();
+    const load = async () => {
+      setLoading(true);
+      setErrorMsg(null);
+      try {
+        // Expected response shape: { payouts: Payout[] }
+        const res = await fetch("/api/admin/payouts", { cache: "no-store" });
+        if (!res.ok) throw new Error(`Failed to load payouts (${res.status})`);
+        const data = await res.json();
+        setPayouts(Array.isArray(data) ? data : data.payouts ?? []);
+      } catch (err: any) {
+        setErrorMsg(err?.message ?? "Failed to load payouts");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
 
   const markAsPaid = async (id: string) => {
-    const res = await fetch("/api/admin/payouts", {
-      method: "POST",
-      body: JSON.stringify({ payoutId: id }),
-    });
+    // optimistic update
+    setPayouts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: "Paid" } : p))
+    );
 
-    if (res.ok) {
-      setPayouts((\1: any) =>
-        prev.map((\1: any) => (p.id === id ? { ...p, status: "Paid" } : p))
+    try {
+      const res = await fetch(`/api/admin/mark-paid?id=${encodeURIComponent(id)}`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        throw new Error(`Mark paid failed (${res.status})`);
+      }
+    } catch (err) {
+      // revert optimistic update on failure
+      setPayouts((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: "Approved" } : p))
       );
+      setErrorMsg((err as any)?.message ?? "Failed to mark as paid");
     }
   };
 
-  if (loading) return <p>Loading payouts...</p>;
-
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Pending Payouts</h2>
-      {payouts.length === 0 && <p>No pending payouts.</p>}
-      <ul className="divide-y divide-gray-200">
-        {payouts.map((\1: any) => (
-          <li key={payout.id} className="py-4 flex justify-between items-center">
-            <div>
-              <p><strong>Email:</strong> {payout.user.email}</p>
-              <p><strong>Amount:</strong> ${payout.amount.toFixed(2)}</p>
-              <p><strong>Date:</strong> {new Date(payout.createdAt).toLocaleString()}</p>
-            </div>
-            {payout.status === "Pending" ? (
-              <button
-                onClick={() => markAsPaid(payout.id)}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Mark as Paid
-              </button>
-            ) : (
-              <span className="text-green-600">Paid</span>
-            )}
-          </li>
-        ))}
-      </ul>
+    <div className="rounded border p-4 bg-white">
+      <h3 className="font-semibold mb-3">Payouts</h3>
+
+      {loading && <div className="text-sm text-gray-600">Loading…</div>}
+      {errorMsg && <div className="text-sm text-red-600 mb-2">{errorMsg}</div>}
+
+      {!loading && payouts.length === 0 && (
+        <div className="text-sm text-gray-700">No payouts found.</div>
+      )}
+
+      {payouts.length > 0 && (
+        <table className="w-full text-sm">
+          <thead className="text-left border-b">
+            <tr>
+              <th className="py-2">User</th>
+              <th className="py-2">Amount</th>
+              <th className="py-2">Status</th>
+              <th className="py-2">Created</th>
+              <th className="py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {payouts.map((p) => (
+              <tr key={p.id} className="border-b last:border-b-0">
+                <td className="py-2">{p.userEmail}</td>
+                <td className="py-2">${p.amount.toFixed(2)}</td>
+                <td className="py-2">{p.status}</td>
+                <td className="py-2">
+                  {new Date(p.createdAt).toLocaleString()}
+                </td>
+                <td className="py-2">
+                  {p.status !== "Paid" && (
+                    <button
+                      className="rounded bg-black text-white px-3 py-1 text-xs"
+                      onClick={() => markAsPaid(p.id)}
+                    >
+                      Mark Paid
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

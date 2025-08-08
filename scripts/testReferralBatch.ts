@@ -1,27 +1,31 @@
 // scripts/testReferralBatch.ts
-import { createReferralBatch } from "@/lib/referrals/createReferralBatch";
 import { prisma } from "@/lib/db";
+import { createReferralBatch } from "@/lib/referrals/createReferralBatch";
 
 async function main() {
-  const referrerEmail = "refbase@test.com";
+  const referrerEmail = "referrer@test.com";
   const referrer = await prisma.user.findUnique({
     where: { email: referrerEmail },
+    select: { id: true, email: true },
   });
 
-  if (!referrer) {
-    console.error("❌ Referrer not found");
-    return;
-  }
+  if (!referrer) throw new Error(`Referrer not found: ${referrerEmail}`);
 
-  const result = await createReferralBatch(referrer.id);
-
-  if (result) {
-    console.log("✅ Referral batch created and trustScore updated");
+  const group = await createReferralBatch(referrer.id);
+  if (!group) {
+    console.log("Not enough ungrouped referrals to create a batch.");
   } else {
-    console.log("⚠️ Not enough referrals to create batch, or batch already exists");
+    console.log("Created referral batch:", group.id);
   }
 }
 
 main()
-  .catch((\1: any) => console.error(e))
-  .finally(() => process.exit());
+  .then(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (e) => {
+    console.error("testReferralBatch failed:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

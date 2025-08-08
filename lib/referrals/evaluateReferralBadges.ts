@@ -1,28 +1,35 @@
-import { prisma } from '@/lib/prisma';
+// lib/referrals/evaluateReferralBadges.ts
+import { prisma } from "@/lib/db";
 
-export async function evaluateReferralBadges(userId: string) {
+/**
+ * Evaluate referral badge status for a referrer.
+ * Simple rule-set:
+ *  - 3+ total referrals => "Inviter"
+ *  - 6+ total referrals => "Active Referrer"
+ *  - 9+ total referrals => "Power Referrer"
+ */
+export async function evaluateReferralBadges(referrerId: string) {
   const groups = await prisma.referralGroup.findMany({
-    where: { referrerId: userId },
+    where: { referrerId },
     include: { users: true },
   });
 
-  const active = groups.filter((\1: any) => g.expiresAt > new Date());
-  const total = groups.length;
+  const now = new Date();
+  const activeGroups = groups.filter(
+    (grp) => grp.expiresAt && grp.expiresAt > now
+  );
+
+  const totalReferrals = groups.reduce((sum, grp) => sum + grp.users.length, 0);
 
   let badge: string | null = null;
+  if (totalReferrals >= 9) badge = "Power Referrer";
+  else if (totalReferrals >= 6) badge = "Active Referrer";
+  else if (totalReferrals >= 3) badge = "Inviter";
 
-  if (total >= 5) {
-    badge = 'Power Referrer';
-  } else if (active.length >= 1) {
-    badge = 'Active Referrer';
-  } else if (total > 0) {
-    badge = 'Inviter';
-  }
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { referralBadge: badge },
-  });
-
-  return badge;
+  return {
+    totalGroups: groups.length,
+    activeGroups: activeGroups.length,
+    totalReferrals,
+    badge,
+  };
 }

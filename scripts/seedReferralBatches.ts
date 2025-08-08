@@ -1,66 +1,67 @@
 // scripts/seedReferralBatches.ts
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/db";
+import { addDays } from "date-fns";
 
 async function main() {
-  console.log("🌱 Seeding referral batch...");
+  // Change this to your real referrer/admin email
+  const referrerEmail = "referrer@test.com";
 
-  // Create referrer
-  const referrer = await prisma.user.upsert({
-    where: { email: "refbase@test.com" },
-    update: {},
-    create: {
-      email: "refbase@test.com",
-      password: await bcrypt.hash("testpass", 10),
-      name: "Referrer Base",
-    },
+  const inviter = await prisma.user.findUnique({
+    where: { email: referrerEmail },
+    select: { id: true, email: true },
   });
 
-  // Create 3 invited users
-  const invitees = await Promise.all(
-    ["invitee1@test.com", "invitee2@test.com", "invitee3@test.com"].map((\1: any) =>
-      prisma.user.upsert({
-        where: { email },
-        update: {},
-        create: {
-          email,
-          password: "testpass",
-          name: email.split("@")[0],
-        },
-      })
-    )
-  );
+  if (!inviter) {
+    throw new Error(`Referrer not found: ${referrerEmail}`);
+  }
 
-  // Create referral group
+  // Seed three invitees (change emails as needed)
+  const inviteeEmails = [
+    "invitee1@test.com",
+    "invitee2@test.com",
+    "invitee3@test.com",
+  ].map((e) => e.toLowerCase());
+
+  // Ensure invitees exist (and are linked to referrer)
+  const invitees = [];
+  for (const email of inviteeEmails) {
+    const existing =
+      (await prisma.user.findUnique({ where: { email } })) ??
+      (await prisma.user.create({
+        data: { email, name: email.split("@")[0], referredById: inviter.id },
+      }));
+    invitees.push(existing);
+  }
+
+  const startedAt = new Date();
+  const expiresAt = addDays(startedAt, 90);
+
+  // Create referral group and connect users
   const group = await prisma.referralGroup.create({
     data: {
-      referrerId: referrer.id,
-      users: {
-        connect: invitees.map((\1: any) => ({ id: user.id })),
-      },
-      expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+      referrerId: inviter.id,
+      startedAt,
+      expiresAt,
+      users: { connect: invitees.map((user) => ({ id: user.id })) },
     },
+    include: { users: { select: { id: true, email: true } } },
   });
 
-  // Create referral batch
-  await prisma.referralBatch.create({
-    data: {
-      referrerId: referrer.id,
-      inviteeIds: invitees.map((\1: any) => u.id),
-      startedAt: new Date(),
-      expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-      status: "active",
-    },
-  });
-
-  console.log("✅ Seeding complete.");
+  console.log(
+    "Seeded referral group:",
+    group.id,
+    "users:",
+    group.users.map((u) => u.email)
+  );
 }
 
 main()
-  .catch((\1: any) => {
-    console.error("❌ Error:", e);
-    process.exit(1);
+  .then(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
   })
-  .finally(() => prisma.$disconnect());
+  .catch(async (e) => {
+    console.error("Seed referral batches failed:", e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

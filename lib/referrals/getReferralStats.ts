@@ -1,45 +1,34 @@
+// lib/referrals/getReferralStats.ts
 import { prisma } from "@/lib/db";
-import { differenceInDays, isAfter } from "date-fns";
 
-export interface ReferralStats {
-  activeBatch: {
-    isComplete: boolean;
-    isExpired: boolean;
-    daysLeft: number;
-    inviteeEmails: string[];
-  } | null;
-}
-
-export async function getReferralStats(userId: string): Promise<ReferralStats> {
-  const referralGroups = await prisma.referralGroup.findMany({
-    where: { referrerId: userId },
-    orderBy: { createdAt: "desc" },
-    take: 1,
-    include: {
-      users: {
-        select: { email: true },
-      },
+/**
+ * Returns referral stats for a given referrer.
+ * Aggregates groups, active groups, total invitees, and invitee emails.
+ */
+export async function getReferralStats(referrerId: string) {
+  const groups = await prisma.referralGroup.findMany({
+    where: { referrerId },
+    select: {
+      id: true,
+      startedAt: true,
+      expiresAt: true,
+      users: { select: { email: true } },
     },
+    orderBy: { startedAt: "desc" },
   });
 
-  const batch = referralGroups[0];
-
-  if (!batch) {
-    return { activeBatch: null };
-  }
-
-  const isComplete = batch.users.length >= 3;
   const now = new Date();
-  const isExpired = isAfter(now, batch.expiresAt);
-  const daysLeft = Math.max(0, differenceInDays(batch.expiresAt, now));
-  const inviteeEmails = batch.users.map((\1: any) => u.email);
+  const activeGroups = groups.filter((g) => g.expiresAt && g.expiresAt > now);
+  const totalInvitees = groups.reduce((sum, g) => sum + (g.users?.length ?? 0), 0);
+  const inviteeEmails = groups.flatMap((batch) =>
+    (batch.users ?? []).map((u) => u.email)
+  );
 
   return {
-    activeBatch: {
-      isComplete,
-      isExpired,
-      daysLeft,
-      inviteeEmails,
-    },
+    totalGroups: groups.length,
+    activeGroups: activeGroups.length,
+    totalInvitees,
+    inviteeEmails,
+    groups,
   };
 }
