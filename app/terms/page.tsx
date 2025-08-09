@@ -1,16 +1,18 @@
 export default function TermsPage() {
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4 text-teal-700">Terms of Service</h1>
-      <p className="text-gray-700 mb-4">
-        By using Linkmint, you agree to follow our rules. Don't abuse the system, spam links, or attempt fraud.
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <h1 className="text-3xl font-bold">Terms of Service</h1>
+      <p className="mt-4 text-slate-700">
+        By using Linkmint, you agree to comply with applicable laws and our policies against spam and fraud.
+        We may suspend accounts for abuse or policy violations.
       </p>
-      <p className="text-gray-700 mb-4">
-        Commissions are only paid once we’ve received cleared funds from the merchant. Early payouts are only available to trusted users.
-      </p>
-      <p className="text-gray-700">
-        We reserve the right to suspend accounts that violate these terms or attempt to exploit the platform.
-      </p>
-    </div>
+      <h2 className="mt-8 text-xl font-semibold">Key points</h2>
+      <ul className="mt-2 list-disc pl-6 text-slate-700">
+        <li>No spam, bot traffic, or misleading claims</li>
+        <li>Payment timelines may vary by partner approval</li>
+        <li>We may reverse payouts on confirmed fraud</li>
+      </ul>
+      <p className="mt-8 text-sm text-slate-500">Last updated {new Date().toLocaleDateString()}.</p>
+    </main>
   );
 }
