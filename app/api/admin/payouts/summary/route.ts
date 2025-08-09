@@ -5,6 +5,9 @@ export const revalidate = 0;
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+const toNum = (x: any) =>
+  x?._sum?.amount?.toNumber ? x._sum.amount.toNumber() : Number(x?._sum?.amount ?? 0);
+
 export async function GET() {
   try {
     const [pending, approved, paid] = await Promise.all([
@@ -12,8 +15,7 @@ export async function GET() {
       prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "Approved" as any } }),
       prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "Paid" as any } }),
     ]);
-    const toNum = (x: any) =>
-      x?._sum?.amount?.toNumber ? x._sum.amount.toNumber() : Number(x?._sum?.amount ?? 0);
+
     return NextResponse.json({
       pending: toNum(pending),
       approved: toNum(approved),
