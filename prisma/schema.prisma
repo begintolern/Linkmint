@@ -132,4 +132,72 @@ model systemSetting {
   key   String @id
   value String
 }
+// Which affiliate networks we support (start small; expand later)
+enum AffiliateNetwork {
+  AMAZON
+  SHAREASALE
+  CJ
+  IMPACT
+  RAKUTEN
+  OTHER
+}
+
+// How we import commissions for a merchant
+enum ImportMethod {
+  API
+  CSV
+  MANUAL
+}
+
+// Commission structure
+enum CommissionCalc {
+  PERCENT
+  FIXED
+}
+
+model NetworkAccount {
+  id           String           @id @default(uuid())
+  network      AffiliateNetwork
+  // The ID/Tag assigned to Linkmint by the network (e.g., Amazon tag, CJ PID)
+  accountId    String
+  note         String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([network, accountId])
+}
+
+model MerchantRule {
+  id               String           @id @default(uuid())
+  active           Boolean          @default(true)
+
+  merchantName     String
+  network          AffiliateNetwork
+  // Match product domains to decide when this rule applies (e.g., "amazon.com", "merchant.com")
+  domainPattern    String
+  // How to construct outbound links
+  paramKey         String           // e.g., "tag" for Amazon, "afftrack" for ShareASale
+  paramValue       String           // usually comes from NetworkAccount.accountId, but allow override
+  // Optional base or deep link template if required by the network
+  linkTemplate     String?          // e.g., "https://www.amazon.com/dp/{SKU}?tag={TAG}"
+
+  // Policy & payout
+  allowedSources   Json?            // { "tiktok": true, "facebook": false, "email": true }
+  disallowed       Json?            // { "tm_bidding": true, "coupon_site_bidding": true }
+  cookieWindowDays Int?             // e.g., 24, 30
+  payoutDelayDays  Int?             // expected delay before approved (for UI)
+  commissionType   CommissionCalc   @default(PERCENT)
+  commissionRate   Decimal?         // 0.04 for 4% or 5.00 for fixed $5
+
+  // Import plumbing
+  importMethod     ImportMethod     @default(MANUAL)
+  apiBaseUrl       String?
+  apiAuthType      String?          // e.g., "basic", "oauth", "key"
+  apiKeyRef        String?          // env var name if needed (e.g., "CJ_API_KEY")
+  lastImportedAt   DateTime?
+
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
 
