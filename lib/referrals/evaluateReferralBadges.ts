@@ -1,28 +1,29 @@
 // lib/referrals/evaluateReferralBadges.ts
 import { prisma } from "@/lib/db";
 
-/**
- * Evaluate referral badge status for a referrer.
- * Rules (tweak as needed):
- *  - 3+ total referrals  => "Inviter"
- *  - 6+ total referrals  => "Active Referrer"
- *  - 9+ total referrals  => "Power Referrer"
- */
+type ReferralGroupLite = {
+  expiresAt: Date | null;
+  users: unknown[];
+};
+
 export async function evaluateReferralBadges(referrerId: string) {
-  const groups = await prisma.referralGroup.findMany({
+  const groups: ReferralGroupLite[] = await prisma.referralGroup.findMany({
     where: { referrerId },
-    include: { users: true },
+    select: {
+      expiresAt: true,
+      users: true,
+    },
     orderBy: { startedAt: "desc" },
   });
 
   const now = new Date();
 
   const activeGroups = groups.filter(
-    (grp) => !!grp.expiresAt && grp.expiresAt > now
+    (grp: ReferralGroupLite) => !!grp.expiresAt && grp.expiresAt > now
   );
 
   const totalReferrals = groups.reduce(
-    (sum: number, grp: { users: unknown[] }) => sum + (grp.users?.length ?? 0),
+    (sum: number, grp: ReferralGroupLite) => sum + (grp.users?.length ?? 0),
     0
   );
 
