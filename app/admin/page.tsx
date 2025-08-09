@@ -1,15 +1,21 @@
 // app/admin/page.tsx
 import AutoPayoutStatusCard from "@/components/admin/AutoPayoutStatusCard";
+import SystemHealthCard from "@/components/admin/SystemHealthCard";
+import CommissionSummaryCard from "@/components/admin/CommissionSummaryCard";
 
 export default function AdminPage() {
   return (
     <main className="max-w-4xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold">Admin Dashboard</h1>
 
-      {/* Auto Payout toggle + status */}
+      {/* Live auto‑payout status + toggle */}
       <AutoPayoutStatusCard />
 
-      {/* more cards will go here in steps 2–4 */}
+      {/* Basic system health (DB + env presence) */}
+      <SystemHealthCard />
+
+      {/* Commissions totals */}
+      <CommissionSummaryCard />
     </main>
   );
 }
