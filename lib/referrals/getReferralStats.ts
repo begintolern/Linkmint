@@ -1,16 +1,16 @@
 // lib/referrals/getReferralStats.ts
 import { prisma } from "@/lib/db";
 
-/**
- * Returns referral stats for a given referrer.
- * Aggregates groups, active groups, total invitees, and invitee emails.
- */
+type ReferralUserLite = { email: string | null };
+type ReferralGroupLite = {
+  expiresAt: Date | null;
+  users: ReferralUserLite[] | null;
+};
+
 export async function getReferralStats(referrerId: string) {
-  const groups = await prisma.referralGroup.findMany({
+  const groups: ReferralGroupLite[] = await prisma.referralGroup.findMany({
     where: { referrerId },
     select: {
-      id: true,
-      startedAt: true,
       expiresAt: true,
       users: { select: { email: true } },
     },
@@ -18,10 +18,18 @@ export async function getReferralStats(referrerId: string) {
   });
 
   const now = new Date();
-  const activeGroups = groups.filter((g) => g.expiresAt && g.expiresAt > now);
-  const totalInvitees = groups.reduce((sum, g) => sum + (g.users?.length ?? 0), 0);
-  const inviteeEmails = groups.flatMap((batch) =>
-    (batch.users ?? []).map((u) => u.email)
+
+  const activeGroups = groups.filter(
+    (g: ReferralGroupLite) => !!g.expiresAt && g.expiresAt > now
+  );
+
+  const totalInvitees = groups.reduce(
+    (sum: number, g: ReferralGroupLite) => sum + (g.users?.length ?? 0),
+    0
+  );
+
+  const inviteeEmails = groups.flatMap((batch: ReferralGroupLite) =>
+    (batch.users ?? []).map((u: ReferralUserLite) => u.email).filter(Boolean) as string[]
   );
 
   return {
@@ -29,6 +37,7 @@ export async function getReferralStats(referrerId: string) {
     activeGroups: activeGroups.length,
     totalInvitees,
     inviteeEmails,
-    groups,
   };
 }
+
+export default getReferralStats;
