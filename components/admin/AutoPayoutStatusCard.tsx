@@ -1,52 +1,70 @@
-// components/admin/AutoPayoutStatusCard.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 
 export default function AutoPayoutStatusCard() {
-  const [status, setStatus] = useState<"on" | "off" | "unknown">("unknown");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [value, setValue] = useState<boolean | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/admin/get-auto-payout-setting", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to fetch setting");
+      setValue(Boolean(data.value));
+    } catch (e: any) {
+      setErr(e.message || "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function toggle() {
+    if (saving) return;
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/admin/auto-payout-toggle", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Toggle failed");
+      // refresh value
+      await load();
+    } catch (e: any) {
+      setErr(e.message || "Toggle failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch("/api/admin/get-auto-payout-setting", {
-          cache: "no-store",
-        });
-        if (!res.ok) {
-          throw new Error(`Failed to fetch setting (${res.status})`);
-        }
-        const data = await res.json();
-        // Expecting { value: "on" | "off" }
-        setStatus((data?.value === "on" || data?.value === "off") ? data.value : "unknown");
-      } catch (err: any) {
-        setErrorMsg(err?.message ?? "Failed to load setting");
-        setStatus("unknown");
-      }
-    };
     load();
   }, []);
 
   return (
-    <div className="rounded border p-4 bg-white">
+    <div className="border rounded-md p-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Auto Payout Engine</h3>
-        <span
-          className={`text-sm ${
-            status === "on"
-              ? "text-green-600"
-              : status === "off"
-              ? "text-gray-600"
-              : "text-yellow-600"
-          }`}
+        <div>
+          <h3 className="text-lg font-semibold">Auto Payouts</h3>
+          <p className="text-sm text-gray-500">
+            Status:{" "}
+            <span className={value ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+              {loading ? "…" : value ? "ON" : "OFF"}
+            </span>
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={loading || saving}
+          className="px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50 disabled:opacity-50"
         >
-          {status === "on" ? "ON" : status === "off" ? "OFF" : "UNKNOWN"}
-        </span>
+          {saving ? "Working…" : value ? "Turn OFF" : "Turn ON"}
+        </button>
       </div>
-      {errorMsg && <div className="mt-2 text-sm text-red-600">{errorMsg}</div>}
-      <p className="mt-2 text-sm text-gray-700">
-        This shows whether automatic payouts are currently enabled in admin.
-      </p>
+      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
     </div>
   );
 }
