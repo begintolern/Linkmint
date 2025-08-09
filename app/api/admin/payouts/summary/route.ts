@@ -12,10 +12,8 @@ export async function GET() {
       prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "Approved" as any } }),
       prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "Paid" as any } }),
     ]);
-
     const toNum = (x: any) =>
       x?._sum?.amount?.toNumber ? x._sum.amount.toNumber() : Number(x?._sum?.amount ?? 0);
-
     return NextResponse.json({
       pending: toNum(pending),
       approved: toNum(approved),

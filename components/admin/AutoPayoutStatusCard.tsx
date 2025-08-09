@@ -31,7 +31,6 @@ export default function AutoPayoutStatusCard() {
       const res = await fetch("/api/admin/auto-payout-toggle", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Toggle failed");
-      // refresh value
       await load();
     } catch (e: any) {
       setErr(e.message || "Toggle failed");
@@ -40,9 +39,7 @@ export default function AutoPayoutStatusCard() {
     }
   }
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   return (
     <div className="border rounded-md p-4">
