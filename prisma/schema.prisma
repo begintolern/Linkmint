@@ -12,22 +12,22 @@ model User {
   email                  String               @unique
   name                   String?
   password               String?
-  role                   String?              @default("user") // ← Add this line
+  role                   String?              @default("user")
   createdAt              DateTime             @default(now())
   referralCode           String?              @unique
-  referralBadge          String? // e.g., "Inviter", "Active Referrer", "Power Referrer"
+  referralBadge          String?
   emailVerified          Boolean              @default(false)
   verifyToken            String?              @unique
   verifyTokenExpiry      DateTime?
-  trustScore             Int?                 @default(0) // ✅ Added here
+  trustScore             Int?                 @default(0)
   referralGroupId        String?
   referralGroup          referralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
   eventLogs              eventLogs[]
   payouts                Payout[]
-  Commissions            Commission[] // ✅ ← ADD THIS LINE
+  Commissions            Commission[]
   referralGroupsCreated  referralGroup[]      @relation("UsersInGroupReferrer")
   referralBatches        referralBatch[]      @relation("UserReferralBatches")
-  referredById           String? //added for check
+  referredById           String?
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
   overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
@@ -48,7 +48,7 @@ model referralBatch {
   id         String    @id @default(cuid())
   referrerId String
   referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
-  inviteeIds String[] // Store user IDs as array
+  inviteeIds String[]
   startedAt  DateTime?
   expiresAt  DateTime?
   status     String    @default("pending")
@@ -57,9 +57,9 @@ model referralBatch {
 
 model eventLogs {
   id        String   @id @default(cuid())
-  userId    String? // ✅ Make optional
-  user      User?    @relation(fields: [userId], references: [id]) // ✅ Make nullable
-  type      String // e.g. "signup", "referral", "commission", "payout"
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  type      String
   detail    String?
   message   String?
   createdAt DateTime @default(now())
@@ -70,9 +70,9 @@ model Payout {
   userId     String
   user       User      @relation(fields: [userId], references: [id])
   amount     Float
-  method     String // e.g. "paypal"
-  status     String // "pending", "approved", "paid", "failed"
-  details    String? // PayPal email or error notes
+  method     String
+  status     String
+  details    String?
   createdAt  DateTime  @default(now())
   approvedAt DateTime?
   paidAt     DateTime?
@@ -81,8 +81,8 @@ model Payout {
 model FloatLog {
   id        String   @id @default(cuid())
   amount    Float
-  source    String // e.g. "Amazon", "Rakuten"
-  note      String? // optional notes like "manual upload"
+  source    String
+  note      String?
   createdAt DateTime @default(now())
 }
 
@@ -90,7 +90,7 @@ model PendingUser {
   id                String   @id @default(cuid())
   email             String   @unique
   password          String
-  name              String? // 👈 Add this line
+  name              String?
   verifyToken       String
   verifyTokenExpiry DateTime
   referredById      String?
@@ -108,13 +108,14 @@ model Commission {
   userId      String
   user        User           @relation(fields: [userId], references: [id])
   amount      Float
-  type        CommissionType // ✅ Uses the enum
-  status      String // "pending", "approved", "paid"
-  paidOut     Boolean  @default(false)
-  source      String? // Amazon, Rakuten, etc.
+  type        CommissionType
+  status      String
+  paidOut     Boolean        @default(false)
+  source      String?
   description String?
   createdAt   DateTime       @default(now())
 }
+
 model OverrideCommission {
   id                 String   @id @default(cuid())
   referrerId         String
@@ -122,17 +123,18 @@ model OverrideCommission {
   amount             Float
   sourceCommissionId String
   reason             String   @default("Referral bonus override")
-  status             String   @default("pending") // ✅ Add this line
+  status             String   @default("pending")
   createdAt          DateTime @default(now())
 
   referrer User @relation("ReferrerOverride", fields: [referrerId], references: [id])
   invitee  User @relation("InviteeOverride", fields: [inviteeId], references: [id])
 }
+
 model systemSetting {
   key   String @id
   value String
 }
-// Which affiliate networks we support (start small; expand later)
+
 enum AffiliateNetwork {
   AMAZON
   SHAREASALE
@@ -142,62 +144,51 @@ enum AffiliateNetwork {
   OTHER
 }
 
-// How we import commissions for a merchant
 enum ImportMethod {
   API
   CSV
   MANUAL
 }
 
-// Commission structure
 enum CommissionCalc {
   PERCENT
   FIXED
 }
 
 model NetworkAccount {
-  id           String           @id @default(uuid())
-  network      AffiliateNetwork
-  // The ID/Tag assigned to Linkmint by the network (e.g., Amazon tag, CJ PID)
-  accountId    String
-  note         String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id        String           @id @default(uuid())
+  network   AffiliateNetwork
+  accountId String
+  note      String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@unique([network, accountId])
 }
 
 model MerchantRule {
-  id               String           @id @default(uuid())
-  active           Boolean          @default(true)
-
+  id               String         @id @default(cuid())
+  active           Boolean        @default(true)
   merchantName     String
-  network          AffiliateNetwork
-  // Match product domains to decide when this rule applies (e.g., "amazon.com", "merchant.com")
+  network          String
   domainPattern    String
-  // How to construct outbound links
-  paramKey         String           // e.g., "tag" for Amazon, "afftrack" for ShareASale
-  paramValue       String           // usually comes from NetworkAccount.accountId, but allow override
-  // Optional base or deep link template if required by the network
-  linkTemplate     String?          // e.g., "https://www.amazon.com/dp/{SKU}?tag={TAG}"
-
-  // Policy & payout
-  allowedSources   Json?            // { "tiktok": true, "facebook": false, "email": true }
-  disallowed       Json?            // { "tm_bidding": true, "coupon_site_bidding": true }
-  cookieWindowDays Int?             // e.g., 24, 30
-  payoutDelayDays  Int?             // expected delay before approved (for UI)
-  commissionType   CommissionCalc   @default(PERCENT)
-  commissionRate   Decimal?         // 0.04 for 4% or 5.00 for fixed $5
-
-  // Import plumbing
-  importMethod     ImportMethod     @default(MANUAL)
-  apiBaseUrl       String?
-  apiAuthType      String?          // e.g., "basic", "oauth", "key"
-  apiKeyRef        String?          // env var name if needed (e.g., "CJ_API_KEY")
-  lastImportedAt   DateTime?
-
+  paramKey         String?
+  paramValue       String?
+  linkTemplate     String?
+  allowedSources   Json? // { "tiktok": true, "facebook": false, "email": true }
+  disallowed       Json?
+  cookieWindowDays Int?
+  payoutDelayDays  Int?
+  commissionType   CommissionCalc @default(PERCENT)
+  commissionRate   Decimal?
+  calc             String?
+  rate             Float?
   notes            String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  importMethod     ImportMethod   @default(MANUAL)
+  apiBaseUrl       String?
+  apiAuthType      String?
+  apiKeyRef        String?
+  lastImportedAt   DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
-

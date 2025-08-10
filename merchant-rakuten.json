@@ -1,0 +1,14 @@
+{
+  "active": true,
+  "merchantName": "Rakuten Merchant (Example)",
+  "network": "RAKUTEN",
+  "domainPattern": "rakutenmerchant.com",
+  "paramKey": "id",
+  "paramValue": "linkmint-20",
+  "linkTemplate": "https://rakutenmerchant.com/item/{pid}?id={paramValue}",
+  "allowedSources": ["email", "facebook", "x"],
+  "calc": "PERCENT",
+  "rate": 0.04,
+  "notes": "Placeholder Rakuten rule for dev",
+  "importMethod": "MANUAL"
+}

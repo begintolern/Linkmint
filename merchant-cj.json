@@ -1,0 +1,14 @@
+{
+  "active": true,
+  "merchantName": "CJ Merchant (Example)",
+  "network": "CJ",
+  "domainPattern": "examplemerchant.com",
+  "paramKey": "sid",
+  "paramValue": "linkmint-20",
+  "linkTemplate": "https://www.examplemerchant.com/product/{pid}?sid={paramValue}",
+  "allowedSources": ["email", "tiktok", "instagram"],
+  "calc": "PERCENT",
+  "rate": 0.05,
+  "notes": "Placeholder CJ rule for dev",
+  "importMethod": "MANUAL"
+}

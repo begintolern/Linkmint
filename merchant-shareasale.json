@@ -1,0 +1,16 @@
+{
+  "active": true,
+  "merchantName": "ShareASale",
+  "network": "SHAREASALE",
+  "domainPattern": "shareasale.com",
+  "paramKey": "afftrack",
+  "paramValue": "linkmint-20",
+  "linkTemplate": "https://www.shareasale.com/r.cfm?b=XXXXX&u=YYYYY&m=ZZZZ&urllink={your-link}",
+  "allowedSources": ["email", "tiktok", "instagram"],
+  "disallowedSources": ["reddit"],
+  "cookieWindowDays": 30,
+  "payoutDelayDays": 15,
+  "commissionType": "PERCENT",
+  "rate": 0.08,
+  "notes": "Placeholder ShareASale merchant rule for dev"
+}
