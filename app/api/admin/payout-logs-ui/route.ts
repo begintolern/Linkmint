@@ -11,15 +11,8 @@ export async function GET() {
     orderBy: { createdAt: 'desc' },
     take: 200,
     select: {
-      id: true,
-      amount: true,
-      method: true,
-      status: true,
-      userId: true,
-      details: true,
-      approvedAt: true,
-      paidAt: true,
-      createdAt: true,
+      id: true, amount: true, method: true, status: true, userId: true,
+      details: true, approvedAt: true, paidAt: true, createdAt: true,
     },
   });
 
