@@ -1,16 +1,12 @@
 // app/admin/payout-logs/page.tsx
-import Controls from './Controls';
 import { prisma } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin/auth';
+import Controls from './Controls';
 
-export const dynamic = 'force-dynamic'; // optional, if you want fresh data on refresh
-
+// Server component: fetch once for initial render
 export default async function PayoutLogsPage() {
-  await requireAdmin();
-
   const logs = await prisma.payout.findMany({
     orderBy: { createdAt: 'desc' },
-    take: 200, // tweak as you like
+    take: 200,
     select: {
       id: true,
       amount: true,
@@ -24,7 +20,6 @@ export default async function PayoutLogsPage() {
     },
   });
 
-  // The rest of your existing table stays the same. Just mount the controls.
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-2">Payout Logs</h1>
@@ -33,9 +28,6 @@ export default async function PayoutLogsPage() {
       </p>
 
       <Controls initialLogs={logs as any} />
-
-      {/* your existing table markup below */}
-      {/* ... */}
     </div>
   );
 }
