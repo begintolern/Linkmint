@@ -166,12 +166,13 @@ model NetworkAccount {
   @@unique([network, accountId])
 }
 
+// --- Model: MerchantRule (updated: network/domainPattern optional) ---
 model MerchantRule {
   id               String         @id @default(cuid())
   active           Boolean        @default(true)
   merchantName     String
-  network          String
-  domainPattern    String
+  network          String? // was String; now optional to avoid undefined crash
+  domainPattern    String? // was String; now optional to avoid undefined crash
   paramKey         String?
   paramValue       String?
   linkTemplate     String?
