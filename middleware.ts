@@ -1,37 +1,34 @@
-// middleware.ts
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
-const CANONICAL = 'linkmint.co'
-// allow Railway’s default domain to pass without redirect
-const ALLOWED = ['linkmint.co', 'www.linkmint.co', '.up.railway.app']
+const CANONICAL_HOST = 'linkmint.co';
+const ALLOWED_HOSTS = new Set([
+  CANONICAL_HOST,
+  'www.linkmint.co',
+  'linkmint-production.up.railway.app', // allow Railway host
+  'localhost:3000',
+]);
 
 export function middleware(req: NextRequest) {
-  const { pathname, host } = {
-    pathname: req.nextUrl.pathname,
-    host: req.headers.get('host') || '',
+  const host = req.headers.get('host') ?? '';
+  const path = req.nextUrl.pathname;
+
+  // Always allow diagnostics
+  if (path.startsWith('/api/health') || path.startsWith('/api/diag')) {
+    return NextResponse.next();
   }
 
-  // 1) Never touch the health check
-  if (pathname.startsWith('/api/health')) {
-    return NextResponse.next()
+  // Unknown hosts -> redirect to canonical
+  if (!ALLOWED_HOSTS.has(host)) {
+    const url = new URL(req.url);
+    url.protocol = 'https:';
+    url.host = CANONICAL_HOST;
+    return NextResponse.redirect(url, 308);
   }
 
-  // 2) If host is already allowed, do nothing
-  if (ALLOWED.some(allowed => host === allowed || host.endsWith(allowed))) {
-    return NextResponse.next()
-  }
-
-  // 3) Otherwise, redirect to canonical host
-  const url = new URL(req.url)
-  url.host = CANONICAL
-  url.protocol = 'https:'
-  return NextResponse.redirect(url, 308)
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    // run on everything except _next/static, images, and assets if you like
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
-}
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};
