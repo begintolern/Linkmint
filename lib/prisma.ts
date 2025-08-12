@@ -1,16 +1,18 @@
-// lib/prisma.ts
+import { PrismaClient } from '@prisma/client'
 
-import { PrismaClient } from "@prisma/client";
+declare global {
+  // avoid re-instantiating in dev
+  // @ts-ignore
+  var prisma: PrismaClient | undefined
+}
 
-// Avoid creating multiple PrismaClient instances in development
-const globalForPrisma = globalThis as unknown as {
-  prisma?: PrismaClient;
-};
+export const prisma =
+  global.prisma ??
+  new PrismaClient({
+    log: ['query', 'error', 'warn'], // <-- turn on server logs
+  })
 
-// Reuse the existing instance if it exists, otherwise create a new one
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-// Assign it to global in development mode
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== 'production') {
+  // @ts-ignore
+  global.prisma = prisma
 }
