@@ -1,58 +1,117 @@
 // app/api/signup/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcrypt";
-import { v4 as uuidv4 } from "uuid";
-import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail";
+import bcrypt from "bcryptjs";
 
+/**
+ * POST /api/signup
+ * Body: { name: string, email: string, password: string, ref?: string }
+ * Also accepts ?ref=... on the request URL.
+ */
 export async function POST(req: Request) {
   try {
-    const data = await req.json();
-    const { email, password, name, referredById } = data;
+    const url = new URL(req.url);
+    const queryRef = url.searchParams.get("ref") || undefined;
 
-    // 1. Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-    if (existingUser) {
+    const body = await req.json().catch(() => ({}));
+    const name = (body?.name ?? "").toString().trim();
+    const email = (body?.email ?? "").toString().trim().toLowerCase();
+    const password = (body?.password ?? "").toString();
+    const bodyRef = (body?.ref ?? "").toString().trim() || undefined;
+
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "Email already registered" },
+        { error: "Email and password are required" },
         { status: 400 }
       );
     }
 
-    // 2. Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Enforce unique email
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "Email already registered" },
+        { status: 409 }
+      );
+    }
 
-    // 3. Create verification token (30-minute expiry)
-    const verifyToken = uuidv4();
-    const verifyTokenExpiry = new Date(Date.now() + 30 * 60 * 1000);
+    // Figure out referrer (supports either user.id or user.referralCode)
+    const refInput = bodyRef || queryRef;
+    let referredById: string | null = null;
+    let referralGroupId: string | null = null;
 
-    // 4. Create user in DB
-    const newUser = await prisma.user.create({
+    if (refInput) {
+      // Try by ID first (links like ?ref=<userId>)
+      let referrer =
+        (await prisma.user.findUnique({
+          where: { id: refInput },
+          select: { id: true, referralGroupId: true },
+        })) ||
+        // Fallback: try by referralCode column if used
+        (await prisma.user.findUnique({
+          where: { referralCode: refInput },
+          select: { id: true, referralGroupId: true },
+        }));
+
+      if (referrer) {
+        referredById = referrer.id;
+        referralGroupId = referrer.referralGroupId ?? null;
+      }
+      // If no referrer found, we intentionally leave both as null.
+      // This prevents FK violations like `User_referredById_fkey`.
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
       data: {
         email,
-        name,
-        password: hashedPassword,
-        referredById: referredById || null,
-        verifyToken,
-        verifyTokenExpiry,
+        name: name || null,
+        password: hashed,
+        // generate a fresh referralCode if you use codes
+        // (safe even if you don't consume it elsewhere)
+        referralCode: cryptoRandom(16),
+        referredById, // null if no valid referrer -> avoids FK error
+        referralGroupId, // null if referrer has no group
         trustScore: 0,
+        emailVerified: false,
+        createdAt: new Date(),
       },
+      select: { id: true, email: true },
     });
 
-    // 5. Send verification email
-    await sendVerificationEmail(email, verifyToken);
+    return NextResponse.json({ success: true, user });
+  } catch (err: any) {
+    // Prisma unique constraint for email
+    if (err?.code === "P2002") {
+      return NextResponse.json(
+        { error: "Email already registered" },
+        { status: 409 }
+      );
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Signup successful. Please verify your email.",
-    });
-  } catch (error) {
-    console.error("Signup error:", error);
+    console.error("Signup error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
+}
+
+/** Simple URL-safe random string for referralCode */
+function cryptoRandom(len = 16): string {
+  // Avoid Node crypto import to keep it simple/compatible
+  const bytes = new Uint8Array(len);
+  // @ts-ignore
+  (globalThis.crypto || require("crypto").webcrypto).getRandomValues(bytes);
+  const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    out += alphabet[bytes[i] % alphabet.length];
+  }
+  return out;
 }
