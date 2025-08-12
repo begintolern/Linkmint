@@ -1,62 +1,53 @@
-// app/api/referrals/route.ts
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import { NextResponse } from "next/server";
-import { addDays } from "date-fns";
-
-type RefUser = { email: string | null };
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session || !session.user?.email || !session.user?.id) {
+    const email = session?.user?.email;
+    if (!email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Find the current user
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: {
-        id: true,
-        email: true,
-        referralGroup: {
-          select: {
-            startedAt: true,
-            users: { select: { email: true } },
-          },
-        },
-      },
+      where: { email },
+      select: { id: true, email: true },
     });
-
-    if (!user || !user.referralGroup) {
-      return NextResponse.json(
-        { error: "User or referral group not found" },
-        { status: 404 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const referredUsers =
-      (user.referralGroup.users as RefUser[] | null | undefined)?.filter(
-        (u: RefUser) => !!u.email && u.email !== user.email
-      ).map((u: RefUser) => u.email as string) ?? [];
+    // Latest referral group (if any)
+    const group = await prisma.referralGroup.findFirst({
+      where: { referrerId: user.id },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, expiresAt: true, startedAt: true, createdAt: true },
+    });
 
-    const startedAt = user.referralGroup.startedAt;
-    const expiresAt = startedAt
-      ? addDays(new Date(startedAt), 90).toISOString()
-      : null;
+    // Accurate total referrals (users who signed up with this user as referrer)
+    const totalReferrals = await prisma.user.count({
+      where: { referredById: user.id },
+    });
+
+    const base =
+      process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "") ||
+      "https://linkmint.co";
+    const referralLink = `${base}/signup?ref=${user.id}`;
+
+    const now = new Date();
+    const isActive = !!(group && group.expiresAt && group.expiresAt > now);
 
     return NextResponse.json({
-      referralLink: `https://linkmint.co/signup?ref=${user.id}`,
-      totalReferrals: referredUsers.length,
-      isActive: referredUsers.length >= 3,
-      expiresAt,
+      referralLink,
+      totalReferrals,
+      isActive,
+      expiresAt: group?.expiresAt ?? null,
     });
-  } catch (error: any) {
-    console.error("API /referrals error:", error?.message, error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  } catch (err) {
+    console.error("referrals GET error:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
