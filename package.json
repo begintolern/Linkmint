@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
+    "start": "next start -p $PORT",        
+    "start:win": "cross-env PORT=3000 next start",
     "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
@@ -45,6 +46,7 @@
     "@types/react-dom": "18.2.6",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.0",
+    "cross-env": "^10.0.0",
     "eslint": "8.45.0",
     "eslint-config-next": "14.1.0",
     "postcss": "^8.4.31",
