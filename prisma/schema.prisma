@@ -12,63 +12,62 @@ model User {
   email                  String               @unique
   name                   String?
   password               String?
-  role                   String?              @default("user")
   createdAt              DateTime             @default(now())
-  referralCode           String?              @unique
-  referralBadge          String?
+  referralGroupId        String?
+  referredById           String?
   emailVerified          Boolean              @default(false)
   verifyToken            String?              @unique
   verifyTokenExpiry      DateTime?
   trustScore             Int?                 @default(0)
-  referralGroupId        String?
-  referralGroup          referralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
-  eventLogs              eventLogs[]
-  payouts                Payout[]
+  referralBadge          String?
+  referralCode           String?              @unique
+  role                   String?              @default("user")
   Commissions            Commission[]
-  referralGroupsCreated  referralGroup[]      @relation("UsersInGroupReferrer")
-  referralBatches        referralBatch[]      @relation("UserReferralBatches")
-  referredById           String?
+  commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
+  overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
+  payouts                Payout[]
+  referralGroup          referralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
-  overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
-  commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
+  eventLogs              eventLogs[]
+  referralBatches        referralBatch[]      @relation("UserReferralBatches")
+  referralGroupsCreated  referralGroup[]      @relation("UsersInGroupReferrer")
 }
 
 model referralGroup {
   id         String   @id @default(cuid())
   referrerId String
-  referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
-  users      User[]   @relation("UsersInGroup")
-  startedAt  DateTime @default(now())
   expiresAt  DateTime
   createdAt  DateTime @default(now())
+  startedAt  DateTime @default(now())
+  users      User[]   @relation("UsersInGroup")
+  referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
 }
 
 model referralBatch {
   id         String    @id @default(cuid())
   referrerId String
-  referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
   inviteeIds String[]
   startedAt  DateTime?
   expiresAt  DateTime?
   status     String    @default("pending")
   createdAt  DateTime  @default(now())
+  referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
 }
 
 model eventLogs {
   id        String   @id @default(cuid())
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
   type      String
   detail    String?
-  message   String?
   createdAt DateTime @default(now())
+  message   String?
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 model Payout {
   id         String    @id @default(cuid())
   userId     String
-  user       User      @relation(fields: [userId], references: [id])
   amount     Float
   method     String
   status     String
@@ -76,6 +75,7 @@ model Payout {
   createdAt  DateTime  @default(now())
   approvedAt DateTime?
   paidAt     DateTime?
+  user       User      @relation(fields: [userId], references: [id])
 }
 
 model FloatLog {
@@ -97,16 +97,9 @@ model PendingUser {
   createdAt         DateTime @default(now())
 }
 
-enum CommissionType {
-  referral_purchase
-  override_bonus
-  payout
-}
-
 model Commission {
   id          String         @id @default(cuid())
   userId      String
-  user        User           @relation(fields: [userId], references: [id])
   amount      Float
   type        CommissionType
   status      String
@@ -114,6 +107,7 @@ model Commission {
   source      String?
   description String?
   createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [userId], references: [id])
 }
 
 model OverrideCommission {
@@ -125,14 +119,65 @@ model OverrideCommission {
   reason             String   @default("Referral bonus override")
   status             String   @default("pending")
   createdAt          DateTime @default(now())
-
-  referrer User @relation("ReferrerOverride", fields: [referrerId], references: [id])
-  invitee  User @relation("InviteeOverride", fields: [inviteeId], references: [id])
+  invitee            User     @relation("InviteeOverride", fields: [inviteeId], references: [id])
+  referrer           User     @relation("ReferrerOverride", fields: [referrerId], references: [id])
 }
 
 model systemSetting {
   key   String @id
   value String
+}
+
+model NetworkAccount {
+  id        String           @id @default(uuid())
+  network   AffiliateNetwork
+  accountId String
+  note      String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([network, accountId])
+}
+
+model MerchantRule {
+  id               String         @id @default(cuid())
+  active           Boolean        @default(true)
+  merchantName     String
+  network          String?
+  domainPattern    String?
+  paramKey         String?
+  paramValue       String?
+  linkTemplate     String?
+  allowedSources   Json?
+  disallowed       Json?
+  cookieWindowDays Int?
+  payoutDelayDays  Int?
+  commissionType   CommissionCalc @default(PERCENT)
+  commissionRate   Decimal?
+  calc             String?
+  rate             Float?
+  notes            String?
+  importMethod     ImportMethod   @default(MANUAL)
+  apiBaseUrl       String?
+  apiAuthType      String?
+  apiKeyRef        String?
+  lastImportedAt   DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@index([identifier], map: "verification_token_identifier_idx")
+}
+
+enum CommissionType {
+  referral_purchase
+  override_bonus
+  payout
 }
 
 enum AffiliateNetwork {
@@ -153,51 +198,4 @@ enum ImportMethod {
 enum CommissionCalc {
   PERCENT
   FIXED
-}
-
-model NetworkAccount {
-  id        String           @id @default(uuid())
-  network   AffiliateNetwork
-  accountId String
-  note      String?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  @@unique([network, accountId])
-}
-
-// --- Model: MerchantRule (updated: network/domainPattern optional) ---
-model MerchantRule {
-  id               String         @id @default(cuid())
-  active           Boolean        @default(true)
-  merchantName     String
-  network          String? // was String; now optional to avoid undefined crash
-  domainPattern    String? // was String; now optional to avoid undefined crash
-  paramKey         String?
-  paramValue       String?
-  linkTemplate     String?
-  allowedSources   Json? // { "tiktok": true, "facebook": false, "email": true }
-  disallowed       Json?
-  cookieWindowDays Int?
-  payoutDelayDays  Int?
-  commissionType   CommissionCalc @default(PERCENT)
-  commissionRate   Decimal?
-  calc             String?
-  rate             Float?
-  notes            String?
-  importMethod     ImportMethod   @default(MANUAL)
-  apiBaseUrl       String?
-  apiAuthType      String?
-  apiKeyRef        String?
-  lastImportedAt   DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-}
-// prisma/schema.prisma
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@index([identifier], map: "verification_token_identifier_idx")
 }
