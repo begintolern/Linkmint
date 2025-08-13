@@ -1,26 +1,19 @@
-import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export function middleware(req: NextRequest) {
+  const token = req.cookies.get('linkmint_token')?.value;
 
-const prisma = new PrismaClient();
-
-export async function GET() {
-  try {
-    // Simple round‑trip to the DB
-    const rows = await prisma.$queryRaw<{ ok: number }[]>`SELECT 1 AS ok`;
-    return NextResponse.json({
-      ok: true,
-      db: rows?.[0]?.ok === 1,
-      ts: Date.now(),
-    });
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err?.message ?? String(err) },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect().catch(() => {});
+  // If no token, redirect to login
+  if (!token) {
+    return NextResponse.redirect(new URL('/login', req.url));
   }
+
+  // Allow through if token exists
+  return NextResponse.next();
 }
+
+// Apply middleware only to /dashboard and future protected routes
+export const config = {
+  matcher: ['/dashboard/:path*'],
+};
