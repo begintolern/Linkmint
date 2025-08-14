@@ -1,58 +1,62 @@
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
+// lib/auth/options.ts
+import type { NextAuthOptions } from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcrypt"; // ✅ Uncommented
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
+  session: { strategy: "jwt" },
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
   providers: [
-    CredentialsProvider({
-      name: "Credentials",
+    Credentials({
+      name: "Email & Password",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(
-  credentials: Record<"email" | "password", string> | undefined
-): Promise<any> {
-  if (!credentials?.email || !credentials?.password) return null;
+      authorize: async (credentials) => {
+        const email = credentials?.email?.toString().trim().toLowerCase() ?? "";
+        const password = credentials?.password?.toString() ?? "";
 
-  const user = await prisma.user.findUnique({
-    where: { email: credentials.email },
-  });
+        if (!email || !password) {
+          throw new Error("Missing email or password");
+        }
 
-  if (!user || !user.password) return null;
+        // Only select fields that exist in your Prisma schema
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            emailVerified: true, // boolean
+            password: true,      // bcrypt hash stored here
+          },
+        });
 
-  const isValid = await bcrypt.compare(credentials.password, user.password);
-  if (!isValid) return null;
+        if (!user) throw new Error("Invalid email or password");
+        if (!user.emailVerified) throw new Error("Email not verified");
 
-  return user;
-}
-,
+        if (!user.password) throw new Error("No password set for this account");
+
+        const ok = await bcrypt.compare(password, user.password);
+        if (!ok) throw new Error("Invalid email or password");
+
+        return { id: String(user.id), email: user.email, name: user.name ?? "" };
+      },
     }),
   ],
-  session: { strategy: "jwt" },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name ?? null;
-      }
+      if (user) token.id = (user as any).id;
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-      }
+      if (session.user && token?.id) (session.user as any).id = token.id as string;
       return session;
     },
   },
-  pages: {
-    signIn: "/login",
-  },
-  secret: process.env.NEXTAUTH_SECRET,
 };
