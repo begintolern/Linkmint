@@ -6,7 +6,7 @@
 
   "scripts": {
     "dev": "next dev",
-    "prebuild": "node env-check.js",
+    "prebuild": "node scripts/env-check.js",
     "build": "next build",
     "start": "next start -p $PORT",
     "start:win": "cross-env PORT=3000 next start",
