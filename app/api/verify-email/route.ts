@@ -2,70 +2,78 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-type Row = { id: string; email: string };
-
+/**
+ * Core token verification against VerificationToken table.
+ * - Looks up token (case-insensitive) that hasn't expired
+ * - Marks the associated user (identifier = email) as verified
+ * - Deletes the token so it can't be reused
+ */
 async function verifyTokenCore(token: string) {
-  const rows = await prisma.$queryRaw<Row[]>`
-    SELECT "id", "email"
-    FROM "User"
-    WHERE lower("verifyToken") = lower(${token})
-      AND "verifyTokenExpiry" > NOW()
-    LIMIT 1
-  `;
+  const now = new Date();
 
-  const match = rows[0];
-  if (!match) {
+  // 1) Find a valid token row
+  const vt = await prisma.verificationToken.findFirst({
+    where: {
+      token: { equals: token, mode: "insensitive" },
+      expires: { gt: now },
+    },
+    select: { identifier: true, token: true },
+  });
+
+  if (!vt) {
     return { ok: false as const, error: "Invalid or expired token" };
   }
 
-  await prisma.user.update({
-    where: { id: match.id },
-    data: {
-      emailVerified: true,   // <-- boolean per your schema
-      verifyToken: null,
-      verifyTokenExpiry: null,
-    },
+  // 2) Verify the user by email (identifier is the email)
+  await prisma.user.updateMany({
+    where: { email: vt.identifier },
+    data: { emailVerified: true },
+  });
+
+  // 3) Remove the token so it cannot be reused
+  await prisma.verificationToken.deleteMany({
+    where: { token: { equals: token, mode: "insensitive" } },
   });
 
   return { ok: true as const };
 }
 
-export async function POST(req: Request) {
-  try {
-    const body = await req.json().catch(() => ({}));
-    const token = body?.token ?? body?.verifyToken;
-    if (!token || typeof token !== "string") {
-      return NextResponse.json({ error: "Token missing" }, { status: 400 });
-    }
+function badRequest(msg: string) {
+  return NextResponse.json({ success: false, error: msg }, { status: 400 });
+}
 
-    const res = await verifyTokenCore(token);
-    if (!res.ok) {
-      return NextResponse.json({ success: false, error: res.error }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("verify-email POST error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
-  }
+function serverError(msg: string) {
+  return NextResponse.json({ success: false, error: msg }, { status: 500 });
 }
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = searchParams.get("token") ?? searchParams.get("verifyToken");
-    if (!token) {
-      return NextResponse.json({ error: "Token missing" }, { status: 400 });
-    }
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token") || url.searchParams.get("verifyToken");
+    if (!token) return badRequest("Token missing");
 
     const res = await verifyTokenCore(token);
-    if (!res.ok) {
-      return NextResponse.json({ success: false, error: res.error }, { status: 400 });
-    }
+    if (!res.ok) return badRequest(res.error!);
 
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("verify-email GET error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return serverError("Server error");
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = (await req.json().catch(() => ({}))) as { token?: string; verifyToken?: string };
+    const token = body.token ?? body.verifyToken;
+    if (!token || typeof token !== "string") return badRequest("Token missing");
+
+    const res = await verifyTokenCore(token);
+    if (!res.ok) return badRequest(res.error!);
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("verify-email POST error:", err);
+    return serverError("Server error");
   }
 }
