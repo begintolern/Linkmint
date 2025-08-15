@@ -2,7 +2,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcrypt";
+import bcryptjs from 'bcryptjs'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -22,7 +22,7 @@ export const authOptions: NextAuthOptions = {
 
   if (!user || !user.password) return null;
 
-  const isValid = await bcrypt.compare(credentials.password, user.password);
+  const isValid = await bcryptjs.compare(credentials.password, user.password);
   if (!isValid) return null;
 
   // Only return fields accepted by NextAuth

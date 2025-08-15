@@ -2,7 +2,7 @@
 import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
+import bcryptjs from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
             email: true,
             name: true,
             emailVerified: true, // boolean
-            password: true,      // bcrypt hash stored here
+            password: true,      // bcryptjs hash stored here
           },
         });
 
@@ -42,7 +42,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!user.password) throw new Error("No password set for this account");
 
-        const ok = await bcrypt.compare(password, user.password);
+        const ok = await bcryptjs.compare(password, user.password);
         if (!ok) throw new Error("Invalid email or password");
 
         return { id: String(user.id), email: user.email, name: user.name ?? "" };

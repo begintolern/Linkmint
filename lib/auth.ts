@@ -1,15 +1,15 @@
 // lib/auth.ts
 
-import bcrypt from "bcryptjs";
+import bcryptjs from "bcryptjs";
 
 /**
- * Hashes a plain text password using bcryptjs.
+ * Hashes a plain text password using bcryptjsjs.
  * @param password - The plain text password.
  * @returns The hashed password.
  */
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
+  const salt = await bcryptjs.genSalt(10);
+  return bcryptjs.hash(password, salt);
 }
 
 /**
@@ -19,5 +19,5 @@ export async function hashPassword(password: string): Promise<string> {
  * @returns True if the password matches, false otherwise.
  */
 export async function comparePasswords(password: string, hashedPassword: string): Promise<boolean> {
-  return bcrypt.compare(password, hashedPassword);
+  return bcryptjs.compare(password, hashedPassword);
 }

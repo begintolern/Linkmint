@@ -4,7 +4,7 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcrypt";
+import bcryptjs from "bcryptjs";
 
 export async function POST(req: Request) {
   const { email, password } = await req.json();
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
 
-  const isValid = await bcrypt.compare(password, user.password);
+  const isValid = await bcryptjs.compare(password, user.password);
 
   if (!isValid) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

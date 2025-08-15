@@ -1,12 +1,12 @@
 // lib/utils.ts
 
-import bcrypt from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
 import { ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 10;
-  return await bcrypt.hash(password, saltRounds);
+  return await bcryptjs.hash(password, saltRounds);
 }
 
 export function generateReferralCode(): string {
