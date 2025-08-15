@@ -1,0 +1,11 @@
+
+.git
+node_modules
+.next/cache
+.vscode
+.DS_Store
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+.env
+.env.local

@@ -1,26 +1,32 @@
-# Use official lightweight Node.js 18 image
+# ---- Runtime+Build (single stage) ----
 FROM node:18-alpine
 
-# Set working directory inside container
+# System deps sometimes needed by bcrypt
+RUN apk add --no-cache python3 make g++ openssl
+
 WORKDIR /app
 
-# Copy package files first for better caching
-COPY package*.json ./
+# Copy only what's needed for dependency install & prisma generate
+COPY package.json package-lock.json* ./
+COPY prisma/schema.prisma prisma/schema.prisma
 
-# Install dependencies
+# Install deps (clean, reproducible)
 RUN npm ci
 
-# Copy the rest of the app source code
+# Generate Prisma client (available at build and runtime)
+RUN npx prisma generate
+
+# Now copy the rest of the app
 COPY . .
 
-# Set production environment
-ENV NODE_ENV=production
-
-# Build the Next.js app
+# Build Next.js (reads env at build as needed, but DB URL is required only at runtime)
 RUN npm run build
 
-# Expose port 3000 for the app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000
+
 EXPOSE 3000
 
-# Start the app
-CMD [ "npm", "start" ]
+# Start the Next.js server
+CMD ["npm", "start"]
