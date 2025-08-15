@@ -1,61 +1,47 @@
 // scripts/env-check.js
-/* Fail fast if required env vars are missing or empty */
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
 
-const required = [
-  // Core
-  'NODE_ENV',
-  'DATABASE_URL',
+// Pick .env.local if present, else .env
+const root = process.cwd();
+const envLocal = path.join(root, ".env.local");
+const envFile = fs.existsSync(envLocal) ? envLocal : path.join(root, ".env");
 
-  // NextAuth
-  'NEXTAUTH_URL',
-  'NEXTAUTH_SECRET',
+// Load env vars explicitly
+import("dotenv").then(({ config }) => {
+  config({ path: envFile });
+  run();
+});
 
-  // App-specific (adjust to your project)
-  'ADMIN_EMAIL',
-  'ADMIN_KEY',
+function run() {
+  const required = [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "NEXTAUTH_URL",
+    "NEXTAUTH_SECRET",
+    "ADMIN_EMAIL",
+    "ADMIN_KEY",
+    "SENDGRID_API_KEY",
+    "SENDGRID_FROM",
+    "SENDGRID_REPLY_TO",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "PAYPAL_CLIENT_ID",
+    "PAYPAL_CLIENT_SECRET",
+    "PAYPAL_ENV",
+  ];
 
-  // If you use these, keep them; if not, remove them
-  'SENDGRID_API_KEY',
-  'SENDGRID_FROM',
-  'SENDGRID_REPLY_TO',
-  'SUPABASE_URL',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'PAYPAL_CLIENT_ID',
-  'PAYPAL_CLIENT_SECRET',
-  'PAYPAL_ENV', // e.g. 'sandbox' or 'production'
-];
-
-const missing = [];
-const empty = [];
-
-for (const key of required) {
-  const val = process.env[key];
-  if (val === undefined) missing.push(key);
-  else if (String(val).trim() === '') empty.push(key);
-}
-
-const fmt = (arr) => arr.map((k) => `  - ${k}`).join('\n');
-
-if (missing.length || empty.length) {
-  console.error('❌ Environment check failed.\n');
-
+  const missing = required.filter((k) => !process.env[k] || process.env[k] === "");  
   if (missing.length) {
-    console.error('Missing variables (not defined at all):');
-    console.error(fmt(missing) || '  (none)');
-    console.error('');
+    console.error("\n✗ Environment check failed.\n");
+    console.error("Missing variables (not defined at all):");
+    for (const k of missing) console.error(" -", k);
+    console.error(
+      "\nTip: set these in Railway → Service → Variables. If you use Shared Variables, ensure the service inherits them."
+    );
+    process.exit(1);
   }
 
-  if (empty.length) {
-    console.error('Empty variables (defined but blank):');
-    console.error(fmt(empty) || '  (none)');
-    console.error('');
-  }
-
-  console.error(
-    'Tip: Set these in Railway → Service → Variables. ' +
-    'If you use Shared Variables, ensure they’re inherited by this service.'
-  );
-  process.exit(1);
+  console.log("✓ Environment check OK");
 }
-
-console.log('✅ Environment check passed. All required variables are present.');
