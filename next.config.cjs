@@ -8,7 +8,7 @@ const nextConfig = {
 
   // Experimental config (optional, for faster builds)
   experimental: {
-    serverActions: true,
+    serverActions: true
   },
 
   webpack: (config) => {
