@@ -3,27 +3,28 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail"; // <-- default import, (email, token)
+import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail"; // named import (email, token)
 
 export async function POST(req: Request) {
   try {
     const { email, password, name } = await req.json();
     if (!email || !password) {
-      return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "missing_fields" }, { status: 400 });
     }
 
     const normalized = String(email).toLowerCase().trim();
 
+    // 1) reject if user exists
     const existing = await prisma.user.findUnique({
       where: { email: normalized },
-      select: { id: true, emailVerifiedAt: true },
+      select: { id: true },
     });
     if (existing) {
-      return NextResponse.json({ success: false, error: "Account already exists." }, { status: 409 });
+      return NextResponse.json({ ok: false, error: "account_exists" }, { status: 409 });
     }
 
+    // 2) create user
     const hash = await bcrypt.hash(String(password), 10);
-
     const verifyToken = uuidv4();
     const verifyTokenExpiry = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
 
@@ -41,12 +42,18 @@ export async function POST(req: Request) {
       select: { id: true, email: true },
     });
 
-    // matches (email, token)
-    await sendVerificationEmail(user.email, verifyToken);
+    // 3) fire-and-forget email (never block signup on email failure)
+    (async () => {
+      try {
+        await sendVerificationEmail(user.email, verifyToken);
+      } catch (e) {
+        console.error("[signup] email send failed:", e);
+      }
+    })();
 
-    return NextResponse.json({ success: true, user });
+    return NextResponse.json({ ok: true, user }, { status: 201 });
   } catch (err) {
     console.error("[signup] ERROR", err);
-    return NextResponse.json({ success: false, error: "Signup failed. Try again later." }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "signup_failed" }, { status: 500 });
   }
 }
