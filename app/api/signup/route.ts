@@ -1,86 +1,52 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import bcryptjs from 'bcryptjs'
-import crypto from 'crypto'
-import { sendVerificationEmail } from '@/lib/email/sendVerificationEmail'
-
-export const dynamic = 'force-dynamic'
+// app/api/signup/route.ts
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
+import { v4 as uuidv4 } from "uuid";
+import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail"; // <-- default import, (email, token)
 
 export async function POST(req: Request) {
-  const started = Date.now()
-
   try {
-    const body = await req.json().catch(() => ({} as any))
-    const { name, email, password } = body as {
-      name?: string; email?: string; password?: string
+    const { email, password, name } = await req.json();
+    if (!email || !password) {
+      return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
     }
 
-    // Basic validation
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { ok: false, error: 'missing_fields' },
-        { status: 400 }
-      )
-    }
+    const normalized = String(email).toLowerCase().trim();
 
-    // Ensure critical envs exist (loud fail if misconfigured)
-    const needed = ['DATABASE_URL', 'NEXTAUTH_SECRET', 'NEXT_PUBLIC_BASE_URL', 'SENDGRID_API_KEY'] as const
-    for (const k of needed) {
-      if (!process.env[k]) {
-        return NextResponse.json(
-          { ok: false, error: `missing_env:${k}` },
-          { status: 500 }
-        )
-      }
-    }
-
-    // Reject duplicate email
-    const existing = await prisma.user.findUnique({ where: { email } })
+    const existing = await prisma.user.findUnique({
+      where: { email: normalized },
+      select: { id: true, emailVerifiedAt: true },
+    });
     if (existing) {
-      return NextResponse.json(
-        { ok: false, error: 'email_in_use' },
-        { status: 409 }
-      )
+      return NextResponse.json({ success: false, error: "Account already exists." }, { status: 409 });
     }
 
-    // Create user
-    const hash = await bcryptjs.hash(password, 10)
+    const hash = await bcrypt.hash(String(password), 10);
+
+    const verifyToken = uuidv4();
+    const verifyTokenExpiry = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
+
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        email: normalized,
+        name: name ?? null,
         password: hash,
-        emailVerified: false, // boolean field in your schema
+        emailVerifiedAt: null,
+        verifyToken,
+        verifyTokenExpiry,
+        role: "user",
+        trustScore: 0,
       },
       select: { id: true, email: true },
-    })
+    });
 
-    // Create verification token (15 min)
-    const token = crypto.randomBytes(32).toString('hex')
-    const expires = new Date(Date.now() + 15 * 60 * 1000)
+    // matches (email, token)
+    await sendVerificationEmail(user.email, verifyToken);
 
-    // relies on model VerificationToken (added below)
-    await prisma.verificationToken.create({
-      data: {
-        identifier: user.email,
-        token,
-        expires,
-      },
-    })
-
-    // Send the email
-    await sendVerificationEmail(user.email, token)
-
-    return NextResponse.json({ ok: true, ms: Date.now() - started })
-  } catch (err: any) {
-    console.error('[signup] ERROR', {
-      message: err?.message,
-      name: err?.name,
-      stack: err?.stack?.split('\n').slice(0, 6).join('\n'),
-    })
-    return NextResponse.json(
-      { ok: false, error: 'signup_failed' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: true, user });
+  } catch (err) {
+    console.error("[signup] ERROR", err);
+    return NextResponse.json({ success: false, error: "Signup failed. Try again later." }, { status: 500 });
   }
 }

@@ -5,7 +5,7 @@ module.exports = {
     "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {}, // Leave empty if not customizing colors
+    extend: {}, // Leave empty unless customizing
   },
   plugins: [],
 };

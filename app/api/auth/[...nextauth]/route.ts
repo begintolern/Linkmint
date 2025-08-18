@@ -1,6 +1,4 @@
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
+// app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 
