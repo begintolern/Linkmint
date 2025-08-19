@@ -2,35 +2,36 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
-    const url = new URL(req.url);
-    const logType = url.searchParams.get("type");
-    const sinceParam = url.searchParams.get("since");
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type") ?? undefined;   // e.g. error|signup|referral|payout|trust
+    const userId = searchParams.get("userId") ?? undefined;
 
     const whereClause: any = {};
+    if (type) whereClause.type = type;
+    if (userId) whereClause.userId = userId;
 
-    if (logType && logType !== "all") {
-      whereClause.type = logType;
-    }
-
-    if (sinceParam) {
-      const sinceDate = new Date(Number(sinceParam));
-      whereClause.createdAt = { gte: sinceDate };
-    }
-
-    const logs = await prisma.eventLogs.findMany({
+    const logs = await prisma.eventLog.findMany({
       where: whereClause,
       orderBy: { createdAt: "desc" },
       take: 100,
+      select: {
+        id: true,
+        type: true,
+        message: true,
+        detail: true,
+        userId: true,
+        createdAt: true,
+      },
     });
 
-    return NextResponse.json({ logs });
-  } catch (error) {
-    console.error("Error fetching logs:", error);
-    return NextResponse.json({ error: "Failed to fetch logs" }, { status: 500 });
+    return NextResponse.json({ ok: true, logs });
+  } catch (err) {
+    console.error("[admin/logs] GET error:", err);
+    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }
 }
