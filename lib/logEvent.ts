@@ -1,22 +1,29 @@
 // lib/logEvent.ts
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 
-export type LogDetail = Prisma.InputJsonValue;
-
-export async function logEvent(input: {
+type LogInput = {
   type: string;
-  message: string;
+  message?: string | null;
+  detail?: string | null;   // schema has detail as String?
   userId?: string | null;
-  detail?: LogDetail | null;
-}) {
-  return prisma.eventLogs.create({
-    data: {
-      type: input.type,
-      message: input.message,
-      userId: input.userId ?? null,
-      detail: input.detail ?? Prisma.JsonNull,
-    },
-    select: { id: true },
-  });
+};
+
+/**
+ * Fire-and-forget logger. Won’t throw if logging fails.
+ */
+export async function logEvent(input: LogInput) {
+  try {
+    await prisma.eventLog.create({
+      data: {
+        type: input.type,
+        message: input.message ?? null,
+        detail: input.detail ?? null,
+        userId: input.userId ?? null,
+      },
+      select: { id: true },
+    });
+  } catch (err) {
+    // Don’t crash app if logging fails
+    console.error("[logEvent] failed:", err);
+  }
 }
