@@ -1,24 +1,29 @@
 // lib/utils/adminGuard.ts
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
+import { prisma } from "@/lib/db";
 
-export function isProd() {
-  return process.env.NODE_ENV === "production";
-}
+export async function adminGuard() {
+  const session = (await getServerSession(authOptions)) as Session | null;
 
-export function parseAdminEmails(): Set<string> {
-  const raw = process.env.ADMIN_EMAILS || "admin@linkmint.co";
-  return new Set(raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
-}
+  const email = session?.user?.email ?? null;
+  if (!email) {
+    return { ok: false as const, status: 401, reason: "Unauthorized" as const };
+  }
 
-export async function assertProdAdmin(): Promise<
-  | { ok: true }
-  | { ok: false; status: number; error: string }
-> {
-  if (!isProd()) return { ok: true };
-  const session = await getServerSession(authOptions);
-  const email = session?.user?.email?.toLowerCase();
-  const admins = parseAdminEmails();
-  if (!email || !admins.has(email)) return { ok: false, status: 403, error: "Forbidden" };
-  return { ok: true };
+  // Resolve role via DB to avoid relying on session augmentation types
+  const me = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, role: true },
+  });
+
+  if (!me) {
+    return { ok: false as const, status: 401, reason: "Unauthorized" as const };
+  }
+  if (String(me.role).toUpperCase() !== "ADMIN") {
+    return { ok: false as const, status: 403, reason: "Forbidden" as const };
+  }
+
+  return { ok: true as const, userId: me.id };
 }

@@ -13,7 +13,7 @@ export async function logEvent({
   detail?: string;
 }) {
   try {
-    await prisma.eventLogs.create({
+    await prisma.eventLog.create({
       data: {
         userId,
         type,

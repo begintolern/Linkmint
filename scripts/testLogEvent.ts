@@ -6,7 +6,7 @@ async function main() {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new Error(`User not found: ${email}`);
 
-  const log = await prisma.eventLogs.create({
+  const log = await prisma.eventLog.create({
     data: {
       userId: user.id,
       type: "test",

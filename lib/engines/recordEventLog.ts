@@ -14,7 +14,7 @@ export async function recordEventLog({
   message,
   detail,
 }: LogEventParams) {
-  await prisma.eventLogs.create({
+  await prisma.eventLog.create({
     data: {
       userId,
       type,

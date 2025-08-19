@@ -5,7 +5,7 @@ export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { assertProdAdmin } from "@/lib/utils/adminGuard";
+import { adminGuard } from "@/lib/utils/adminGuard";
 
 function toBool(val: unknown): boolean {
   if (typeof val === "boolean") return val;
@@ -16,13 +16,13 @@ function toBool(val: unknown): boolean {
 
 export async function POST(req: Request) {
   try {
-    const gate = await assertProdAdmin();
+    const gate = await adminGuard();
     if (!gate.ok) {
-      return NextResponse.json({ error: gate.error }, { status: gate.status });
+      return NextResponse.json({ error: gate.reason }, { status: gate.status });
     }
 
     const body = await req.json().catch(() => ({}));
-    const desired = toBool(body?.value);
+    const desired = toBool((body as any)?.value);
     const key = "autoPayoutsOn";
 
     const updated = await prisma.systemSetting.upsert({
@@ -33,8 +33,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      value: toBool(updated.value),
-      message: `Auto payout set to ${toBool(updated.value)}.`,
+      value: toBool((updated as any).value),
+      message: `Auto payout set to ${toBool((updated as any).value)}.`,
     });
   } catch (err) {
     console.error("auto-payout-set POST error:", err);

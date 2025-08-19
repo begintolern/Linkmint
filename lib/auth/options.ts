@@ -1,9 +1,10 @@
 // lib/auth/options.ts
+import type { Session } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-// Avoid importing types that caused issues earlier; this object works with NextAuth v4.
 export const authOptions = {
   session: { strategy: "jwt" as const },
   secret: process.env.NEXTAUTH_SECRET,
@@ -15,7 +16,7 @@ export const authOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (creds) => {
+      async authorize(creds) {
         if (!creds?.email || !creds?.password) return null;
 
         const email = String(creds.email).trim().toLowerCase();
@@ -29,19 +30,15 @@ export const authOptions = {
             email: true,
             password: true,
             role: true,
-            // ✅ use the DateTime field, not the old boolean
-            emailVerifiedAt: true,
+            emailVerifiedAt: true, // keep only if this exists in your schema
           },
         });
-
         if (!user || !user.password) return null;
 
         const ok = await bcrypt.compare(pw, user.password);
         if (!ok) return null;
 
-        // ✅ block login until verified timestamp exists
         if (!user.emailVerifiedAt) {
-          // This becomes ?error=EMAIL_NOT_VERIFIED on /login
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
@@ -49,30 +46,29 @@ export const authOptions = {
           id: user.id,
           name: user.name ?? "",
           email: user.email,
-          role: (user as any).role ?? "USER",
+          role: user.role ?? "USER",
         } as any;
       },
     }),
   ],
 
-  pages: {
-    signIn: "/login",
-  },
+  pages: { signIn: "/login" },
 
   callbacks: {
-    async jwt({ token, user }: any) {
+    async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
       if (user) {
-        token.id = user.id;
-        token.role = user.role ?? "USER";
+        token.sub = (user as any).id ?? token.sub;
+        (token as any).role = (user as any).role ?? (token as any).role ?? "USER";
       }
       return token;
     },
-    async session({ session, token }: any) {
+
+    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       if (session?.user) {
-        (session.user as any).id = token?.id;
-        (session.user as any).role = token?.role ?? "USER";
+        (session.user as any).id = (token.sub ?? "") as string;
+        (session.user as any).role = ((token as any).role ?? "USER") as string;
       }
       return session;
     },
   },
-} as const;
+} as any; // <-- cast once to avoid version/type mismatches

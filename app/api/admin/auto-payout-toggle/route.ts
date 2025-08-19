@@ -5,7 +5,7 @@ export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { assertProdAdmin } from "@/lib/utils/adminGuard";
+import { adminGuard } from "@/lib/utils/adminGuard";
 
 function toBool(val: unknown): boolean {
   if (typeof val === "boolean") return val;
@@ -16,24 +16,27 @@ function toBool(val: unknown): boolean {
 
 export async function POST() {
   try {
-    const gate = await assertProdAdmin();
+    const gate = await adminGuard();
     if (!gate.ok) {
-      return NextResponse.json({ error: gate.error }, { status: gate.status });
+      return NextResponse.json({ error: gate.reason }, { status: gate.status });
     }
 
     const key = "autoPayoutsOn";
-    const current = await prisma.systemSetting.findUnique({ where: { key } });
-    const next = !toBool(current?.value);
 
+    // Read current (string | boolean | null) and flip it
+    const current = await prisma.systemSetting.findUnique({ where: { key } });
+    const next = !toBool((current as any)?.value);
+
+    // Persist as string to avoid Prisma/DB type drift
     const updated = await prisma.systemSetting.upsert({
       where: { key },
-      create: { key, value: next as any }, // works for boolean or string column
-      update: { value: next as any },
+      create: { key, value: String(next) },
+      update: { value: String(next) },
     });
 
     return NextResponse.json({
       success: true,
-      value: toBool(updated.value),
+      value: toBool((updated as any).value),
     });
   } catch (err) {
     console.error("auto-payout-toggle POST error:", err);

@@ -66,15 +66,23 @@ model ReferralBatch {
   referrer User @relation("UserReferralBatches", fields: [referrerId], references: [id])
 }
 
+// schema.prisma
+
+// schema.prisma
+
 model EventLog {
   id        String   @id @default(cuid())
-  userId    String?
-  type      String
-  detail    String?
+  userId    String?                                       // allow system logs
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  type      String                                        // "commission" | "referral" | "payout" | "test" | ...
   message   String?
+  detail    String?                                       // keep as String for now (you can switch to Json? later)
   createdAt DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id])
+  @@index([userId, createdAt])
+  // If your actual DB table is named `eventLogs` (plural), keep this map:
+  // @@map("eventLogs")
 }
 
 model Payout {

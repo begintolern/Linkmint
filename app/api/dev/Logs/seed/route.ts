@@ -1,37 +1,39 @@
-// app/api/dev/logs/seed/route.ts
+// app/api/dev/Logs/seed/route.ts
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
+export async function POST() {
+  try {
+    const result = await prisma.eventLog.createMany({
+      data: [
+        {
+          type: "seed",
+          message: "Seeding started",
+          detail: JSON.stringify({ step: 1, info: "Begin seeding dev logs" }),
+          userId: "system", // NOTE: must be a valid User.id if FK is enforced
+        },
+        {
+          type: "seed",
+          message: "Inserted initial data",
+          detail: JSON.stringify({ step: 2, items: 3 }),
+          userId: "system",
+        },
+        {
+          type: "seed",
+          message: "Seeding complete",
+          detail: JSON.stringify({ step: 3, status: "ok" }),
+          userId: "system",
+        },
+      ],
+      skipDuplicates: true,
+    });
 
-export async function POST(req: Request) {
-  // simple header check
-  const key = req.headers.get("x-admin-key");
-  if (!key || key !== process.env.ADMIN_API_KEY) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: true, inserted: result.count });
+  } catch (err) {
+    console.error("Dev Logs seed error:", err);
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
-
-  // IMPORTANT: detail must be JSON, not string | null
-  const result = await prisma.eventLogs.createMany({
-    data: [
-      {
-        type: "seed",
-        message: "Inserted from seed endpoint",
-        // store explicit JSON null
-        detail: Prisma.JsonNull,
-        userId: null,
-      },
-      {
-        type: "seed",
-        message: "Inserted with JSON object",
-        // store a JSON object
-        detail: { seeded: true, at: new Date().toISOString() } as Prisma.InputJsonValue,
-        userId: null,
-      },
-    ],
-  });
-
-  return NextResponse.json({ ok: true, inserted: result.count });
 }

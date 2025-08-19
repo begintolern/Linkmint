@@ -1,31 +1,46 @@
 // scripts/forceDeleteUser.ts
 import { prisma } from "@/lib/db";
 
-async function forceDeleteUser(email: string) {
-  try {
-    const user = await prisma.user.findUnique({ where: { email } });
+async function main() {
+  const email = process.argv[2];
+  if (!email) {
+    console.error("Usage: ts-node scripts/forceDeleteUser.ts <email>");
+    process.exit(1);
+  }
 
-    if (!user) {
-      console.log("❌ User not found.");
-      return;
-    }
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, email: true },
+  });
 
-    console.log(`🔍 Deleting user: ${email} (id: ${user.id})`);
+  if (!user) {
+    console.error(`User not found: ${email}`);
+    process.exit(1);
+  }
 
-    // Delete related records (if cascade isn't enabled)
-    await prisma.eventLogs.deleteMany({ where: { userId: user.id } });
-    await prisma.payout.deleteMany({ where: { userId: user.id } });
-    await prisma.referralGroup.deleteMany({ where: { referrerId: user.id } });
+  await prisma.$transaction(async (tx) => {
+    // Delete dependent/related data — adjust relations as needed for your schema
+    await tx.overrideCommission.deleteMany({ where: { referrerId: user.id } });
+    await tx.overrideCommission.deleteMany({ where: { inviteeId: user.id } });
+    await tx.commission.deleteMany({ where: { userId: user.id } });
+    await tx.payout.deleteMany({ where: { userId: user.id } });
+    await tx.eventLog.deleteMany({ where: { userId: user.id } });
+    await tx.verificationToken.deleteMany({ where: { userId: user.id } }).catch(() => {});
 
     // Finally, delete the user
-    await prisma.user.delete({ where: { email } });
+    await tx.user.delete({ where: { id: user.id } });
+  });
 
-    console.log("✅ User and related records deleted.");
-  } catch (error) {
-    console.error("❌ Error deleting user:", error);
-  } finally {
-    await prisma.$disconnect();
-  }
+  console.log(`Deleted user ${user.email} (${user.id}) and related data.`);
 }
 
-forceDeleteUser("epo78741@yahoo.com");
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

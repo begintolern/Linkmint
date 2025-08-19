@@ -1,25 +1,24 @@
 // types/next-auth.d.ts
-import NextAuth from "next-auth";
+import type { DefaultSession } from "next-auth/next";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-
-      // ✅ Custom fields
+      role: "ADMIN" | "USER";
+      // Your custom fields
       trustScore?: number;
       badges?: string[];
       badgeInviter?: boolean;
       badgeActiveReferrer?: boolean;
       badgePowerReferrer?: boolean;
-    };
+    } & DefaultSession["user"];
   }
 
   interface User {
     id: string;
+    role: "ADMIN" | "USER";
+    // Your custom fields
     trustScore?: number;
     badges?: string[];
     badgeInviter?: boolean;
@@ -30,7 +29,9 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string;
+    sub?: string; // NextAuth uses `sub` for user id
+    role?: "ADMIN" | "USER";
+    // Your custom fields
     trustScore?: number;
     badges?: string[];
     badgeInviter?: boolean;
@@ -38,3 +39,6 @@ declare module "next-auth/jwt" {
     badgePowerReferrer?: boolean;
   }
 }
+
+// Make this file a module
+export {};

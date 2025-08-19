@@ -8,22 +8,21 @@ const FLOAT_LIMIT = 1000;
 
 export async function runAutoPayoutEngine() {
   try {
-    // Use `select` so TS knows the shape includes `Commissions`
+    // Use lowercase relation name that Prisma generates (`commissions`)
     const eligibleUsers = await prisma.user.findMany({
       where: {
-        Commissions: {
+        commissions: {
           some: {
-            status: "Approved" as any, // match your enum/literals
+            status: "Approved" as any, // cast to your enum/literal as needed
             paidOut: false,
           },
         },
-        // honeymoonOver: true, // ❌ your schema doesn't have this — removing
         trustScore: { gte: 80 },
       },
       select: {
         id: true,
         email: true,
-        Commissions: {
+        commissions: {
           where: { status: "Approved" as any, paidOut: false },
           select: { id: true, amount: true },
         },
@@ -33,18 +32,15 @@ export async function runAutoPayoutEngine() {
     let currentFloatUsage = await getCurrentFloatUsage();
 
     for (const user of eligibleUsers) {
-      const approvedPayouts = user.Commissions as Array<{ id: string; amount: unknown }>;
+      const approvedPayouts = user.commissions as Array<{ id: string; amount: unknown }>;
 
-      const totalApproved = approvedPayouts.reduce(
-        (sum: number, p: { amount: unknown }) => {
-          const amt =
-            typeof (p as any)?.amount?.toNumber === "function"
-              ? (p as any).amount.toNumber()
-              : Number((p as any)?.amount ?? 0);
-          return sum + amt;
-        },
-        0
-      );
+      const totalApproved = approvedPayouts.reduce((sum: number, p) => {
+        const amt =
+          typeof (p as any)?.amount?.toNumber === "function"
+            ? (p as any).amount.toNumber()
+            : Number((p as any)?.amount ?? 0);
+        return sum + (Number.isFinite(amt) ? amt : 0);
+      }, 0);
 
       if (totalApproved > 0 && currentFloatUsage + totalApproved <= FLOAT_LIMIT) {
         await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -52,12 +48,12 @@ export async function runAutoPayoutEngine() {
             data: {
               userId: user.id,
               amount: totalApproved,
-              status: "Paid" as any, // or "Approved"/"Pending" per your flow
+              status: "Paid" as any, // or "Approved"/"Pending" per your enum/flow
             } as any,
           });
 
           await tx.commission.updateMany({
-            where: { id: { in: approvedPayouts.map((c: { id: string }) => c.id) } }, // ✅ typed `c`
+            where: { id: { in: approvedPayouts.map((c) => c.id) } },
             data: { paidOut: true, status: "Paid" as any },
           });
 
@@ -81,7 +77,7 @@ export async function runAutoPayoutEngine() {
     return { success: true };
   } catch (error) {
     console.error("Auto payout engine failed:", error);
-    await sendAlert(`❌ Auto payout engine failed: ${error}`);
+    await sendAlert(`❌ Auto payout engine failed: ${String(error)}`);
     return { success: false, error };
   }
 }
@@ -93,6 +89,6 @@ async function getCurrentFloatUsage(): Promise<number> {
       typeof (log as any)?.amount?.toNumber === "function"
         ? (log as any).amount.toNumber()
         : Number((log as any)?.amount ?? 0);
-    return sum + amt;
+    return sum + (Number.isFinite(amt) ? amt : 0);
   }, 0);
 }
