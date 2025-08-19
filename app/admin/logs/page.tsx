@@ -1,3 +1,4 @@
+// app/admin/logs/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -11,9 +12,11 @@ type LogEntry = {
 };
 
 export default async function AdminLogsPage() {
-  const logs: LogEntry[] = await prisma.eventLogs.findMany({
+  // ✅ Model is EventLog → client is prisma.eventLog (singular)
+  const logs: LogEntry[] = await prisma.eventLog.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,
+    select: { id: true, type: true, message: true, createdAt: true },
   });
 
   const getLogStyle = (type: string) => {
@@ -41,7 +44,7 @@ export default async function AdminLogsPage() {
         <p>No logs found.</p>
       ) : (
         <ul className="space-y-2">
-          {logs.map((log: LogEntry) => (
+          {logs.map((log) => (
             <li
               key={log.id}
               className={`border-l-4 p-3 text-sm shadow ${getLogStyle(log.type)}`}
