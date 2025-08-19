@@ -4,16 +4,9 @@ export const fetchCache = "force-no-store";
 
 import { prisma } from "@/lib/db";
 
-type LogEntry = {
-  id: string;
-  type: string;
-  message: string | null;
-  createdAt: Date;
-};
-
 export default async function AdminLogsPage() {
   // ✅ Model is EventLog → client is prisma.eventLog (singular)
-  const logs: LogEntry[] = await prisma.eventLog.findMany({
+  const logs = await prisma.eventLog.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,
     select: { id: true, type: true, message: true, createdAt: true },
