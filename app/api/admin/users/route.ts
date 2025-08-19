@@ -4,24 +4,19 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-// ✅ Use the v4 helper directly
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/options";
+import { auth } from "@/lib/auth/index"; // wrapper that calls getServerSession(authOptions)
 
 export async function GET() {
   try {
-    // Cast to dodge v4/v5 signature mismatch in some TS setups
-    const session = await (getServerSession as any)(authOptions);
-
+    const session = await auth();
     if (!session || !(session as any).user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
-    // Enforce admin
+    // Optional role gate
     const role = (session as any).user?.role ?? "USER";
     if (role !== "ADMIN") {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
     }
 
     const users = await prisma.user.findMany({
@@ -30,15 +25,21 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
-        emailVerified: true,
+        emailVerifiedAt: true, // ✅ timestamp field
         createdAt: true,
         role: true,
       },
     });
 
-    return NextResponse.json({ success: true, users });
+    // Normalize for UI (keep both keys if you want)
+    const data = users.map(u => ({
+      ...u,
+      emailVerified: !!u.emailVerifiedAt, // for components expecting boolean
+    }));
+
+    return NextResponse.json({ ok: true, users: data });
   } catch (err) {
-    console.error("Admin users route error:", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    console.error("[admin/users] error:", err);
+    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }
 }
