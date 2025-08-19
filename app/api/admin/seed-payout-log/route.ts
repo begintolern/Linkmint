@@ -1,39 +1,50 @@
+// app/api/admin/seed-payout-log/route.ts
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET(req: Request) {
-  const adminKey = req.headers.get("x-admin-key");
-  if (adminKey !== process.env.ADMIN_KEY) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function POST() {
   try {
-    // Ensure a test user exists (Payout.userId is required)
+    // Create (or reuse) a seeded user
     const user = await prisma.user.upsert({
       where: { email: "seed-tester@linkmint.co" },
       update: {},
       create: {
         email: "seed-tester@linkmint.co",
         name: "Seed Tester",
-        emailVerified: true,
+        // ✅ new schema uses timestamp, not boolean
+        emailVerifiedAt: new Date(),
+        role: "user",
+        trustScore: 0,
       },
+      select: { id: true, email: true },
     });
 
-    // Create a payout row (this is your “payout log”)
-    const payout = await prisma.payout.create({
+    // Create a sample payout + log entry
+    await prisma.payout.create({
       data: {
         userId: user.id,
-        amount: 25.5,
+        amount: 25.0,
         method: "paypal",
-        status: "paid",
-        details: "Seeded payout for API test",
-        paidAt: new Date(),
+        status: "queued",
+        details: "seed payout",
       },
     });
 
-    return NextResponse.json({ success: true, payout });
+    await prisma.eventLog.create({
+      data: {
+        type: "payout",
+        message: "Seed payout queued",
+        detail: "Seed script created a test payout for seed-tester@linkmint.co",
+        userId: user.id,
+      },
+    });
+
+    return NextResponse.json({ ok: true, user });
   } catch (err) {
-    console.error("Seed payout error:", err);
-    return NextResponse.json({ success: false, error: "Failed to create test payout" }, { status: 500 });
+    console.error("[seed-payout-log] error:", err);
+    return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }
 }
