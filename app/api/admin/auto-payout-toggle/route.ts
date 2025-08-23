@@ -5,41 +5,41 @@ export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { adminGuard } from "@/lib/utils/adminGuard";
+import { getToken } from "next-auth/jwt";
 
-function toBool(val: unknown): boolean {
-  if (typeof val === "boolean") return val;
-  if (typeof val === "string") return val.trim().toLowerCase() === "true";
-  if (typeof val === "number") return val !== 0;
-  return false;
-}
-
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const gate = await adminGuard();
-    if (!gate.ok) {
-      return NextResponse.json({ error: gate.reason }, { status: gate.status });
+    const token = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET });
+    if (!token?.email) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const key = "autoPayoutsOn";
+    // Check role from token, fallback to DB
+    const role = (token as any).role ?? null;
+    if (String(role || "").toUpperCase() !== "ADMIN") {
+      const me = await prisma.user.findUnique({
+        where: { email: token.email as string },
+        select: { role: true },
+      });
+      if (!me || String(me.role).toUpperCase() !== "ADMIN") {
+        return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      }
+    }
 
-    // Read current (string | boolean | null) and flip it
-    const current = await prisma.systemSetting.findUnique({ where: { key } });
-    const next = !toBool((current as any)?.value);
+    const key = "autoPayoutEnabled";
+    const cur = await prisma.systemSetting.findUnique({ where: { key } });
+    const current = cur?.value === "true";
+    const next = !current;
 
-    // Persist as string to avoid Prisma/DB type drift
-    const updated = await prisma.systemSetting.upsert({
+    await prisma.systemSetting.upsert({
       where: { key },
-      create: { key, value: String(next) },
-      update: { value: String(next) },
+      create: { key, value: next ? "true" : "false" },
+      update: { value: next ? "true" : "false" },
     });
 
-    return NextResponse.json({
-      success: true,
-      value: toBool((updated as any).value),
-    });
+    return NextResponse.json({ success: true, value: next });
   } catch (err) {
     console.error("auto-payout-toggle POST error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }

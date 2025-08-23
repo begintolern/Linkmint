@@ -1,115 +1,178 @@
-// app/admin/users/page.tsx
 "use client";
+
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 import { useEffect, useState } from "react";
 
-type MeResp =
-  | { success: true; user: { id: string; email: string; name?: string | null; role: string } }
-  | { success: false; error: string };
-
-type UsersResp =
-  | { success: true; users: Array<{ id: string; email: string; name?: string | null; emailVerified: boolean; createdAt: string; role?: string | null }> }
-  | { success: false; error: string };
+type Row = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  role: string | null;
+  trustScore: number | null;
+  createdAt: string;
+  emailVerifiedAt: string | null;
+};
 
 export default function AdminUsersPage() {
-  const [me, setMe] = useState<MeResp | null>(null);
-  const [data, setData] = useState<UsersResp | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<Row[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function load(next?: string | null) {
+    try {
+      setLoading(true);
+      setErr(null);
+      const url = new URL("/api/admin/users", window.location.origin);
+      url.searchParams.set("limit", "10");
+      if (next) url.searchParams.set("cursor", next);
+      const res = await fetch(url.toString(), { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+      setRows((prev) => (next ? [...prev, ...json.rows] : json.rows));
+      setCursor(json.nextCursor ?? null);
+    } catch (e: any) {
+      setErr(e.message || "Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    (async () => {
-      try {
-        // 1) Who am I?
-        const meRes = await fetch("/api/me", { cache: "no-store" });
-        const meJson: MeResp = await meRes.json();
-        setMe(meJson);
-
-        if (!meJson.success) return; // not logged in
-        if (meJson.user.role !== "ADMIN") {
-          setData({ success: false, error: "Forbidden" });
-          return;
-        }
-
-        // 2) Load users
-        const usersRes = await fetch("/api/admin/users", { cache: "no-store" });
-        const usersJson: UsersResp = await usersRes.json();
-        setData(usersJson);
-      } catch (e) {
-        setData({ success: false, error: "Server error" });
-      } finally {
-        setLoading(false);
-      }
-    })();
+    load(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Admin · Users</h1>
-        <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
-      </div>
-    );
-  }
-
-  if (!me || !me.success) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Admin · Users</h1>
-        <div className="rounded border border-yellow-300 bg-yellow-50 px-3 py-2 text-yellow-700">
-          You must be logged in to view this page.
-        </div>
-      </div>
-    );
-  }
-
-  if (!data || !data.success) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Admin · Users</h1>
-        <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-red-700">
-          {(data as any)?.error === "Forbidden"
-            ? "You must be an admin to view this page."
-            : "Failed to load users."}
-        </div>
-      </div>
-    );
+  async function patchUser(id: string, body: any) {
+    try {
+      setBusyId(id);
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+      const updated = json.user as Row;
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...updated } : r)));
+    } catch (e: any) {
+      alert(e.message || "Update failed");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Admin · Users</h1>
-      <div className="overflow-x-auto">
-        <table className="min-w-full border rounded-lg">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-3 py-2 text-left text-sm font-semibold text-gray-700 border-b">Email</th>
-              <th className="px-3 py-2 text-left text-sm font-semibold text-gray-700 border-b">Name</th>
-              <th className="px-3 py-2 text-left text-sm font-semibold text-gray-700 border-b">Verified</th>
-              <th className="px-3 py-2 text-left text-sm font-semibold text-gray-700 border-b">Role</th>
-              <th className="px-3 py-2 text-left text-sm font-semibold text-gray-700 border-b">Created</th>
+    <main className="mx-auto max-w-7xl p-6 space-y-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Admin · Users</h1>
+        <button
+          onClick={() => load(null)}
+          className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 hover:bg-zinc-50"
+        >
+          Refresh
+        </button>
+      </header>
+
+      {err && (
+        <div className="rounded-xl bg-red-50 text-red-800 ring-1 ring-red-200 p-3 text-sm">
+          {err}
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-2xl ring-1 ring-zinc-200">
+        <table className="min-w-full text-sm">
+          <thead className="bg-zinc-50">
+            <tr className="text-left">
+              <th className="px-4 py-3">Created</th>
+              <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Role</th>
+              <th className="px-4 py-3">Trust</th>
+              <th className="px-4 py-3">Verified</th>
+              <th className="px-4 py-3">Actions</th>
+              <th className="px-4 py-3">ID</th>
             </tr>
           </thead>
           <tbody>
-            {data.users.map((u) => (
-              <tr key={u.id} className="odd:bg-white even:bg-gray-50">
-                <td className="px-3 py-2 border-b">{u.email}</td>
-                <td className="px-3 py-2 border-b">{u.name ?? "—"}</td>
-                <td className="px-3 py-2 border-b">
-                  {u.emailVerified ? (
-                    <span className="text-green-600">Yes</span>
-                  ) : (
-                    <span className="text-red-600">No</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 border-b">{u.role ?? "USER"}</td>
-                <td className="px-3 py-2 border-b">
-                  {new Date(u.createdAt).toLocaleString()}
+            {rows.length === 0 && !loading ? (
+              <tr>
+                <td className="px-4 py-6 text-zinc-500" colSpan={8}>
+                  No users found.
                 </td>
               </tr>
-            ))}
+            ) : (
+              rows.map((u) => {
+                const verified = !!u.emailVerifiedAt;
+                const isAdmin = (u.role ?? "user").toUpperCase() === "ADMIN";
+                return (
+                  <tr key={u.id} className="border-t border-zinc-200 align-middle">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {new Date(u.createdAt).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3">{u.email ?? "—"}</td>
+                    <td className="px-4 py-3">{u.name ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs">
+                        {u.role ?? "user"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{u.trustScore ?? 0}</td>
+                    <td className="px-4 py-3">
+                      {verified ? new Date(u.emailVerifiedAt!).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => patchUser(u.id, { verifyEmail: true })}
+                          disabled={busyId === u.id || verified}
+                          className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
+                          title={verified ? "Already verified" : "Mark email verified"}
+                        >
+                          Verify
+                        </button>
+                        <button
+                          onClick={() => patchUser(u.id, { makeAdmin: true })}
+                          disabled={busyId === u.id || isAdmin}
+                          className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
+                          title={isAdmin ? "Already admin" : "Make admin"}
+                        >
+                          Make Admin
+                        </button>
+                        <button
+                          onClick={() => patchUser(u.id, { makeUser: true })}
+                          disabled={busyId === u.id || !isAdmin}
+                          className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
+                          title={!isAdmin ? "Already user" : "Revoke admin"}
+                        >
+                          Make User
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-xs max-w-[32ch] truncate" title={u.id}>
+                      {u.id}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
-    </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => load(cursor)}
+          disabled={!cursor || loading}
+          className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 disabled:opacity-50"
+        >
+          {loading ? "Loading..." : cursor ? "Load more" : "No more"}
+        </button>
+      </div>
+    </main>
   );
 }

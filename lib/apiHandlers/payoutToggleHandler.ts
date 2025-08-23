@@ -1,6 +1,6 @@
 // lib/apiHandlers/payoutToggleHandler.ts
 
-import { prisma } from "../../lib/db";
+import { prisma } from "../db";
 
 // This toggles a single system setting in the database — enable/disable auto payouts
 export async function handleAutoPayoutToggle(): Promise<{ success: boolean; message: string }> {
@@ -27,11 +27,11 @@ export async function handleAutoPayoutToggle(): Promise<{ success: boolean; mess
       success: true,
       message: `Auto payout toggled to ${newValue}.`,
     };
-  } catch (error: any) {
-  console.error("Toggle error (DB or Prisma):", error); // ← add this line
-  return {
-    success: false,
-    message: "Toggle failed due to internal error.",
-  };
-}
+  } catch (error) {
+    console.error("Toggle error (DB or Prisma):", error);
+    return {
+      success: false,
+      message: "Toggle failed due to internal error.",
+    };
+  }
 }

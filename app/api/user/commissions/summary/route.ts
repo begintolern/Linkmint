@@ -21,16 +21,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const commissions = await prisma.payout.findMany({
+    const commissions = await prisma.commission.findMany({
       where: { userId: user.id },
     });
 
     let pending = 0, approved = 0, paid = 0;
 
     for (const c of commissions) {
-      if (c.status === "pending") pending += c.amount;
-      else if (c.status === "approved") approved += c.amount;
-      else if (c.status === "paid") paid += c.amount;
+      const amt = Number(c.amount); // coerce Decimal/Float to number
+      const status = c.status.toLowerCase();
+
+      if (status === "pending") pending += amt;
+      else if (status === "approved") approved += amt;
+      else if (status === "paid") paid += amt;
     }
 
     return NextResponse.json({ pending, approved, paid });

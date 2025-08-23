@@ -1,70 +1,70 @@
 // app/layout.tsx
-import './globals.css';
-import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import "./globals.css";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import Footer from "@/components/site/Footer"; // ← added
 
-// (optional) keep these to avoid stale caching during dev
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+// Avoid stale caching during dev
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
 const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
 });
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Linkmint — Earn From Every Link You Share',
-    template: '%s · Linkmint',
+    default: "Linkmint — Earn From Every Link You Share",
+    template: "%s · Linkmint",
   },
   description:
-    'Turn any link into a payout. No followers needed. Built for trust.',
-  keywords: ['link monetization', 'affiliate', 'payouts', 'sharing'],
-  applicationName: 'Linkmint',
-  icons: { icon: '/favicon.ico' },
+    "Turn any link into a payout. No followers needed. Built for trust.",
+  keywords: ["link monetization", "affiliate", "payouts", "sharing"],
+  applicationName: "Linkmint",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
-    type: 'website',
+    type: "website",
     url: SITE_URL,
-    title: 'Linkmint',
-    description:
-      'Earn from every link you share. Built for trust.',
-    images: ['/opengraph-image.png'],
+    siteName: "Linkmint",
+    title: "Linkmint — Earn From Every Link You Share",
+    description: "Earn from every link you share. Built for trust.",
+    images: [
+      { url: "/opengraph-image.png", width: 1200, height: 630, alt: "Linkmint preview" },
+    ],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'Linkmint — Earn From Every Link You Share',
+    card: "summary_large_image",
+    site: "@linkmint", // update if needed
+    title: "Linkmint — Earn From Every Link You Share",
     description:
-      'Turn any link into a payout. No followers needed. Built for trust.',
-    images: ['/opengraph-image.png'],
+      "Turn any link into a payout. No followers needed. Built for trust.",
+    images: ["/opengraph-image.png"],
   },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
-  themeColor: '#111111',
-  colorScheme: 'light',
+  themeColor: "#111111",
+  colorScheme: "light",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={inter.variable}
-    >
+    <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className="min-h-screen bg-white text-gray-900 antialiased">
-        {children}
+        <div className="min-h-screen">{children}</div>
+        <Footer /> {/* ← added */}
       </body>
     </html>
   );

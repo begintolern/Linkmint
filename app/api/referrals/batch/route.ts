@@ -3,21 +3,24 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { createReferralBatch } from "@/lib/referrals/createReferralBatch";
 import { evaluateReferralBadges } from "@/lib/referrals/evaluateReferralBadges";
 
 export async function POST(req: NextRequest) {
   try {
-    const token = req.cookies.get("linkmint_token")?.value ?? "";
-
-    if (!token) {
+    const jwt = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!jwt || !jwt.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await createReferralBatch(token);
-    await evaluateReferralBadges(token);
+    // Use the email as identifier
+    const email = jwt.email;
 
-    return NextResponse.json({ message: "Batch created and badge evaluated" });
+    await createReferralBatch(email);
+    await evaluateReferralBadges(email);
+
+    return NextResponse.json({ success: true, message: "Batch created and badges evaluated." });
   } catch (err) {
     console.error("POST /api/referrals/batch error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

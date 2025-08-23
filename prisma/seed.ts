@@ -1,60 +1,62 @@
 // prisma/seed.ts
 import { prisma } from "../lib/db";
+import { CommissionType } from "@prisma/client";
 
 async function main() {
-  // 1) Example network account (placeholder until real creds)
-  await prisma.networkAccount.upsert({
-    where: { network_accountId: { network: "SHAREASALE", accountId: "LM-12345" } },
-    update: { note: "placeholder dev" },
+  console.log("🌱 Seeding database…");
+
+  // 1) Ensure a test user exists (use upsert to avoid unique email errors)
+  const email = "testuser@example.com";
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {}, // nothing to update for now
     create: {
-      network: "SHAREASALE",
-      accountId: "LM-12345",
-      note: "placeholder dev",
+      email,
+      name: "Test User",
+      role: "USER",
+      trustScore: 0,
     },
   });
+  console.log("✅ User ready:", user.id, user.email);
 
-  // 2) Seed a couple of merchant rules
-  await prisma.merchantRule.createMany({
-    data: [
-      {
-        merchantName: "Generic Merchant",
-        network: "SHAREASALE",
-        domainPattern: "merchant.com",
-        paramKey: "afftrack",
-        paramValue: "LM-12345",
-        cookieWindowDays: 30,
-        payoutDelayDays: 30,
-        commissionType: "PERCENT",
-        commissionRate: "0.08",
-        importMethod: "CSV",
-        notes: "CSV import until API creds approved",
-      },
-      {
-        merchantName: "Amazon (US)",
-        network: "AMAZON",
-        domainPattern: "amazon.com",
-        paramKey: "tag",
-        paramValue: "linkmint-20", // placeholder
-        cookieWindowDays: 24,
-        payoutDelayDays: 35,
-        commissionType: "PERCENT",
-        commissionRate: "0.03",
-        importMethod: "API",
-        apiBaseUrl: "https://advertising-api.amazon.com",
-        apiAuthType: "oauth",
-        notes: "API auth to be finalized post-approval",
-      },
-    ],
+  // 2) Create a Commission that MATCHES your schema (must include `type`)
+  const commission = await prisma.commission.create({
+    data: {
+      userId: user.id,
+      amount: 45.5,
+      type: CommissionType.referral_purchase, // ← REQUIRED enum per your schema
+      status: "Pending",
+      paidOut: false,
+      source: "SEED",
+      description: "Seeded commission",
+    },
   });
+  console.log("✅ Commission created:", commission.id);
 
-  console.log("✅ Seed complete");
+  // 3) Create a PayoutLog using fields that EXIST on your current model
+  //    (receiverEmail / amount / paypalBatchId / transactionId / note / status)
+  const payoutLog = await prisma.payoutLog.create({
+    data: {
+      userId: user.id,
+      receiverEmail: "sandbox-recipient@example.com",
+      amount: 12.34,
+      paypalBatchId: "SEEDBATCH123",
+      transactionId: "SEEDTXN123",
+      note: "This is a test payout log entry from seed.ts",
+      status: "CREATED",
+    },
+  });
+  console.log("✅ PayoutLog created:", payoutLog.id);
+
+  console.log("🌱 Seed complete.");
 }
 
 main()
-  .catch(async (e) => {
-    console.error("❌ Seed failed:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
+  .then(async () => {
     await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error("❌ Seed error:", e);
+    await prisma.$disconnect();
+    process.exit(1);
   });

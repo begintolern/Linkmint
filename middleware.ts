@@ -3,51 +3,61 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-// Public routes (no auth required)
-const PUBLIC: string[] = [
-  "/",
-  "/login",
-  "/signup",
-  "/verify",
-  "/trust-center",
-  "/api/signup",
-  "/api/verify-email",
-];
+// Paths
+const ADMIN_PAGES = ["/admin"];
+const ADMIN_APIS = ["/api/admin"];
+const PROTECTED_PAGES = ["/dashboard", "/account"];
 
-// Protected route prefixes (auth required)
-const PROTECTED: string[] = ["/dashboard", "/admin", "/account"];
+const hasPrefix = (pathname: string, list: string[]) =>
+  list.some((p) => pathname.startsWith(p));
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
-  // Allow public paths
-  if (PUBLIC.some((p) => pathname.startsWith(p))) {
+  // --- Admin APIs: require ADMIN; respond with JSON ---
+  if (hasPrefix(pathname, ADMIN_APIS)) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+    const role = (token as any)?.role ?? "USER";
+    if (role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
     return NextResponse.next();
   }
 
-  // Only guard protected paths
-  if (!PROTECTED.some((p) => pathname.startsWith(p))) {
+  // --- Admin pages: require ADMIN; use redirects ---
+  if (hasPrefix(pathname, ADMIN_PAGES)) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      const url = new URL("/login", req.url);
+      url.searchParams.set("callbackUrl", pathname + search);
+      return NextResponse.redirect(url);
+    }
+    const role = (token as any)?.role ?? "USER";
+    if (role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
     return NextResponse.next();
   }
 
-  // Read NextAuth JWT (from next-auth.session-token / __Secure-next-auth.session-token)
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-
-  if (!token) {
-    const url = new URL("/login", req.url);
-    url.searchParams.set("callbackUrl", pathname + search);
-    return NextResponse.redirect(url);
+  // --- Auth-required pages (non-admin) ---
+  if (hasPrefix(pathname, PROTECTED_PAGES)) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (!token) {
+      const url = new URL("/login", req.url);
+      url.searchParams.set("callbackUrl", pathname + search);
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
   }
 
-  // Optional: admin role guard
-  // if (pathname.startsWith("/admin") && (token as any)?.role !== "ADMIN") {
-  //   return NextResponse.redirect(new URL("/dashboard", req.url));
-  // }
-
+  // Everything else: ignore
   return NextResponse.next();
 }
 
-// Run only on protected sections (efficient; avoids _next/static etc.)
+// Only run where needed (keeps static assets & public pages untouched)
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/account/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/dashboard/:path*", "/account/:path*"],
 };
