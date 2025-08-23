@@ -12,12 +12,12 @@ export async function POST(req: Request) {
     const updated = await prisma.payout.update({
       where: { id: payoutId },
       data: {
-        externalPayoutId,
-        status: "PAID",          // legacy string
-        statusEnum: "PAID",      // new enum
-        paidAt: new Date(),
-        notes: notes ?? null,
-      },
+  externalPayoutId,
+  status: "PAID",
+  statusEnum: "PAID",
+  paidAt: new Date(),
+  // notes: notes ?? null,   // ← remove this line
+},
       select: { id: true, status: true, statusEnum: true, externalPayoutId: true, paidAt: true },
     });
 
