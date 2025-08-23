@@ -1,78 +1,108 @@
 // app/api/payouts/request/route.ts
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import { quoteFeeCents } from "@/lib/payouts/fees";
-import type { PayoutProvider } from "@prisma/client";
 
-// TODO: replace with real approved-balance logic
-async function getApprovedBalanceCents(userId: string) {
-  return 5000; // $50.00 available (stub)
-}
+type Body = {
+  amount?: number; // USD
+  provider?: "PAYPAL" | "PAYONEER";
+  note?: string;
+};
 
 export async function POST(req: Request) {
   try {
-    const session = await (getServerSession as any)(authOptions as any);
-    if (!session?.user?.id) {
+    // ---- Auth ----
+    const session = (await getServerSession(authOptions as any)) as any;
+    if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
-    const userId = session.user.id as string;
 
-    const { amountCents, provider } = await req.json();
-    if (!amountCents || amountCents <= 0) {
-      return NextResponse.json({ success: false, error: "Invalid amount" }, { status: 400 });
-    }
-    if (!provider || !["PAYPAL", "PAYONEER"].includes(provider)) {
-      return NextResponse.json({ success: false, error: "Invalid provider" }, { status: 400 });
-    }
-
-    // Ensure user has a default payout account for this provider
-    const payoutAccount = await prisma.payoutAccount.findFirst({
-      where: { userId, provider, isDefault: true },
-      select: { id: true, externalId: true },
+    const me = await prisma.user.findUnique({
+      where: { email: session.user.email as string },
+      select: { id: true, email: true },
     });
-    if (!payoutAccount) {
+    if (!me) {
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    }
+
+    // ---- Input ----
+    const { amount, provider, note } = (await req.json()) as Body;
+
+    if (!amount || !Number.isFinite(amount) || amount <= 0) {
       return NextResponse.json(
-        { success: false, error: `No default ${provider} payout account on file.` },
+        { success: false, error: "Amount must be a positive number" },
         { status: 400 }
       );
     }
 
-    // Balance check
-    const available = await getApprovedBalanceCents(userId);
-    if (amountCents > available) {
-      return NextResponse.json(
-        { success: false, error: "Amount exceeds your available approved balance." },
-        { status: 400 }
-      );
-    }
-
-    // Fee + net
-    const { feeCents, netCents } = quoteFeeCents(provider as PayoutProvider, amountCents);
-
-    // Create payout (populate legacy + new fields)
-    const payout = await prisma.payout.create({
-      data: {
-        userId,
-        amount: amountCents / 100,                // legacy float, keep for now
-        method: provider,                         // legacy string
-        status: "PENDING",                        // legacy string
-        provider,                                 // new enum
-        payoutAccountId: payoutAccount.id,
-        feeCents,
-        netCents,
-        details: null,
+    // ---- Find payout account ----
+    const account = await prisma.payoutAccount.findFirst({
+      where: {
+        userId: me.id,
+        ...(provider ? { provider } : { isDefault: true }),
       },
       select: {
-        id: true, amount: true, feeCents: true, netCents: true,
-        provider: true, status: true,
+        id: true,
+        provider: true,
+        externalId: true, // <-- your schema uses externalId (email for PayPal, etc.)
+        label: true,
+        isDefault: true,
+        status: true,
       },
     });
 
-    return NextResponse.json({ success: true, payout });
-  } catch (e) {
-    console.error("POST /api/payouts/request error", e);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    if (!account) {
+      return NextResponse.json(
+        { success: false, error: "No payout method on file. Please save one first." },
+        { status: 400 }
+      );
+    }
+
+    // Basic fee example (you can tune this later or make network-specific):
+    // PayPal: 2.9% + $0.30, Payoneer: flat $1.50 placeholder
+    const gross = Math.round(amount * 100); // cents
+    let feeCents = 0;
+    if (account.provider === "PAYPAL") {
+      feeCents = Math.round(gross * 0.029) + 30;
+    } else if (account.provider === "PAYONEER") {
+      feeCents = 150;
+    }
+    const netCents = Math.max(0, gross - feeCents);
+
+    // ---- Record request in PayoutLog (stable table) ----
+    const log = await prisma.payoutLog.create({
+      data: {
+        userId: me.id,
+        receiverEmail: account.externalId ?? null,
+        amount: amount, // store USD amount for display
+        note:
+          note ??
+          `Request payout via ${account.provider} (${account.label ?? "default"}) | gross=$${(
+            gross / 100
+          ).toFixed(2)} fee=$${(feeCents / 100).toFixed(2)} net=$${(netCents / 100).toFixed(2)}`,
+        status: "REQUESTED",
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({
+      success: true,
+      requestId: log.id,
+      provider: account.provider,
+      destination: account.externalId,
+      grossUSD: amount,
+      feeUSD: feeCents / 100,
+      netUSD: netCents / 100,
+    });
+  } catch (err) {
+    console.error("POST /api/payouts/request error:", err);
+    return NextResponse.json(
+      { success: false, error: "Failed to submit payout request" },
+      { status: 500 }
+    );
   }
 }
