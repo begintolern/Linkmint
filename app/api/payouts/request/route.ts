@@ -7,102 +7,125 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-type Body = {
-  amount?: number; // USD
-  provider?: "PAYPAL" | "PAYONEER";
-  note?: string;
-};
+type Provider = "PAYPAL" | "PAYONEER";
+
+function redactDb(url?: string) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return {
+      protocol: u.protocol.replace(/:$/, ""),
+      host: u.host,
+      database: u.pathname.slice(1),
+      user: u.username ? "***" : null,
+    };
+  } catch {
+    return { raw: "***" };
+  }
+}
+
+// Debug helper (GET): see which DB this route reads + last few payouts
+export async function GET() {
+  try {
+    const session = (await getServerSession(authOptions as any)) as any;
+    if (!session?.user?.email) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+    const me = await prisma.user.findUnique({
+      where: { email: session.user.email as string },
+      select: { id: true },
+    });
+    if (!me) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+
+    const db = redactDb(process.env.DATABASE_URL);
+    const recent = await prisma.payout.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { id: true, createdAt: true, statusEnum: true, provider: true, netCents: true },
+    });
+    return NextResponse.json({ ok: true, db, payoutsCount: recent.length, recent });
+  } catch {
+    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   try {
-    // ---- Auth ----
+    // auth
     const session = (await getServerSession(authOptions as any)) as any;
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
-
     const me = await prisma.user.findUnique({
       where: { email: session.user.email as string },
       select: { id: true, email: true },
     });
     if (!me) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // ---- Input ----
-    const { amount, provider, note } = (await req.json()) as Body;
+    // input
+    const { provider, amount } = await req.json();
+    const prov = String(provider || "").toUpperCase() as Provider;
+    const amt = Number(amount);
+    if (!["PAYPAL", "PAYONEER"].includes(prov)) {
+      return NextResponse.json({ success: false, error: "Invalid provider" }, { status: 400 });
+    }
+    if (!Number.isFinite(amt) || amt <= 0) {
+      return NextResponse.json({ success: false, error: "Invalid amount" }, { status: 400 });
+    }
 
-    if (!amount || !Number.isFinite(amount) || amount <= 0) {
+    // ensure default payout account
+    const acct = await prisma.payoutAccount.findFirst({
+      where: { userId: me.id, provider: prov as any, isDefault: true },
+      select: { externalId: true },
+    });
+    if (!acct) {
       return NextResponse.json(
-        { success: false, error: "Amount must be a positive number" },
+        { success: false, error: "No default payout account for selected provider" },
         { status: 400 }
       );
     }
 
-    // ---- Find payout account ----
-    const account = await prisma.payoutAccount.findFirst({
-      where: {
+    // compute cents/fees
+    const amountCents = Math.round(amt * 100);
+    const feeCents = 0;
+    const netCents = amountCents - feeCents;
+
+    // ✅ Create payout (string fields `method` and `status` are required by your schema)
+    const payout = await prisma.payout.create({
+      data: {
         userId: me.id,
-        ...(provider ? { provider } : { isDefault: true }),
+        // required string fields
+        method: prov,                 // e.g., "PAYPAL" or "PAYONEER"
+        status: "PENDING",
+        // your existing fields
+        statusEnum: "PENDING" as any, // enum mirror
+        provider: prov as any,
+        amount: amt,                  // Float in your schema
+        netCents,                     // Int in your schema
+        receiverEmail: acct.externalId,
       },
       select: {
         id: true,
+        statusEnum: true,
         provider: true,
-        externalId: true, // <-- your schema uses externalId (email for PayPal, etc.)
-        label: true,
-        isDefault: true,
-        status: true,
+        receiverEmail: true,
+        createdAt: true,
       },
-    });
-
-    if (!account) {
-      return NextResponse.json(
-        { success: false, error: "No payout method on file. Please save one first." },
-        { status: 400 }
-      );
-    }
-
-    // Basic fee example (you can tune this later or make network-specific):
-    // PayPal: 2.9% + $0.30, Payoneer: flat $1.50 placeholder
-    const gross = Math.round(amount * 100); // cents
-    let feeCents = 0;
-    if (account.provider === "PAYPAL") {
-      feeCents = Math.round(gross * 0.029) + 30;
-    } else if (account.provider === "PAYONEER") {
-      feeCents = 150;
-    }
-    const netCents = Math.max(0, gross - feeCents);
-
-    // ---- Record request in PayoutLog (stable table) ----
-    const log = await prisma.payoutLog.create({
-      data: {
-        userId: me.id,
-        receiverEmail: account.externalId ?? null,
-        amount: amount, // store USD amount for display
-        note:
-          note ??
-          `Request payout via ${account.provider} (${account.label ?? "default"}) | gross=$${(
-            gross / 100
-          ).toFixed(2)} fee=$${(feeCents / 100).toFixed(2)} net=$${(netCents / 100).toFixed(2)}`,
-        status: "REQUESTED",
-      },
-      select: { id: true },
     });
 
     return NextResponse.json({
       success: true,
-      requestId: log.id,
-      provider: account.provider,
-      destination: account.externalId,
-      grossUSD: amount,
-      feeUSD: feeCents / 100,
+      requestId: payout.id,
+      provider: payout.provider,
+      destination: payout.receiverEmail,
+      grossUSD: amt,
       netUSD: netCents / 100,
+      status: payout.statusEnum,
     });
-  } catch (err) {
-    console.error("POST /api/payouts/request error:", err);
-    return NextResponse.json(
-      { success: false, error: "Failed to submit payout request" },
-      { status: 500 }
-    );
+  } catch (e) {
+    console.error("POST /api/payouts/request error:", e);
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }
