@@ -11,6 +11,8 @@ export default function PayoutMethodCard() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const [cashAmount, setCashAmount] = useState<string>("");
+
   async function onSave() {
     setSaving(true);
     setMsg(null);
@@ -29,6 +31,29 @@ export default function PayoutMethodCard() {
       setMsg(e.message || "Error saving payout method.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onCashOut() {
+    if (!cashAmount || Number(cashAmount) <= 0) {
+      alert("Amount must be a positive number");
+      return;
+    }
+    try {
+      const res = await fetch("/api/payouts/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          amount: Number(cashAmount),
+        }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Failed");
+      alert("Payout requested!");
+      setCashAmount(""); // 👈 reset input after success
+    } catch (e: any) {
+      alert(e.message || "Error requesting payout.");
     }
   }
 
@@ -83,6 +108,34 @@ export default function PayoutMethodCard() {
       <p className="text-xs text-gray-500">
         This will be set as your default payout destination. You can change it anytime.
       </p>
+
+      {/* Cash Out Section */}
+      <div className="mt-6 border-t pt-4">
+        <h4 className="text-md font-semibold mb-2">Cash Out Anytime</h4>
+        <div className="flex items-center gap-2">
+          <select
+            className="border rounded px-2 py-2"
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as Provider)}
+          >
+            <option value="PAYPAL">PayPal</option>
+            <option value="PAYONEER">Payoneer</option>
+          </select>
+          <input
+            type="number"
+            className="border rounded px-3 py-2 w-32"
+            placeholder="Amount (USD)"
+            value={cashAmount}
+            onChange={(e) => setCashAmount(e.target.value)}
+          />
+          <button
+            onClick={onCashOut}
+            className="rounded bg-gray-800 text-white px-3 py-2"
+          >
+            Request Payout
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
