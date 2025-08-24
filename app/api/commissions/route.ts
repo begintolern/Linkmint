@@ -3,44 +3,43 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next"; // runtime
-import type { Session } from "next-auth";          // types
+import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 export async function GET() {
   try {
-    const session = (await getServerSession(authOptions)) as Session | null;
-
-    const email = session?.user?.email ?? null;
-    if (!email) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const session = (await getServerSession(authOptions as any)) as any;
+    if (!session?.user?.email) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Resolve user id
     const me = await prisma.user.findUnique({
-      where: { email },
+      where: { email: session.user.email as string },
       select: { id: true },
     });
     if (!me) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch commissions (adjust to your schema as needed)
+    // Example: return recent payout records as “commissions” placeholder
+    // (Adjust to your real Commission model if needed)
     const commissions = await prisma.payout.findMany({
       where: { userId: me.id },
       orderBy: { createdAt: "desc" },
+      take: 100,
       select: {
         id: true,
-        amount: true,
-        status: true, // e.g., "pending" | "approved" | "paid"
         createdAt: true,
+        statusEnum: true,
+        provider: true,
+        netCents: true,
       },
     });
 
-    return NextResponse.json({ success: true, commissions });
-  } catch (err) {
-    console.error("Commissions GET error:", err);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json({ ok: true, rows: commissions });
+  } catch (e) {
+    console.error("GET /api/commissions error:", e);
+    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }

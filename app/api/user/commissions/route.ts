@@ -4,61 +4,44 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 export async function GET() {
-  const session = (await getServerSession(authOptions)) as Session | null;
-
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const session = (await getServerSession(authOptions as any)) as any;
+    if (!session?.user?.email) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const me = await prisma.user.findUnique({
+      where: { email: session.user.email as string },
       select: { id: true },
     });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!me) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only fetch fields we need
-    const payouts = await prisma.payout.findMany({
-      where: { userId: user.id },
-      select: { status: true, amount: true },
+    // Pull recent Commission rows for this user
+    const rows = await prisma.commission.findMany({
+      where: { userId: me.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        createdAt: true,
+        amount: true,           // Float
+        type: true,             // CommissionType enum
+        status: true,           // string in your schema
+        paidOut: true,          // boolean
+        source: true,
+        description: true,
+      },
     });
 
-    let pending = 0;
-    let approved = 0;
-    let paid = 0;
-
-    for (const p of payouts) {
-      const status = String(p.status).toLowerCase();
-
-      // Prisma Decimal-safe conversion
-      const amount =
-        typeof (p.amount as any)?.toNumber === "function"
-          ? (p.amount as any).toNumber()
-          : Number(p.amount);
-
-      if (status === "pending") {
-        pending += amount;
-      } else if (status === "approved") {
-        approved += amount;
-      } else if (status === "paid") {
-        paid += amount;
-      }
-    }
-
-    return NextResponse.json({ pending, approved, paid });
-  } catch (error) {
-    console.error("Error fetching commissions:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: true, rows });
+  } catch (e) {
+    console.error("GET /api/user/commissions error:", e);
+    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }
