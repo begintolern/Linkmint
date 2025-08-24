@@ -1,4 +1,3 @@
-// app/api/admin/payouts/mark-paid/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -26,16 +25,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Missing payoutId" }, { status: 400 });
     }
 
+    // Use transactionId (exists in your schema) instead of externalPayoutId
     const updated = await prisma.payout.update({
       where: { id: payoutId },
       data: {
-        statusEnum: "PAID",
-        externalPayoutId: externalPayoutId ?? null,
+        statusEnum: "PAID" as any,
+        transactionId: externalPayoutId ?? null, // <- write here
         paidAt: new Date(),
       },
       select: {
-        id: true, userId: true, statusEnum: true, provider: true,
-        netCents: true, receiverEmail: true, externalPayoutId: true, paidAt: true,
+        id: true,
+        userId: true,
+        statusEnum: true,
+        provider: true,
+        netCents: true,
+        receiverEmail: true,
+        transactionId: true,
+        paidAt: true,
       },
     });
 
@@ -48,7 +54,11 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, payout: updated });
-  } catch (e) {
+  } catch (e: any) {
+    // If record not found, return 404 instead of 500
+    if (e?.code === "P2025") {
+      return NextResponse.json({ success: false, error: "Payout not found" }, { status: 404 });
+    }
     console.error("POST /api/admin/payouts/mark-paid error:", e);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
