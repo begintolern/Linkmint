@@ -8,22 +8,19 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export const authOptions = {
-  // ✅ Adapter required for email tokens (stores VerificationToken)
   adapter: PrismaAdapter(prisma),
 
   session: { strategy: "jwt" as const },
   secret: process.env.NEXTAUTH_SECRET,
-  debug: true, // temporary to surface errors in logs
+  debug: true,
 
   providers: [
-    // ✅ Magic-link / verification emails
     EmailProvider({
-      server: process.env.EMAIL_SERVER!,   // e.g. smtp://USER:PASS@HOST:587
-      from: process.env.EMAIL_FROM!,       // e.g. "Linkmint <no-reply@linkmint.co>"
-      maxAge: 60 * 60,                     // 1 hour
+      server: process.env.EMAIL_SERVER!,
+      from: process.env.EMAIL_FROM!,
+      maxAge: 60 * 60,
     }),
 
-    // ✅ Keep your existing credential login
     CredentialsProvider({
       name: "Email & Password",
       credentials: {
@@ -44,7 +41,8 @@ export const authOptions = {
             email: true,
             password: true,
             role: true,
-            emailVerifiedAt: true, // keep only if this exists in your schema
+            emailVerifiedAt: true,
+            referralCode: true, // <-- include for dashboard
           },
         });
         if (!user || !user.password) return null;
@@ -53,8 +51,6 @@ export const authOptions = {
         if (!ok) return null;
 
         if (!user.emailVerifiedAt) {
-          // You can change this behavior later if you want
-          // credentials login to work even before manual verify
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
@@ -63,6 +59,7 @@ export const authOptions = {
           name: user.name ?? "",
           email: user.email,
           role: user.role ?? "USER",
+          referralCode: user.referralCode ?? null, // <-- pass through
         } as any;
       },
     }),
@@ -75,6 +72,8 @@ export const authOptions = {
       if (user) {
         token.sub = (user as any).id ?? token.sub;
         (token as any).role = (user as any).role ?? (token as any).role ?? "USER";
+        (token as any).referralCode =
+          (user as any).referralCode ?? (token as any).referralCode ?? null; // <-- store on JWT
       }
       return token;
     },
@@ -82,6 +81,7 @@ export const authOptions = {
       if (session?.user) {
         (session.user as any).id = (token.sub ?? "") as string;
         (session.user as any).role = ((token as any).role ?? "USER") as string;
+        (session.user as any).referralCode = ((token as any).referralCode ?? null) as string | null; // <-- expose to client
       }
       return session;
     },
