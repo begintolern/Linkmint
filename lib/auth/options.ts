@@ -9,7 +9,6 @@ import bcrypt from "bcryptjs";
 
 export const authOptions = {
   adapter: PrismaAdapter(prisma),
-
   session: { strategy: "jwt" as const },
   secret: process.env.NEXTAUTH_SECRET,
   debug: true,
@@ -42,7 +41,7 @@ export const authOptions = {
             password: true,
             role: true,
             emailVerifiedAt: true,
-            referralCode: true, // <-- include for dashboard
+            referralCode: true,
           },
         });
         if (!user || !user.password) return null;
@@ -59,7 +58,7 @@ export const authOptions = {
           name: user.name ?? "",
           email: user.email,
           role: user.role ?? "USER",
-          referralCode: user.referralCode ?? null, // <-- pass through
+          referralCode: user.referralCode ?? null,
         } as any;
       },
     }),
@@ -69,19 +68,40 @@ export const authOptions = {
 
   callbacks: {
     async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
+      // On login: seed token with fresh user data
       if (user) {
         token.sub = (user as any).id ?? token.sub;
-        (token as any).role = (user as any).role ?? (token as any).role ?? "USER";
+        (token as any).role =
+          (user as any).role ?? (token as any).role ?? "USER";
         (token as any).referralCode =
-          (user as any).referralCode ?? (token as any).referralCode ?? null; // <-- store on JWT
+          (user as any).referralCode ?? (token as any).referralCode ?? null;
       }
+
+      // If we already have a user id but referralCode is missing, fetch it once
+      if (token?.sub && !(token as any).referralCode) {
+        const db = await prisma.user.findUnique({
+          where: { id: token.sub as string },
+          select: { referralCode: true },
+        });
+        (token as any).referralCode = db?.referralCode ?? null;
+      }
+
       return token;
     },
-    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
+
+    async session({
+      session,
+      token,
+    }: {
+      session: Session;
+      token: JWT;
+    }): Promise<Session> {
       if (session?.user) {
         (session.user as any).id = (token.sub ?? "") as string;
         (session.user as any).role = ((token as any).role ?? "USER") as string;
-        (session.user as any).referralCode = ((token as any).referralCode ?? null) as string | null; // <-- expose to client
+        (session.user as any).referralCode = (
+          (token as any).referralCode ?? null
+        ) as string | null;
       }
       return session;
     },
