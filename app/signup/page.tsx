@@ -36,7 +36,7 @@ export default function SignupPage() {
       }
 
       // Success: send them to verify page
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      router.push(`/verify-email`);
     } catch {
       setError('Network error. Please try again.');
     } finally {

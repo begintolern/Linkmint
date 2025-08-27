@@ -62,8 +62,14 @@ function VerifyEmailHandler() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="text-center mt-10">Verifying...</div>}>
-      <VerifyEmailHandler />
-    </Suspense>
+    <main className="mx-auto max-w-md py-16 px-6">
+      <h1 className="text-2xl font-semibold mb-3">Check your email</h1>
+      <p className="text-sm text-gray-600">
+        We sent you a verification link. Please open the email and click the button to verify.
+      </p>
+      <p className="text-sm text-gray-600 mt-3">
+        If it doesn’t arrive, check spam or request a new link from the login page.
+      </p>
+    </main>
   );
 }

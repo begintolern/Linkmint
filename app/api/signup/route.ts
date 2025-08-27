@@ -42,7 +42,6 @@ export async function POST(req: Request) {
         name: (name ?? null) as string | null,
         password: hash,
         emailVerifiedAt: null,
-        // ❌ do not set role/trustScore here to avoid enum/column mismatches
       },
       select: { id: true, email: true },
     });
@@ -57,14 +56,12 @@ export async function POST(req: Request) {
       },
     });
 
-    // 4) Send email (mailer builds the /verify?token=... link from token)
-    (async () => {
-      try {
-        await sendVerificationEmail(user.email, token);
-      } catch (e) {
-        console.error("[signup] email send failed:", e);
-      }
-    })();
+    // 4) Send email (mailer builds the /api/verify-email?token=... link from token)
+    try {
+      await sendVerificationEmail(user.email, token);
+    } catch (e) {
+      console.error("[signup] email send failed:", e);
+    }
 
     return NextResponse.json(
       { ok: true, message: "verification_sent" },

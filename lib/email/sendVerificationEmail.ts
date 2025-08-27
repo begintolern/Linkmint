@@ -1,24 +1,14 @@
-// /lib/email/sendVerificationEmail.ts
+// lib/email/sendVerificationEmail.ts
 import nodemailer from "nodemailer";
 
-/**
- * Uses Zoho SMTP (or any SMTP via EMAIL_SERVER URL) to send a verification email.
- * Required env:
- *  - EMAIL_FROM=admin@linkmint.co
- *  - EMAIL_SERVER=smtp://admin@linkmint.co:APP_PASSWORD@smtp.zoho.com:587
- * Optional (fallback if EMAIL_SERVER not set):
- *  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
- */
 function buildTransport() {
   if (process.env.EMAIL_SERVER) {
-    // Prefer a single SMTP URL when provided
     return nodemailer.createTransport(process.env.EMAIL_SERVER);
   }
-  // Fallback discrete settings (also works with Zoho)
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST ?? "smtp.zoho.com",
     port: Number(process.env.SMTP_PORT ?? 587),
-    secure: false, // Zoho uses STARTTLS on 587
+    secure: false,
     auth: {
       user: process.env.SMTP_USER ?? process.env.EMAIL_FROM,
       pass: process.env.SMTP_PASS,
@@ -28,15 +18,21 @@ function buildTransport() {
 
 const transporter = buildTransport();
 
+/**
+ * Sends a verification email that points to the API route:
+ *   /api/verify-email?token=...
+ */
 export async function sendVerificationEmail(to: string, tokenOrLink: string) {
   const base =
+    process.env.EMAIL_VERIFY_BASE_URL ||
     process.env.NEXT_PUBLIC_BASE_URL ||
     process.env.NEXTAUTH_URL ||
     "http://localhost:3000";
 
+  // ALWAYS target the API endpoint
   const link = tokenOrLink.startsWith("http")
     ? tokenOrLink
-    : `${base.replace(/\/$/, "")}/verify?token=${encodeURIComponent(
+    : `${base.replace(/\/$/, "")}/api/verify-email?token=${encodeURIComponent(
         tokenOrLink
       )}`;
 
@@ -55,7 +51,7 @@ export async function sendVerificationEmail(to: string, tokenOrLink: string) {
   });
 
   if (process.env.NODE_ENV !== "production") {
-    console.log("[mail] sent", info.messageId);
+    console.log("[mail] sent", info.messageId, "->", to, "link:", link);
   }
 }
 
