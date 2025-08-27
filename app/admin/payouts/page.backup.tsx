@@ -3,18 +3,18 @@
 import React from 'react';
 
 type PayoutRow = {
-  id: string | null | undefined;
+  id: string;
   createdAt: string;
   provider: 'PAYPAL' | 'PAYONEER' | string;
   statusEnum: 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED';
-  netCents?: number | null;
-  feeCents?: number | null;
-  amount?: number | null; // some rows use amount instead of netCents
+  netCents?: number;
+  feeCents?: number;
+  amount?: number;
   email?: string | null;
   name?: string | null;
 };
 
-function centsToUsd(c?: number | null) {
+function centsToUsd(c?: number) {
   if (typeof c !== 'number') return '-';
   return `$${(c / 100).toFixed(2)}`;
 }
@@ -24,7 +24,6 @@ export default function AdminPayoutsPage() {
   const [rows, setRows] = React.useState<PayoutRow[]>([]);
   const [email, setEmail] = React.useState('');
   const [status, setStatus] = React.useState<'ALL' | 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED'>('ALL');
-  const [msg, setMsg] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -48,8 +47,7 @@ export default function AdminPayoutsPage() {
 
   React.useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // initial only
+  }, []); // initial
 
   const totalNet = rows.reduce((sum, r) => sum + (r.netCents ?? 0), 0);
 
@@ -58,7 +56,7 @@ export default function AdminPayoutsPage() {
       const res = await fetch('/api/admin/payouts/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logId, dryRun: true })
+        body: JSON.stringify({ logId, dryRun: true }) // dry-run approve
       });
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.error || 'Approve failed');
@@ -70,44 +68,20 @@ export default function AdminPayoutsPage() {
     }
   }
 
-  // --- Robust Mark Paid: send id if present, else send fallback row metadata ---
-  async function markPaidFromIndex(e: React.MouseEvent<HTMLButtonElement>) {
-    const idxStr = (e.currentTarget.getAttribute('data-row-index') || '').trim();
-    const idx = Number(idxStr);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= rows.length) {
-      alert('Missing payoutId');
-      return;
-    }
-    const row = rows[idx];
-    const payoutId = (row?.id || '').toString().trim();
-    const external = `ADMIN-MANUAL-${Date.now()}`;
-
-    // derive netCents fallback if only amount is present
-    const netCents = typeof row.netCents === 'number'
-      ? row.netCents
-      : (typeof row.amount === 'number' ? Math.round(row.amount * 100) : null);
-
-    const payload = {
-      payoutId: payoutId || null,
-      createdAt: row.createdAt,
-      email: row.email ?? null,
-      netCents,
-      externalPayoutId: external,
-    };
-
+  async function markPaid(payoutId: string) {
     try {
-      const url = `/api/admin/payouts/mark-paid`; // server will resolve by id or fallback
-      const res = await fetch(url, {
+      const res = await fetch('/api/admin/payouts/mark-paid', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          payoutId,
+          externalPayoutId: `ADMIN-MANUAL-${Date.now()}`
+        })
       });
       const json = await res.json();
       if (!res.ok || !json?.success) throw new Error(json?.error || 'Mark paid failed');
-
-      setMsg('Marked as PAID.');
+      alert('Marked as PAID.');
       await load();
-      setTimeout(() => setMsg(null), 3000);
     } catch (e: any) {
       console.error(e);
       alert(e.message || 'Mark paid failed');
@@ -146,13 +120,6 @@ export default function AdminPayoutsPage() {
         </button>
       </div>
 
-      {/* success message */}
-      {msg && (
-        <div className="px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
-          {msg}
-        </div>
-      )}
-
       {/* Table */}
       <div className="border rounded-md overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -177,8 +144,8 @@ export default function AdminPayoutsPage() {
                 </td>
               </tr>
             ) : (
-              rows.map((r, idx) => (
-                <tr key={(r.id as string) || `${r.createdAt}-${idx}`} className="border-t">
+              rows.map((r) => (
+                <tr key={r.id} className="border-t">
                   <td className="px-3 py-2">{new Date(r.createdAt).toLocaleString()}</td>
                   <td className="px-3 py-2">{r.email ?? '—'}</td>
                   <td className="px-3 py-2">{r.name ?? '—'}</td>
@@ -205,23 +172,22 @@ export default function AdminPayoutsPage() {
                       : '—'}
                   </td>
                   <td className="px-3 py-2">{centsToUsd(r.feeCents)}</td>
-                  <td className="px-3 py-2">{r.id || '—'}</td>
+                  <td className="px-3 py-2">{r.id}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
                       {(r.statusEnum === 'PENDING' || r.statusEnum === 'PROCESSING') && (
                         <>
                           <button
                             className="px-2 py-1 rounded bg-amber-100 hover:bg-amber-200"
-                            onClick={() => approve(String(r.id))}
+                            onClick={() => approve(r.id)}
                             title="Approve (dry‑run)"
                           >
                             Approve
                           </button>
                           <button
                             className="px-2 py-1 rounded bg-green-100 hover:bg-green-200"
-                            data-row-index={idx}
-                            onClick={markPaidFromIndex}
-                            title={`Mark Paid`}
+                            onClick={() => markPaid(r.id)}
+                            title="Mark Paid"
                           >
                             Mark Paid
                           </button>

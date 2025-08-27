@@ -5,7 +5,7 @@ export const fetchCache = "force-no-store";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 
-// NextAuth
+// NextAuth (v4)
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 
@@ -16,11 +16,17 @@ import ReferralStatusCard from "@/components/dashboard/ReferralStatusCard";
 import CommissionCard from "@/components/dashboard/CommissionCard";
 import FounderRewardCard from "@/components/dashboard/FounderRewardCard";
 import ReferralSummaryCard from "@/components/dashboard/ReferralSummaryCard";
-import PayoutMethodCard from "@/components/dashboard/PayoutMethodCard"; // single source of Cash Out
+
+// Payout widgets
+import PayoutMethodCard from "@/components/dashboard/PayoutMethodCard";
+import CashOutCard from "@/components/dashboard/CashOutCard"; // ✅ single cash-out section
 
 export default async function DashboardPage() {
   const session = (await getServerSession(authOptions as any)) as any;
-  if (!session || !session.user?.email) redirect("/login");
+
+  if (!session || !session.user?.email) {
+    redirect("/login");
+  }
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email as string },
@@ -34,9 +40,11 @@ export default async function DashboardPage() {
     },
   });
 
-  if (!user) redirect("/login");
+  if (!user) {
+    redirect("/login");
+  }
 
-  // Founder bonus: 90 days from creation
+  // Founder bonus window: 90 days from account creation
   const createdAt =
     user.createdAt instanceof Date ? user.createdAt : new Date(user.createdAt as any);
   const bonusEnds = new Date(createdAt.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -50,7 +58,7 @@ export default async function DashboardPage() {
         <LogoutButton />
       </div>
 
-      {/* Founder reward */}
+      {/* Founder reward / inviter context */}
       <FounderRewardCard
         inviterEmail={user.referredBy?.email ?? null}
         bonusActive={bonusActive}
@@ -75,13 +83,18 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Main cards (single Cash Out via PayoutMethodCard) */}
+      {/* Main cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <ReferralCardWrapper />
         <ReferralStatusCard />
         <CommissionCard />
         <ReferralSummaryCard />
+      </div>
+
+      {/* Payout section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PayoutMethodCard />
+        <CashOutCard /> {/* ✅ only one Cash Out component */}
       </div>
     </div>
   );

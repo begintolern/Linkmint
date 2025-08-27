@@ -1,15 +1,29 @@
 // lib/auth/options.ts
 import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export const authOptions = {
+  // ✅ Adapter required for email tokens (stores VerificationToken)
+  adapter: PrismaAdapter(prisma),
+
   session: { strategy: "jwt" as const },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: true, // temporary to surface errors in logs
 
   providers: [
+    // ✅ Magic-link / verification emails
+    EmailProvider({
+      server: process.env.EMAIL_SERVER!,   // e.g. smtp://USER:PASS@HOST:587
+      from: process.env.EMAIL_FROM!,       // e.g. "Linkmint <no-reply@linkmint.co>"
+      maxAge: 60 * 60,                     // 1 hour
+    }),
+
+    // ✅ Keep your existing credential login
     CredentialsProvider({
       name: "Email & Password",
       credentials: {
@@ -39,6 +53,8 @@ export const authOptions = {
         if (!ok) return null;
 
         if (!user.emailVerifiedAt) {
+          // You can change this behavior later if you want
+          // credentials login to work even before manual verify
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
@@ -62,7 +78,6 @@ export const authOptions = {
       }
       return token;
     },
-
     async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       if (session?.user) {
         (session.user as any).id = (token.sub ?? "") as string;
@@ -71,4 +86,4 @@ export const authOptions = {
       return session;
     },
   },
-} as any; // <-- cast once to avoid version/type mismatches
+} as any;

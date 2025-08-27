@@ -1,54 +1,55 @@
 // prisma/seed.ts
-import { prisma } from "../lib/db";
-import { CommissionType } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Seeding database…");
-
-  // 1) Ensure a test user exists (use upsert to avoid unique email errors)
   const email = "testuser@example.com";
+
+  // Ensure user exists
   const user = await prisma.user.upsert({
     where: { email },
-    update: {}, // nothing to update for now
+    update: {},
     create: {
       email,
-      name: "Test User",
-      role: "USER",
-      trustScore: 0,
+      password: null,
+      role: "ADMIN",            // so you can access admin pages
+      trustScore: 80,
+      emailVerifiedAt: new Date(),
     },
+    select: { id: true, email: true },
   });
-  console.log("✅ User ready:", user.id, user.email);
 
-  // 2) Create a Commission that MATCHES your schema (must include `type`)
-  const commission = await prisma.commission.create({
-    data: {
-      userId: user.id,
-      amount: 45.5,
-      type: CommissionType.referral_purchase, // ← REQUIRED enum per your schema
-      status: "Pending",
-      paidOut: false,
-      source: "SEED",
-      description: "Seeded commission",
-    },
+  // Create a few approved, unpaid commissions (available to cash out)
+  const rows = [
+    { amount: 3.50, type: "referral_purchase" as const, status: "approved" },
+    { amount: 4.25, type: "referral_purchase" as const, status: "approved" },
+    { amount: 2.00, type: "referral_purchase" as const, status: "pending"  }, // not counted yet
+  ];
+
+  // Insert only if there are no approved+unpaid commissions yet
+  const existing = await prisma.commission.count({
+    where: { userId: user.id, status: "approved", paidOut: false },
   });
-  console.log("✅ Commission created:", commission.id);
 
-  // 3) Create a PayoutLog using fields that EXIST on your current model
-  //    (receiverEmail / amount / paypalBatchId / transactionId / note / status)
-  const payoutLog = await prisma.payoutLog.create({
-    data: {
-      userId: user.id,
-      receiverEmail: "sandbox-recipient@example.com",
-      amount: 12.34,
-      paypalBatchId: "SEEDBATCH123",
-      transactionId: "SEEDTXN123",
-      note: "This is a test payout log entry from seed.ts",
-      status: "CREATED",
-    },
-  });
-  console.log("✅ PayoutLog created:", payoutLog.id);
+  if (existing === 0) {
+    await prisma.$transaction(
+      rows.map((r) =>
+        prisma.commission.create({
+          data: {
+            userId: user.id,
+            amount: r.amount,
+            type: r.type,
+            status: r.status,
+            paidOut: false,
+            description: "Seed commission",
+            source: "seed",
+          },
+        })
+      )
+    );
+  }
 
-  console.log("🌱 Seed complete.");
+  console.log("Seeded commissions for:", user.email);
 }
 
 main()
@@ -56,7 +57,7 @@ main()
     await prisma.$disconnect();
   })
   .catch(async (e) => {
-    console.error("❌ Seed error:", e);
+    console.error("Seed error:", e);
     await prisma.$disconnect();
     process.exit(1);
   });

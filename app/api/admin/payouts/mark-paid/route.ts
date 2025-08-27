@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
+    // ---- admin auth
     const session = (await getServerSession(authOptions as any)) as any;
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -20,17 +21,64 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
-    const { payoutId, externalPayoutId } = await req.json();
-    if (!payoutId) {
+    // ---- parse body
+    const raw = await req.text();
+    let body: any = null;
+    try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
+
+    const payoutId: string = (body?.payoutId ?? "").toString().trim();
+    const createdAtStr: string = (body?.createdAt ?? "").toString().trim();
+    const email: string = (body?.email ?? "").toString().trim();
+    const netCents: number | null = typeof body?.netCents === "number" ? body.netCents : null;
+    const externalPayoutId: string = (body?.externalPayoutId ?? "").toString().trim();
+
+    // ---- find target payout
+    let targetId = payoutId;
+
+    if (!targetId) {
+      // Fallback lookup by metadata (createdAt ~ window, email, netCents)
+      const where: any = {
+        statusEnum: { in: ["PENDING", "PROCESSING"] as any },
+      };
+
+      if (email) {
+        where.user = { is: { email } };
+      }
+
+      if (Number.isFinite(netCents)) {
+        where.netCents = netCents!;
+      }
+
+      if (createdAtStr) {
+        const base = new Date(createdAtStr);
+        if (!isNaN(base.getTime())) {
+          const before = new Date(base.getTime() - 5 * 60 * 1000); // 5m window
+          const after = new Date(base.getTime() + 5 * 60 * 1000);
+          where.createdAt = { gte: before, lte: after };
+        }
+      }
+
+      const candidate = await prisma.payout.findFirst({
+        where,
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+
+      if (candidate?.id) {
+        targetId = candidate.id;
+      }
+    }
+
+    if (!targetId) {
       return NextResponse.json({ success: false, error: "Missing payoutId" }, { status: 400 });
     }
 
-    // Use transactionId (exists in your schema) instead of externalPayoutId
+    // ---- update payout
     const updated = await prisma.payout.update({
-      where: { id: payoutId },
+      where: { id: targetId },
       data: {
         statusEnum: "PAID" as any,
-        transactionId: externalPayoutId ?? null, // <- write here
+        transactionId: externalPayoutId || null,
         paidAt: new Date(),
       },
       select: {
@@ -45,6 +93,7 @@ export async function POST(req: Request) {
       },
     });
 
+    // optional event log
     await prisma.eventLog.create({
       data: {
         userId: me.id,
@@ -55,7 +104,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, payout: updated });
   } catch (e: any) {
-    // If record not found, return 404 instead of 500
     if (e?.code === "P2025") {
       return NextResponse.json({ success: false, error: "Payout not found" }, { status: 404 });
     }
