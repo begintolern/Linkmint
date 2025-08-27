@@ -19,7 +19,6 @@ export const authOptions = {
       from: process.env.EMAIL_FROM!,
       maxAge: 60 * 60,
     }),
-
     CredentialsProvider({
       name: "Email & Password",
       credentials: {
@@ -48,10 +47,7 @@ export const authOptions = {
 
         const ok = await bcrypt.compare(pw, user.password);
         if (!ok) return null;
-
-        if (!user.emailVerifiedAt) {
-          throw new Error("EMAIL_NOT_VERIFIED");
-        }
+        if (!user.emailVerifiedAt) throw new Error("EMAIL_NOT_VERIFIED");
 
         return {
           id: user.id,
@@ -68,7 +64,6 @@ export const authOptions = {
 
   callbacks: {
     async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
-      // On login: seed token with fresh user data
       if (user) {
         token.sub = (user as any).id ?? token.sub;
         (token as any).role =
@@ -76,32 +71,27 @@ export const authOptions = {
         (token as any).referralCode =
           (user as any).referralCode ?? (token as any).referralCode ?? null;
       }
-
-      // If we already have a user id but referralCode is missing, fetch it once
-      if (token?.sub && !(token as any).referralCode) {
-        const db = await prisma.user.findUnique({
-          where: { id: token.sub as string },
-          select: { referralCode: true },
-        });
-        (token as any).referralCode = db?.referralCode ?? null;
-      }
-
       return token;
     },
 
-    async session({
-      session,
-      token,
-    }: {
-      session: Session;
-      token: JWT;
-    }): Promise<Session> {
+    // <-- Always hydrate referralCode from DB on each session fetch
+    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       if (session?.user) {
-        (session.user as any).id = (token.sub ?? "") as string;
+        const userId = (token.sub ?? "") as string;
+        (session.user as any).id = userId;
         (session.user as any).role = ((token as any).role ?? "USER") as string;
-        (session.user as any).referralCode = (
-          (token as any).referralCode ?? null
-        ) as string | null;
+
+        try {
+          const db = userId
+            ? await prisma.user.findUnique({
+                where: { id: userId },
+                select: { referralCode: true },
+              })
+            : null;
+          (session.user as any).referralCode = db?.referralCode ?? null;
+        } catch {
+          (session.user as any).referralCode = null;
+        }
       }
       return session;
     },
