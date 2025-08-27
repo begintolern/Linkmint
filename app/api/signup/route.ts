@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2) Create user
+    // 2) Create user (let DB defaults handle role, etc.)
     const hash = await bcrypt.hash(String(password), 10);
     const user = await prisma.user.create({
       data: {
@@ -42,13 +42,12 @@ export async function POST(req: Request) {
         name: (name ?? null) as string | null,
         password: hash,
         emailVerifiedAt: null,
-        role: "USER",   // ensure this matches your Prisma enum
-        trustScore: 0,  // remove if not in your schema
+        // ❌ do not set role/trustScore here to avoid enum/column mismatches
       },
       select: { id: true, email: true },
     });
 
-    // 3) Create verification token (stored in VerificationToken table)
+    // 3) Create verification token
     const token = crypto.randomBytes(32).toString("hex");
     await prisma.verificationToken.create({
       data: {
@@ -58,9 +57,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // 4) Send verification email with the TOKEN (mailer builds the link)
-    // Your sendVerificationEmail(to, token) should construct:
-    //   `${process.env.EMAIL_VERIFY_BASE_URL}/verify?token=${token}`
+    // 4) Send email (mailer builds the /verify?token=... link from token)
     (async () => {
       try {
         await sendVerificationEmail(user.email, token);
@@ -69,7 +66,6 @@ export async function POST(req: Request) {
       }
     })();
 
-    // 5) Respond — client should redirect to /check-email page
     return NextResponse.json(
       { ok: true, message: "verification_sent" },
       { status: 201 }
