@@ -3,11 +3,14 @@
 import { useSession } from "next-auth/react";
 
 export default function ReferralLinkCard() {
-  const { data: session } = useSession();
-  const code = (session?.user as any)?.referralCode;
-  const link = code ? `https://linkmint.co/signup?ref=${code}` : null;
+  // Be defensive: don't destructure directly
+  const sessionResult = typeof useSession === "function" ? useSession() : undefined;
+  const session = sessionResult?.data ?? null;
 
-  if (!link) return null;
+  const code = (session?.user as any)?.referralCode as string | undefined;
+  if (!code) return null;
+
+  const link = `https://linkmint.co/signup?ref=${code}`;
 
   return (
     <div className="p-4 border rounded-lg bg-white shadow">
