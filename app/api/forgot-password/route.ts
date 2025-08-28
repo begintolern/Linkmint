@@ -14,24 +14,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "missing_email" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email: normalized }, select: { id: true, email: true } });
-    // Always respond OK to avoid user enumeration
+    const user = await prisma.user.findUnique({
+      where: { email: normalized },
+      select: { id: true, email: true },
+    });
+
+    // Always respond OK (avoid user enumeration)
     if (!user) return NextResponse.json({ ok: true });
 
-    // Clear existing tokens for this user
+    // Remove old tokens
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
 
+    // Create new token (1h expiry)
     const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
 
     await prisma.passwordResetToken.create({
       data: { userId: user.id, token, expires },
     });
 
+    // Send email
     await sendPasswordResetEmail(user.email, token);
 
     return NextResponse.json({ ok: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }
 }
