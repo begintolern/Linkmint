@@ -29,6 +29,8 @@ model User {
   payoutLogs             PayoutLog[]
   commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
   overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
+  passwordResetTokens    PasswordResetToken[]
+
 
   // NEW: payout accounts per provider (PayPal/Payoneer)
   payoutAccounts         PayoutAccount[]
@@ -285,4 +287,12 @@ model PayoutLog {
   user User? @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
+}
+model PasswordResetToken {
+  id      String   @id @default(cuid())
+  userId  String
+  token   String   @unique
+  expires DateTime
+
+  user    User     @relation(fields: [userId], references: [id])
 }
