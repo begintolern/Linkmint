@@ -16,7 +16,8 @@ export default function ForgotPasswordPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      setSent(true); // always show success to prevent enumeration
+      // Always show success, even if user doesn't exist (to prevent email enumeration)
+      setSent(true);
     } finally {
       setBusy(false);
     }
