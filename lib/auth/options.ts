@@ -63,35 +63,39 @@ export const authOptions = {
   pages: { signIn: "/login" },
 
   callbacks: {
+    // Always hydrate referralCode (and role) from DB on every JWT calc.
     async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
+      // If just signed in, seed basics
       if (user) {
-        token.sub = (user as any).id ?? token.sub;
-        (token as any).role =
-          (user as any).role ?? (token as any).role ?? "USER";
-        (token as any).referralCode =
-          (user as any).referralCode ?? (token as any).referralCode ?? null;
+        token.sub = user.id ?? token.sub;
+        (token as any).email = user.email ?? (token as any).email;
       }
+
+      // Refresh from DB using either freshly-logged-in user or existing token.sub
+      const userId = (user?.id ?? token.sub) as string | undefined;
+      if (userId) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { referralCode: true, role: true },
+          });
+          if (dbUser) {
+            (token as any).referralCode = dbUser.referralCode ?? null;
+            (token as any).role = dbUser.role ?? (token as any).role ?? "USER";
+          }
+        } catch {
+          // leave token fields as-is on DB error
+        }
+      }
+
       return token;
     },
 
-    // <-- Always hydrate referralCode from DB on each session fetch
     async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       if (session?.user) {
-        const userId = (token.sub ?? "") as string;
-        (session.user as any).id = userId;
+        (session.user as any).id = (token.sub ?? "") as string;
         (session.user as any).role = ((token as any).role ?? "USER") as string;
-
-        try {
-          const db = userId
-            ? await prisma.user.findUnique({
-                where: { id: userId },
-                select: { referralCode: true },
-              })
-            : null;
-          (session.user as any).referralCode = db?.referralCode ?? null;
-        } catch {
-          (session.user as any).referralCode = null;
-        }
+        (session.user as any).referralCode = ((token as any).referralCode ?? null) as string | null;
       }
       return session;
     },
