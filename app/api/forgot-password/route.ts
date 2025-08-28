@@ -19,13 +19,11 @@ export async function POST(req: Request) {
       select: { id: true, email: true },
     });
 
-    // Always respond OK (avoid user enumeration)
+    // Always behave the same (anti-enumeration)
     if (!user) return NextResponse.json({ ok: true });
 
-    // Remove old tokens
     await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
 
-    // Create new token (1h expiry)
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -33,11 +31,17 @@ export async function POST(req: Request) {
       data: { userId: user.id, token, expires },
     });
 
-    // Send email
-    await sendPasswordResetEmail(user.email, token);
+    // Try to send, but don't fail the request if SMTP is blocked/timeouts
+    try {
+      await sendPasswordResetEmail(user.email, token);
+    } catch (e) {
+      console.error("[forgot-password] email send failed:", e);
+      // still return ok so UX works; link is in server logs if you added console.log in mailer
+    }
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error("[forgot-password] server error:", e);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }
 }
