@@ -1,12 +1,24 @@
 import nodemailer from "nodemailer";
 
 function buildTransport() {
-  if (process.env.EMAIL_SERVER) return nodemailer.createTransport(process.env.EMAIL_SERVER);
+  const hasUrl = !!process.env.EMAIL_SERVER;
+  console.log("[password-reset] EMAIL_SERVER present:", hasUrl);
+
+  if (hasUrl) {
+    // If you set smtps://...:465 this will use SSL automatically
+    return nodemailer.createTransport(process.env.EMAIL_SERVER as string);
+  }
+
+  // Fallback: Zoho on 587 with STARTTLS
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST ?? "smtp.zoho.com",
     port: Number(process.env.SMTP_PORT ?? 587),
-    secure: false,
-    auth: { user: process.env.SMTP_USER ?? process.env.EMAIL_FROM, pass: process.env.SMTP_PASS },
+    secure: false,              // STARTTLS
+    requireTLS: true,           // force upgrade
+    auth: {
+      user: process.env.SMTP_USER ?? process.env.EMAIL_FROM,
+      pass: process.env.SMTP_PASS,
+    },
   });
 }
 
@@ -32,5 +44,6 @@ export async function sendPasswordResetEmail(to: string, token: string) {
       <p>This link expires in 1 hour.</p>
     `,
   });
-   console.log("[password-reset] sent to:", to, "link:", link); // <-- add this
+
+  console.log("[password-reset] sent to:", to, "link:", link);
 }
