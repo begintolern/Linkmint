@@ -32,4 +32,5 @@ export async function sendPasswordResetEmail(to: string, token: string) {
       <p>This link expires in 1 hour.</p>
     `,
   });
+   console.log("[password-reset] sent to:", to, "link:", link); // <-- add this
 }
