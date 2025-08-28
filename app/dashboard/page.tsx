@@ -16,17 +16,19 @@ import ReferralCardWrapper from "@/components/dashboard/ReferralCardWrapper";
 import ReferralStatusCard from "@/components/dashboard/ReferralStatusCard";
 import ReferralSummaryCard from "@/components/dashboard/ReferralSummaryCard";
 import EarningsCard from "@/components/dashboard/EarningsCard";
-// import FounderRewardCard from "@/components/dashboard/FounderRewardCard";
 
 export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [name, setName] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
     fetch("/api/auth/session")
       .then((r) => r.json())
       .then((j) => {
-        if (!cancelled) setUserId(j?.user?.id ?? null);
+        if (cancelled) return;
+        setUserId(j?.user?.id ?? null);
+        setName(j?.user?.name ?? "");
       })
       .catch(() => {});
     return () => {
@@ -37,7 +39,10 @@ export default function DashboardPage() {
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          {name ? <p className="text-sm text-gray-500 mt-1">Hi, {name}</p> : null}
+        </div>
         <LogoutButton />
       </div>
 
@@ -56,6 +61,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <OverrideBonusCard />
+        {/* FounderRewardCard depends on extra props; we’ll wire later */}
         {/* <FounderRewardCard inviterEmail={""} bonusActive={false} bonusEndsAt={new Date()} /> */}
       </div>
 
