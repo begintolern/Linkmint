@@ -1,3 +1,10 @@
+/**
+ * ⚠️ SIMULATOR ONLY — Developer testing route
+ * Not used in production logic.
+ * Safe to remove or disable before launch.
+ */
+
+
 // app/api/simulate-referral-bonus-alert/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";

@@ -1,4 +1,12 @@
+/**
+ * ⚠️ SIMULATOR ONLY — Developer testing route
+ * Not used in production logic.
+ * Safe to remove or disable before launch.
+ */
+
+
 // app/api/simulate-referrals/route.ts
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
@@ -15,12 +23,13 @@ function randEmail(seed: string) {
 export async function POST(req: Request) {
   try {
     const jwt = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET });
-    if (!jwt || !jwt.email) {
+    const email = (jwt as any)?.email as string | undefined;
+    if (!email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const me = await prisma.user.findUnique({
-      where: { email: jwt.email },
+      where: { email },
       select: { id: true },
     });
     if (!me) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
@@ -31,7 +40,7 @@ export async function POST(req: Request) {
         data: {
           email: randEmail(String(i)),
           name: `Referred User ${i + 1}`,
-          password: "dev-seed",               // matches your schema (optional field)
+          password: "dev-seed",
           referredById: me.id,
           emailVerifiedAt: new Date(),
         },
