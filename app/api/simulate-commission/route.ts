@@ -5,57 +5,75 @@
  */
 
 
-// app/api/simulate-commission/route.ts
+// app/api/admin/simulate-commission/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import { getToken } from "next-auth/jwt";
-import { CommissionType } from "@prisma/client";
+
+type PostBody = { userId?: string; amount?: number; type?: string };
 
 export async function POST(req: Request) {
   try {
-    const jwt = await getToken({ req: req as any, secret: process.env.NEXTAUTH_SECRET });
-    if (!jwt || !jwt.email) {
+    const raw = await getServerSession(authOptions);
+    const session = raw as Session | null;
+
+    if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const me = await prisma.user.findUnique({
-      where: { email: String(jwt.email).toLowerCase() },
-      select: { id: true },
-    });
-    if (!me) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    // TEMP allowlist
+    const ADMIN_EMAILS = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
+    const sessionRole = String((session.user as any).role ?? "").toUpperCase();
+    const isAdmin = sessionRole === "ADMIN" || ADMIN_EMAILS.has(session.user.email.toLowerCase());
 
-    const body = await req.json().catch(() => ({} as any));
-    const amount = Number(body.amount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ success: false, error: "Invalid amount" }, { status: 400 });
+    if (!isAdmin) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
-    const typeInput = String(body.type ?? "SALE").toUpperCase();
-    const type =
-      (Object.values(CommissionType) as string[]).includes(typeInput)
-        ? (typeInput as CommissionType)
-        : CommissionType.referral_purchase;
+    const body = (await req.json()) as PostBody;
+    const userId = body.userId?.trim();
+    const amount = Number(body.amount);
+    const type = body.type ?? "referral_purchase"; // default
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: "userId is required" }, { status: 400 });
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json({ success: false, error: "amount must be > 0" }, { status: 400 });
+    }
+
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!target) {
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    }
 
     const commission = await prisma.commission.create({
       data: {
-        userId: me.id,
+        userId: target.id,
         amount,
-        type,
-        status: "pending",
-        source: body.source ?? "simulate",
-        description: body.description ?? null,
-      },
+        status: "PENDING" as any,          // must match PayoutStatus
+        type: type as any,                 // must be one of: referral_purchase | override_bonus | payout
+      } as any,
     });
 
-    return NextResponse.json({ success: true, commission });
-  } catch (e) {
-    console.error("simulate-commission error:", e);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      message: "Simulated commission created (admin route).",
+      commission,
+    });
+  } catch (err: any) {
+    console.error("[admin simulate-commission] error:", err);
+    return NextResponse.json(
+      { success: false, error: err?.message ?? "Internal error", debug: { stage: "catch" } },
+      { status: 500 }
+    );
   }
 }
+
 
 
