@@ -8,16 +8,13 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-// NOTE: In your DB, commission.status uses the PayoutStatus enum:
-// PENDING | PROCESSING | PAID | FAILED
 // We'll treat PROCESSING as "approved" for this test flow.
-
 type PostBody = { commissionId?: string };
 
 export async function POST(req: Request) {
   try {
-    const rawSession = await getServerSession(authOptions);
-    const session = rawSession as Session | null;
+    const raw = await getServerSession(authOptions);
+    const session = raw as Session | null;
     const email = session?.user?.email ?? "";
     if (!email) {
       return NextResponse.json({ success: false, error: "Unauthorized (no session)" }, { status: 401 });
@@ -34,7 +31,7 @@ export async function POST(req: Request) {
 
     const updated = await prisma.commission.update({
       where: { id: commissionId },
-      data: { status: "PROCESSING" as any }, // treat as Approved
+      data: { status: "PROCESSING" as any }, // PayoutStatus enum
       select: { id: true, status: true, amount: true, userId: true, type: true },
     });
 

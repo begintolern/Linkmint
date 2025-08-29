@@ -8,16 +8,12 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-// This simulates a PayPal payout by:
-// 1) Creating a payout row with PROCESSING -> PAID
-// 2) Marking the commission as PAID
-
 type PostBody = { commissionId?: string };
 
 export async function POST(req: Request) {
   try {
-    const rawSession = await getServerSession(authOptions);
-    const session = rawSession as Session | null;
+    const raw = await getServerSession(authOptions);
+    const session = raw as Session | null;
     const email = session?.user?.email ?? "";
     if (!email) {
       return NextResponse.json({ success: false, error: "Unauthorized (no session)" }, { status: 401 });
@@ -32,7 +28,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "commissionId is required" }, { status: 400 });
     }
 
-    // Pull commission
     const commission = await prisma.commission.findUnique({
       where: { id: commissionId },
       select: { id: true, userId: true, amount: true, status: true, type: true },
@@ -47,7 +42,7 @@ export async function POST(req: Request) {
         userId: commission.userId,
         commissionId: commission.id,
         amount: commission.amount,
-        status: "PROCESSING" as any, // PayoutStatus
+        status: "PROCESSING" as any, // PayoutStatus enum
         provider: "PAYPAL_SANDBOX",
         providerRef: `SIM-${Date.now()}`,
         meta: { note: "diag trigger-payout-bypass" } as any,
@@ -55,7 +50,7 @@ export async function POST(req: Request) {
       select: { id: true, status: true, amount: true },
     });
 
-    // Simulate provider success: mark payout PAID and commission PAID
+    // Simulate provider success (PAID)
     const [payoutFinal, commissionFinal] = await prisma.$transaction([
       prisma.payout.update({
         where: { id: payout.id },
