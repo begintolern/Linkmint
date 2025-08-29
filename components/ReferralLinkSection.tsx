@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import ReferralLinkButton from "@/components/ReferralLinkButton";
 
 export default async function ReferralLinkSection() {
+  // Typed session to avoid TS "user does not exist" errors
   const rawSession = await getServerSession(authOptions);
   const session = rawSession as Session | null;
 
@@ -20,7 +21,7 @@ export default async function ReferralLinkSection() {
     );
   }
 
-  // Prefer looking up by id if present on the session; otherwise by email
+  // Prefer lookup by id (if your session includes it), else by email
   const me =
     (sessionUserId &&
       (await prisma.user.findUnique({
@@ -47,8 +48,8 @@ export default async function ReferralLinkSection() {
       <h3 className="text-sm font-semibold mb-2">Your referral link</h3>
       <ReferralLinkButton
         referralCode={referralCode}
-        // baseUrl={process.env.NEXT_PUBLIC_APP_URL} // optional
-        style="path"
+        // baseUrl={process.env.NEXT_PUBLIC_APP_URL} // optional override
+        style="path" // change to "query" if you prefer ?ref=CODE
       />
       <p className="mt-2 text-xs text-gray-500">
         Share this link to earn from referral purchases.

@@ -1,9 +1,9 @@
 // app/dashboard/page.tsx
-"use client";
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
 
-import { useEffect, useState } from "react";
 import LogoutButton from "@/components/dashboard/LogoutButton";
-
 import CommissionCard from "@/components/dashboard/CommissionCard";
 import OverrideBonusCard from "@/components/dashboard/OverrideBonusCard";
 import PayoutMethodCard from "@/components/dashboard/PayoutMethodCard";
@@ -13,28 +13,14 @@ import ReferralCardWrapper from "@/components/dashboard/ReferralCardWrapper";
 import ReferralStatusCard from "@/components/dashboard/ReferralStatusCard";
 import ReferralSummaryCard from "@/components/dashboard/ReferralSummaryCard";
 import EarningsCard from "@/components/dashboard/EarningsCard";
-
-// ✅ Import the new server component
 import ReferralLinkSection from "@/components/ReferralLinkSection";
 
-export default function DashboardPage() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [name, setName] = useState<string>("");
+export default async function DashboardPage() {
+  const rawSession = await getServerSession(authOptions);
+  const session = rawSession as Session | null;
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/auth/session")
-      .then((r) => r.json())
-      .then((j) => {
-        if (cancelled) return;
-        setUserId(j?.user?.id ?? null);
-        setName(j?.user?.name ?? "");
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const name = session?.user?.name ?? "";
+  const userId = (session?.user as any)?.id ?? null;
 
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
@@ -47,8 +33,6 @@ export default function DashboardPage() {
       </div>
 
       <ReferralBonusBanner />
-
-      {/* ✅ Show referral link copy button */}
       <ReferralLinkSection />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -63,7 +47,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <OverrideBonusCard />
-        {/* FounderRewardCard depends on extra props; we’ll wire later */}
+        {/* FounderRewardCard depends on extra props; wire later */}
         {/* <FounderRewardCard inviterEmail={""} bonusActive={false} bonusEndsAt={new Date()} /> */}
       </div>
 
