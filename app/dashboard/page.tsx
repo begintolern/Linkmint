@@ -1,11 +1,8 @@
 // app/dashboard/page.tsx
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import LogoutButton from "@/components/dashboard/LogoutButton";
-
-const ReferralLinkCard = dynamic(() => import("./components/ReferralLinkCard"), { ssr: false });
 
 import CommissionCard from "@/components/dashboard/CommissionCard";
 import OverrideBonusCard from "@/components/dashboard/OverrideBonusCard";
@@ -16,6 +13,9 @@ import ReferralCardWrapper from "@/components/dashboard/ReferralCardWrapper";
 import ReferralStatusCard from "@/components/dashboard/ReferralStatusCard";
 import ReferralSummaryCard from "@/components/dashboard/ReferralSummaryCard";
 import EarningsCard from "@/components/dashboard/EarningsCard";
+
+// ✅ Import the new server component
+import ReferralLinkSection from "@/components/ReferralLinkSection";
 
 export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -47,7 +47,9 @@ export default function DashboardPage() {
       </div>
 
       <ReferralBonusBanner />
-      <ReferralLinkCard />
+
+      {/* ✅ Show referral link copy button */}
+      <ReferralLinkSection />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {userId ? <EarningsCard userId={userId} /> : null}
