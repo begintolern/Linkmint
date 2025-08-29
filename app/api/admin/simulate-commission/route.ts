@@ -19,14 +19,19 @@ export async function POST(req: Request) {
     }
 
     const me = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, role: true },
+      where: { email: session.user.email! },
+      select: { role: true },
     });
-    if (!me) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-    const role = String(me.role ?? "").toUpperCase();
-    if (role !== "ADMIN") {
+
+    // Trust session role first, then DB role
+    const sessionRole = String((session.user as any).role ?? "").toUpperCase();
+    const dbRole = String(me?.role ?? "").toUpperCase();
+    const role = sessionRole || dbRole;
+
+    // Allowlist for safe override
+    const ADMIN_EMAILS = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
+
+    if (role !== "ADMIN" && !ADMIN_EMAILS.has(session.user.email!)) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
