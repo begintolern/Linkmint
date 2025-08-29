@@ -28,6 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "commissionId is required" }, { status: 400 });
     }
 
+    // Fetch commission
     const commission = await prisma.commission.findUnique({
       where: { id: commissionId },
       select: { id: true, userId: true, amount: true, status: true, type: true },
@@ -37,25 +38,30 @@ export async function POST(req: Request) {
     }
 
     // Create payout in PROCESSING
+    // Your schema requires:
+    // - status: PayoutStatus enum (PROCESSING/PAID/etc.)
+    // - provider: PayoutProvider enum (PAYPAL/PAYONEER)
+    // - method: String (we'll store "PAYPAL" here for clarity)
     const payout = await prisma.payout.create({
       data: {
         userId: commission.userId,
         commissionId: commission.id,
         amount: commission.amount,
-        status: "PROCESSING" as any, // PayoutStatus enum
-        provider: "PAYPAL_SANDBOX",
+        status: "PROCESSING" as any,  // PayoutStatus
+        provider: "PAYPAL" as any,    // PayoutProvider
+        method: "PAYPAL",             // String field required by your schema
         providerRef: `SIM-${Date.now()}`,
         meta: { note: "diag trigger-payout-bypass" } as any,
       } as any,
-      select: { id: true, status: true, amount: true },
+      select: { id: true, status: true, amount: true, provider: true, method: true },
     });
 
-    // Simulate provider success (PAID)
+    // Simulate provider success: mark payout PAID and commission PAID
     const [payoutFinal, commissionFinal] = await prisma.$transaction([
       prisma.payout.update({
         where: { id: payout.id },
         data: { status: "PAID" as any },
-        select: { id: true, status: true },
+        select: { id: true, status: true, provider: true, method: true },
       }),
       prisma.commission.update({
         where: { id: commission.id },
@@ -67,8 +73,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       message: "Payout simulated: PAID",
-      payout: { id: payoutFinal.id, status: payoutFinal.status },
-      commission: { id: commissionFinal.id, status: commissionFinal.status },
+      payout: payoutFinal,
+      commission: commissionFinal,
     });
   } catch (err: any) {
     console.error("[diag trigger-payout-bypass] error:", err);
