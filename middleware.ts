@@ -3,61 +3,52 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-// Paths
-const ADMIN_PAGES = ["/admin"];
-const ADMIN_APIS = ["/api/admin"];
-const PROTECTED_PAGES = ["/dashboard", "/account"];
-
-const hasPrefix = (pathname: string, list: string[]) =>
-  list.some((p) => pathname.startsWith(p));
+const ADMIN_EMAILS = new Set<string>([
+  "epo78741@yahoo.com",
+  "admin@linkmint.co",
+]);
 
 export async function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const { pathname } = req.nextUrl;
 
-  // --- Admin APIs: require ADMIN; respond with JSON ---
-  if (hasPrefix(pathname, ADMIN_APIS)) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-    const role = (token as any)?.role ?? "USER";
-    if (role !== "ADMIN") {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-    }
+  // Let everything else through
+  if (!pathname.startsWith("/api/")) {
     return NextResponse.next();
   }
 
-  // --- Admin pages: require ADMIN; use redirects ---
-  if (hasPrefix(pathname, ADMIN_PAGES)) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
-      const url = new URL("/login", req.url);
-      url.searchParams.set("callbackUrl", pathname + search);
-      return NextResponse.redirect(url);
-    }
-    const role = (token as any)?.role ?? "USER";
-    if (role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
+  // TEMP: allow diag endpoints while we finish tests
+  if (pathname.startsWith("/api/diag/")) {
     return NextResponse.next();
   }
 
-  // --- Auth-required pages (non-admin) ---
-  if (hasPrefix(pathname, PROTECTED_PAGES)) {
+  // Protect /api/admin/*
+  if (pathname.startsWith("/api/admin/")) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!token) {
-      const url = new URL("/login", req.url);
-      url.searchParams.set("callbackUrl", pathname + search);
-      return NextResponse.redirect(url);
+    if (!token || !token.email) {
+      return new NextResponse(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { "content-type": "application/json" } }
+      );
     }
-    return NextResponse.next();
+
+    const emailLc = String(token.email).toLowerCase();
+    const role = String((token as any).role ?? "").toUpperCase();
+
+    if (role === "ADMIN" || ADMIN_EMAILS.has(emailLc)) {
+      return NextResponse.next();
+    }
+
+    return new NextResponse(
+      JSON.stringify({ success: false, error: "Forbidden" }),
+      { status: 403, headers: { "content-type": "application/json" } }
+    );
   }
 
-  // Everything else: ignore
+  // Default allow for other /api/* routes
   return NextResponse.next();
 }
 
-// Only run where needed (keeps static assets & public pages untouched)
+// Run middleware on all API routes
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*", "/dashboard/:path*", "/account/:path*"],
+  matcher: ["/api/:path*"],
 };
