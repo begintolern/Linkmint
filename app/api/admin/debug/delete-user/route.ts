@@ -1,4 +1,4 @@
-// app/api/admin/debug/delete-user/route.ts
+// app/api/admin/delete-user/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -8,18 +8,13 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-const VERSION = "v1-delete-user-debug";
+const VERSION = "v1-delete-user-flat";
 const ADMIN_EMAILS = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
 
 type Body = { email?: string; userId?: string };
 
-// GET probe so we can confirm the route exists
 export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    route: "admin/debug/delete-user",
-    version: VERSION,
-  });
+  return NextResponse.json({ ok: true, route: "admin/delete-user", version: VERSION });
 }
 
 export async function POST(req: Request) {
@@ -28,9 +23,7 @@ export async function POST(req: Request) {
   const sessionEmail = session?.user?.email?.toLowerCase() || "";
   const role = String((session?.user as any)?.role ?? "").toUpperCase();
 
-  if (!sessionEmail) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-  }
+  if (!sessionEmail) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   if (!(role === "ADMIN" || ADMIN_EMAILS.has(sessionEmail))) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
@@ -41,14 +34,10 @@ export async function POST(req: Request) {
   }
 
   const user =
-    (userId &&
-      (await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } }))) ||
-    (email &&
-      (await prisma.user.findUnique({ where: { email }, select: { id: true, email: true } })));
+    (userId && (await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } }))) ||
+    (email && (await prisma.user.findUnique({ where: { email }, select: { id: true, email: true } })));
 
-  if (!user) {
-    return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
-  }
+  if (!user) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -64,13 +53,11 @@ export async function POST(req: Request) {
         deletions.payouts = r.count;
       } catch {}
 
-      // If you have a Referral model, these blocks will work; if not, they noop.
       try {
-        // @ts-ignore
+        // @ts-ignore optional model
         const r1 = await tx.referral?.deleteMany({ where: { inviterUserId: user.id } });
-        // @ts-ignore
+        // @ts-ignore optional model
         const r2 = await tx.referral?.deleteMany({ where: { referredUserId: user.id } });
-        // @ts-ignore
         deletions.referrals = (r1?.count || 0) + (r2?.count || 0);
       } catch {}
 
@@ -83,7 +70,7 @@ export async function POST(req: Request) {
   } catch (err: any) {
     return NextResponse.json(
       { success: false, version: VERSION, error: err?.message ?? "Delete failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
