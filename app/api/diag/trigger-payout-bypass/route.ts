@@ -9,10 +9,9 @@ import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 const ALLOW = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
-const VERSION = "v3-method-field-PAYPAL-provider";
+const VERSION = "v4-no-commissionId-field";
 
 export async function GET() {
-  // Simple version ping so we can confirm deploy content
   return NextResponse.json({ ok: true, route: "trigger-payout-bypass", version: VERSION });
 }
 
@@ -35,6 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "commissionId is required" }, { status: 400 });
     }
 
+    // Pull commission
     const commission = await prisma.commission.findUnique({
       where: { id: commissionId },
       select: { id: true, userId: true, amount: true, status: true, type: true },
@@ -43,25 +43,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Commission not found" }, { status: 404 });
     }
 
-    // IMPORTANT: your DB enums are:
-    //   PayoutStatus: PENDING | PROCESSING | PAID | FAILED
-    //   PayoutProvider: PAYPAL | PAYONEER
-    // And your schema REQUIRES `method` (String).
-    // We set provider=PAYPAL and method="PAYPAL".
+    // Create payout (NO commissionId column in your schema)
+    // Required/known fields from your schema:
+    // - status: string (enumy) -> we'll use "PROCESSING", then "PAID"
+    // - provider: enum PayoutProvider -> "PAYPAL"
+    // - method: string (required)
+    // Optional fields we can populate:
+    // - details: string (store commissionId here for traceability)
+    // - meta: json
     const payout = await prisma.payout.create({
       data: {
         userId: commission.userId,
-        commissionId: commission.id,
         amount: commission.amount,
-        status: "PROCESSING" as any, // PayoutStatus
-        provider: "PAYPAL" as any,   // PayoutProvider
-        method: "PAYPAL",            // REQUIRED string
+        status: "PROCESSING" as any, // PayoutStatus in DB
+        provider: "PAYPAL" as any,   // PayoutProvider in DB
+        method: "PAYPAL",            // REQUIRED string field in your DB
         providerRef: `SIM-${Date.now()}`,
-        meta: { note: "diag trigger-payout-bypass", version: VERSION } as any,
+        details: `Commission ${commission.id} paid via bypass`,
+        meta: { note: "diag trigger-payout-bypass", commissionId: commission.id, version: VERSION } as any,
       } as any,
-      select: { id: true, status: true, amount: true, provider: true, method: true },
+      select: { id: true, status: true, amount: true, provider: true, method: true, details: true },
     });
 
+    // Simulate provider success
     const [payoutFinal, commissionFinal] = await prisma.$transaction([
       prisma.payout.update({
         where: { id: payout.id },
