@@ -21,7 +21,7 @@ export default function LoginPage() {
       setInfoMsg("Your email is verified. You can sign in now.");
     }
 
-    const nextAuthErr = searchParams?.get("error");
+    const nextAuthErr = searchParams?.get("error") ?? "";
     if (nextAuthErr === "EMAIL_NOT_VERIFIED") {
       setErrorMsg("Please verify your email before signing in.");
     } else if (nextAuthErr) {
@@ -35,15 +35,17 @@ export default function LoginPage() {
     setErrorMsg(null);
 
     try {
+      const callbackUrl = searchParams?.get("callbackUrl") ?? "/dashboard";
+
       const res = await signIn("credentials", {
         redirect: false,
         email,
         password,
-        callbackUrl: "/dashboard",
+        callbackUrl,
       });
 
       if (res?.ok) {
-        router.push(res.url ?? "/dashboard");
+        router.push(res.url ?? callbackUrl);
         return;
       }
 
