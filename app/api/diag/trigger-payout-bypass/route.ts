@@ -9,7 +9,7 @@ import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 const ALLOW = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
-const VERSION = "v5-use-transactionId-no-providerRef";
+const VERSION = "v6-no-meta";
 
 export async function GET() {
   return NextResponse.json({ ok: true, route: "trigger-payout-bypass", version: VERSION });
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "commissionId is required" }, { status: 400 });
     }
 
-    // Pull commission
+    // Fetch commission
     const commission = await prisma.commission.findUnique({
       where: { id: commissionId },
       select: { id: true, userId: true, amount: true, status: true, type: true },
@@ -43,26 +43,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Commission not found" }, { status: 404 });
     }
 
-    // Create payout
-    // Known columns from your schema:
-    //   status (PayoutStatus), provider (PayoutProvider), method (string), transactionId (string),
-    //   details (string), meta (json), userId (string), amount (number), plus various timestamps/ids.
+    // Create payout (no meta/provideref/commissionId cols)
     const txn = `SIM-${Date.now()}`;
     const payout = await prisma.payout.create({
       data: {
         userId: commission.userId,
         amount: commission.amount,
-        status: "PROCESSING" as any,  // PayoutStatus
-        provider: "PAYPAL" as any,    // PayoutProvider
-        method: "PAYPAL",             // REQUIRED string
-        transactionId: txn,           // <-- use this instead of providerRef
+        status: "PROCESSING" as any, // PayoutStatus
+        provider: "PAYPAL" as any,   // PayoutProvider
+        method: "PAYPAL",            // required string
+        transactionId: txn,
         details: `Commission ${commission.id} paid via bypass`,
-        meta: { note: "diag trigger-payout-bypass", commissionId: commission.id, version: VERSION } as any,
       } as any,
       select: { id: true, status: true, amount: true, provider: true, method: true, transactionId: true, details: true },
     });
 
-    // Simulate provider success
+    // Simulate provider success: mark payout + commission PAID
     const [payoutFinal, commissionFinal] = await prisma.$transaction([
       prisma.payout.update({
         where: { id: payout.id },
@@ -85,6 +81,9 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error("[diag trigger-payout-bypass] error:", err);
-    return NextResponse.json({ success: false, error: err?.message ?? "Internal error", version: VERSION }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err?.message ?? "Internal error", version: VERSION },
+      { status: 500 }
+    );
   }
 }
