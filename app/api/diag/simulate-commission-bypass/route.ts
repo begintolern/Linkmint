@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Unauthorized (no session)" }, { status: 401 });
     }
 
-    // TEMP allowlist (outside /api/admin to avoid middleware)
+    // TEMP allowlist (kept outside /api/admin to avoid middleware)
     const ALLOW = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
     if (!ALLOW.has(email.toLowerCase())) {
       return NextResponse.json(
@@ -31,10 +31,10 @@ export async function POST(req: Request) {
     const body = (await req.json()) as PostBody;
     const userId = body.userId?.trim();
     const amount = Number(body.amount);
-    const status = (body.status ?? "pending").toString();
-    // IMPORTANT: CommissionType is required by your schema. We default to "REFERRAL".
-    // If your enum uses a different value (e.g., "STANDARD" / "SALE" / "BASE"), pass it in body.type.
-    const type = (body.type ?? "REFERRAL").toString();
+
+    // Use exact enum values discovered from DB
+    const status = (body.status ?? "PENDING").toString(); // PayoutStatus
+    const type = (body.type ?? "referral_purchase").toString(); // CommissionType
 
     if (!userId) return NextResponse.json({ success: false, error: "userId is required" }, { status: 400 });
     if (!Number.isFinite(amount) || amount <= 0)
@@ -43,13 +43,12 @@ export async function POST(req: Request) {
     const target = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
     if (!target) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
 
-    // Create commission — cast to any so TS doesn't block while we discover enum values
     const commission = await prisma.commission.create({
       data: {
         userId: target.id,
         amount,
-        status: status as any, // adjust to "PENDING" if your enum is uppercase
-        type: type as any,     // MUST match your Prisma enum CommissionType
+        status: status as any, // MUST be one of: PENDING | PROCESSING | PAID | FAILED
+        type: type as any,     // MUST be one of: referral_purchase | override_bonus | payout
       } as any,
     });
 
@@ -58,7 +57,7 @@ export async function POST(req: Request) {
       message: "Simulated commission created (bypass).",
       commissionId: commission.id,
       status: commission.status,
-      type: commission as any,
+      type: commission.type,
       amount: commission.amount,
     });
   } catch (err: any) {
