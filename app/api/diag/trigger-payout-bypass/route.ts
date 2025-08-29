@@ -9,7 +9,7 @@ import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 const ALLOW = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
-const VERSION = "v4-no-commissionId-field";
+const VERSION = "v5-use-transactionId-no-providerRef";
 
 export async function GET() {
   return NextResponse.json({ ok: true, route: "trigger-payout-bypass", version: VERSION });
@@ -43,26 +43,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Commission not found" }, { status: 404 });
     }
 
-    // Create payout (NO commissionId column in your schema)
-    // Required/known fields from your schema:
-    // - status: string (enumy) -> we'll use "PROCESSING", then "PAID"
-    // - provider: enum PayoutProvider -> "PAYPAL"
-    // - method: string (required)
-    // Optional fields we can populate:
-    // - details: string (store commissionId here for traceability)
-    // - meta: json
+    // Create payout
+    // Known columns from your schema:
+    //   status (PayoutStatus), provider (PayoutProvider), method (string), transactionId (string),
+    //   details (string), meta (json), userId (string), amount (number), plus various timestamps/ids.
+    const txn = `SIM-${Date.now()}`;
     const payout = await prisma.payout.create({
       data: {
         userId: commission.userId,
         amount: commission.amount,
-        status: "PROCESSING" as any, // PayoutStatus in DB
-        provider: "PAYPAL" as any,   // PayoutProvider in DB
-        method: "PAYPAL",            // REQUIRED string field in your DB
-        providerRef: `SIM-${Date.now()}`,
+        status: "PROCESSING" as any,  // PayoutStatus
+        provider: "PAYPAL" as any,    // PayoutProvider
+        method: "PAYPAL",             // REQUIRED string
+        transactionId: txn,           // <-- use this instead of providerRef
         details: `Commission ${commission.id} paid via bypass`,
         meta: { note: "diag trigger-payout-bypass", commissionId: commission.id, version: VERSION } as any,
       } as any,
-      select: { id: true, status: true, amount: true, provider: true, method: true, details: true },
+      select: { id: true, status: true, amount: true, provider: true, method: true, transactionId: true, details: true },
     });
 
     // Simulate provider success
@@ -70,7 +67,7 @@ export async function POST(req: Request) {
       prisma.payout.update({
         where: { id: payout.id },
         data: { status: "PAID" as any },
-        select: { id: true, status: true, provider: true, method: true },
+        select: { id: true, status: true, provider: true, method: true, transactionId: true },
       }),
       prisma.commission.update({
         where: { id: commission.id },
