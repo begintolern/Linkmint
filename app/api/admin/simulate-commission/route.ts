@@ -17,7 +17,8 @@ export async function POST(req: Request) {
     const session = rawSession as Session | null;
 
     const sessionEmail = session?.user?.email ?? "";
-    if (!sessionEmail) {
+    const emailLc = sessionEmail.toLowerCase();
+    if (!emailLc) {
       return NextResponse.json(
         { success: false, error: "Unauthorized", debug: { stage: "no-session" } },
         { status: 401 }
@@ -32,18 +33,30 @@ export async function POST(req: Request) {
 
     const sessionRole = String((session?.user as any)?.role ?? "").toUpperCase();
     const dbRole = String(me?.role ?? "").toUpperCase();
-    const role = sessionRole || dbRole;
+    const computedRole = sessionRole || dbRole;
 
-    // Hard allowlist (your admin emails)
+    // Allowlist (lowercased) + optional bypass
     const ADMIN_EMAILS = new Set<string>(["epo78741@yahoo.com", "admin@linkmint.co"]);
-    const isAdmin = role === "ADMIN" || ADMIN_EMAILS.has(sessionEmail);
+    const isAllowlisted = ADMIN_EMAILS.has(emailLc);
+    const ADMIN_BYPASS = process.env.ADMIN_BYPASS === "1";
+    const isAdmin = ADMIN_BYPASS || computedRole === "ADMIN" || isAllowlisted;
 
     if (!isAdmin) {
       return NextResponse.json(
         {
           success: false,
           error: "Forbidden",
-          debug: { sessionEmail, sessionRole, dbRole, role, allowlist: Array.from(ADMIN_EMAILS) },
+          debug: {
+            stage: "role-check",
+            sessionEmail,
+            emailLc,
+            sessionRole,
+            dbRole,
+            computedRole,
+            isAllowlisted,
+            ADMIN_BYPASS,
+            allowlist: Array.from(ADMIN_EMAILS),
+          },
         },
         { status: 403 }
       );
@@ -75,12 +88,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5) Create pending commission
+    // 5) Create pending commission (adjust enum casing if needed)
     const commission = await prisma.commission.create({
       data: {
         userId: target.id,
         amount,
-        status: "pending" as any, // adjust if your enum is uppercase
+        status: "pending" as any, // change to "PENDING" if your enum is uppercase
       } as any,
     });
 
@@ -90,7 +103,7 @@ export async function POST(req: Request) {
       commissionId: commission.id,
       status: commission.status,
       amount: commission.amount,
-      debug: { sessionEmail, sessionRole, dbRole, role },
+      debug: { sessionEmail, emailLc, sessionRole, dbRole, computedRole, ADMIN_BYPASS },
     });
   } catch (err: any) {
     console.error("[simulate-commission] error:", err);
