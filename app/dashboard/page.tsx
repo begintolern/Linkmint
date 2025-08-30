@@ -15,6 +15,7 @@ import ReferralSummaryCard from "@/components/dashboard/ReferralSummaryCard";
 import EarningsCard from "@/components/dashboard/EarningsCard";
 import ReferralLinkSection from "@/components/ReferralLinkSection";
 import AttachReferralOnload from "@/components/dashboard/AttachReferralOnload";
+import SmartLinkGenerator from "@/components/dashboard/SmartLinkGenerator";
 
 export default async function DashboardPage() {
   const rawSession = await getServerSession(authOptions);
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
       <AttachReferralOnload />
 
       <ReferralLinkSection />
+      <SmartLinkGenerator />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {userId ? <EarningsCard userId={userId} /> : null}
