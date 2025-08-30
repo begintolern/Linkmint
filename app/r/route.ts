@@ -21,13 +21,13 @@ function assertHttpUrl(raw: string): URL {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const to = url.searchParams.get("to");
-  const sid = url.searchParams.get("sid"); // user's referralCode
+  // ✅ support ascsubtag as well as sid
+  const sid = url.searchParams.get("sid") || url.searchParams.get("ascsubtag");
 
   if (!to) {
     return NextResponse.json({ ok: false, error: "Missing to" }, { status: 400 });
   }
 
-  // Validate/normalize target
   let target: URL;
   try {
     target = assertHttpUrl(to);
@@ -35,9 +35,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ ok: false, error: e?.message ?? "Bad URL" }, { status: 400 });
   }
 
-  // Log click best-effort; never block redirect
   try {
-    // Find user by referralCode (sid)
     const user = sid
       ? await prisma.user.findUnique({
           where: { referralCode: sid },
@@ -62,6 +60,5 @@ export async function GET(req: Request) {
     console.error("[/r] click log failed:", err);
   }
 
-  // Redirect to destination
   return NextResponse.redirect(target.toString(), { status: 302 });
 }
