@@ -1,3 +1,4 @@
+// app/api/admin/referral-groups/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -7,35 +8,43 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
+// Narrow the session type so TS knows `user` exists.
+type AdminSession = Session & {
+  user?: {
+    id?: string;
+    email?: string | null;
+    name?: string | null;
+    role?: string | null;
+  };
+};
+
 export async function GET() {
-  const raw = await getServerSession(authOptions);
-  const session = raw as Session | null;
+  try {
+    const session = (await getServerSession(authOptions)) as AdminSession | null;
 
-  // Must be signed in
-  const email = session?.user?.email ?? null;
-  if (!email) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+    const email = session?.user?.email ?? null;
+    if (!email) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
-  // Must be ADMIN
-  const me = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, role: true },
-  });
+    const role = session?.user?.role ?? "USER";
+    if (role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
-  if (me?.role !== "ADMIN") {
-    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
-  }
-
-  // Return groups with basic user info
-  const groups = await prisma.referralGroup.findMany({
-    include: {
-      users: {
-        select: { id: true, email: true, createdAt: true },
+    const rows = await prisma.referralGroup.findMany({
+      orderBy: { id: "desc" },
+      select: {
+        id: true,
+        referrer: { select: { id: true, email: true, name: true } },
+        users: { select: { id: true, email: true, name: true } },
+        _count: { select: { users: true } },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+    });
 
-  return NextResponse.json({ ok: true, count: groups.length, groups });
+    return NextResponse.json({ success: true, rows });
+  } catch (err: any) {
+    console.error("[admin/referral-groups] GET failed:", err?.message || err);
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+  }
 }
