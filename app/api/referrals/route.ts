@@ -40,7 +40,12 @@ export async function GET() {
     const trustSync = await syncTrustFromReferrals(inviterId);
     const me = await prisma.user.findUnique({
       where: { id: inviterId },
-      select: { trustScore: true, email: true, referralBadge: true },
+      select: {
+        trustScore: true,
+        email: true,
+        referralBadge: true,
+        referralCode: true, // <-- added
+      },
     });
 
     const result = groups.map((g) => {
@@ -59,7 +64,8 @@ export async function GET() {
       success: true,
       ungroupedInvitees: ungroupedCount,
       groups: result,
-      badge: me?.referralBadge ?? null, // <- added
+      badge: me?.referralBadge ?? null,
+      referralCode: me?.referralCode ?? null, // <-- added
 
       // ----- Debug fields (safe to keep for now) -----
       debug: {
