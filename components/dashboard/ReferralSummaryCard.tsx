@@ -17,6 +17,7 @@ type ApiResp =
       success: true;
       ungroupedInvitees: number;
       groups: Group[];
+      badge?: string | null; // <-- added
     }
   | {
       success: false;
@@ -98,11 +99,14 @@ export default function ReferralSummaryCard() {
     <div className="rounded-2xl p-5 border border-gray-200 shadow-sm bg-white">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Referral Summary</h2>
-        <BadgeStrip
-          inviter={hasInviterBadge}
-          active={hasActiveReferrer}
-          power={hasPowerReferrer}
-        />
+        <div className="flex items-center gap-2">
+          {data.badge ? <Badge text={data.badge} on /> : null}
+          <BadgeStrip
+            inviter={hasInviterBadge}
+            active={hasActiveReferrer}
+            power={hasPowerReferrer}
+          />
+        </div>
       </div>
 
       {/* Top stats */}
