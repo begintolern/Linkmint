@@ -20,8 +20,10 @@ export async function POST() {
 
     const result = await evaluateReferralBadges(userId);
     return NextResponse.json({ success: true, ...result });
-  } catch (err) {
-    console.error("POST /api/referrals/evaluate error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
-  }
-}
+  } catch (err: any) {
+  console.error("POST /api/referrals/evaluate error:", err);
+  return NextResponse.json(
+    { error: "Server error", detail: String(err?.message ?? err) },
+    { status: 500 }
+  );
+  }}
