@@ -8,7 +8,6 @@ import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-// Narrow the session type so TS knows `user` exists.
 type AdminSession = Session & {
   user?: {
     id?: string;
