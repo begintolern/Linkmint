@@ -2,19 +2,24 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
 import { evaluateReferralBadges } from "@/lib/referrals/evaluateReferralBadges";
 
-export async function POST(req: NextRequest) {
+type MySession = Session & { user?: { id?: string; email?: string | null } };
+
+export async function POST() {
   try {
-    const jwt = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (!jwt || !jwt.email) {
+    const session = (await getServerSession(authOptions)) as MySession | null;
+    const userId = session?.user?.id;
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const badge = await evaluateReferralBadges(jwt.email);
-    return NextResponse.json({ success: true, message: "Badge evaluated", badge });
+    const result = await evaluateReferralBadges(userId);
+    return NextResponse.json({ success: true, ...result });
   } catch (err) {
     console.error("POST /api/referrals/evaluate error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
