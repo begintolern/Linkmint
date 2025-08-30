@@ -17,7 +17,6 @@ type ApiResp =
       success: true;
       ungroupedInvitees: number;
       groups: Group[];
-      badge?: string | null; // <-- added
     }
   | {
       success: false;
@@ -46,11 +45,9 @@ export default function ReferralSummaryCard() {
     };
   }, []);
 
-  // ✅ Always define groups & ungroupedInvitees safely
   const groups = data && data.success ? data.groups : [];
   const ungroupedInvitees = data && data.success ? data.ungroupedInvitees : 0;
 
-  // ✅ Hook always runs, even if groups = []
   const groupedEmails = useMemo(() => {
     const s = new Set<string>();
     for (const g of groups) {
@@ -99,14 +96,11 @@ export default function ReferralSummaryCard() {
     <div className="rounded-2xl p-5 border border-gray-200 shadow-sm bg-white">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">Referral Summary</h2>
-        <div className="flex items-center gap-2">
-          {data.badge ? <Badge text={data.badge} on /> : null}
-          <BadgeStrip
-            inviter={hasInviterBadge}
-            active={hasActiveReferrer}
-            power={hasPowerReferrer}
-          />
-        </div>
+        <BadgeStrip
+          inviter={hasInviterBadge}
+          active={hasActiveReferrer}
+          power={hasPowerReferrer}
+        />
       </div>
 
       {/* Top stats */}
@@ -142,6 +136,7 @@ export default function ReferralSummaryCard() {
   );
 }
 
+// Stat Component for displaying each stat
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-lg border p-3">
@@ -151,6 +146,7 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   );
 }
 
+// BadgeStrip Component for displaying badges
 function BadgeStrip({
   inviter,
   active,
@@ -169,13 +165,13 @@ function BadgeStrip({
   );
 }
 
+// Badge Component for individual badge
 function Badge({ text, on }: { text: string; on: boolean }) {
   return (
     <span
-      className={`text-xs px-2 py-1 rounded-full border ${
-        on
-          ? "bg-green-100 text-green-700 border-green-200"
-          : "bg-gray-100 text-gray-600 border-gray-200"
+      className={`text-xs px-2 py-1 rounded-full border ${on
+        ? "bg-green-100 text-green-700 border-green-200"
+        : "bg-gray-100 text-gray-600 border-gray-200"
       }`}
       title={text}
     >

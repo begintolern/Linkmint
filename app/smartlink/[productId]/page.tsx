@@ -5,11 +5,13 @@ import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 export default function SmartlinkRedirectPage() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const ref = searchParams?.get("ref") ?? null;
 
   useEffect(() => {
-    const referrerId = searchParams.get("ref");
+    const referrerId = searchParams?.get("ref") ?? null;
 
     if (referrerId) {
       // Set a cookie for 30 days
@@ -18,7 +20,7 @@ export default function SmartlinkRedirectPage() {
 
     // Simulate redirect to purchase page
     router.replace("/thank-you");
-  }, [searchParams, router]);
+  }, [router, ref]);
 
   return <p>Redirecting to product...</p>;
 }

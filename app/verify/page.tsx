@@ -13,7 +13,7 @@ export default function VerifyPage() {
     if (didRun.current) return;
     didRun.current = true;
 
-    const token = searchParams.get("token");
+    const token = searchParams?.get("token") ?? "";
     if (!token) {
       // ✅ If user lands here without a token (right after signup), send them to the safe page
       router.replace("/check-email");
