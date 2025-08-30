@@ -106,7 +106,11 @@ export async function POST(req: Request) {
       link = buildCjLink(CJ_BASE, inputUrl, CJ_SID_KEY, referralCode);
     }
 
-    return NextResponse.json({ ok: true, link });
+    // Wrap with our tracked redirect so clicks get logged by /r
+    const origin = (process.env.NEXT_PUBLIC_SITE_URL as string | undefined) ?? new URL(req.url).origin;
+    const smart = `${origin}/r?to=${encodeURIComponent(link!)}&sid=${encodeURIComponent(referralCode ?? "")}`;
+
+    return NextResponse.json({ ok: true, link: smart, smartLink: smart });
   } catch (err: any) {
     console.error("POST /api/smartlink error:", err);
     return NextResponse.json({ ok: false, error: "Server error", detail: String(err?.message ?? err) }, { status: 500 });
