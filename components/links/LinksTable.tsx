@@ -47,6 +47,7 @@ export default function LinksTable() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load links (server + localStorage)
   useEffect(() => {
     (async () => {
       try {
@@ -119,6 +120,40 @@ export default function LinksTable() {
       }
     })();
   }, []);
+
+  // Fetch click counts for the displayed shortUrls and merge into rows
+  useEffect(() => {
+    (async () => {
+      const shortUrls = Array.from(
+        new Set(rows.map(r => r.shortUrl).filter((u): u is string => !!u))
+      );
+      if (!shortUrls.length) return;
+
+      try {
+        const res = await fetch("/api/links/clicks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ shortUrls }),
+        });
+        const json = await res.json();
+        const counts: Record<string, number> = json?.counts || {};
+
+        if (counts && typeof counts === "object") {
+          setRows(prev =>
+            prev.map(r => ({
+              ...r,
+              clicks:
+                r.shortUrl && counts[r.shortUrl] != null
+                  ? counts[r.shortUrl]
+                  : r.clicks ?? 0,
+            }))
+          );
+        }
+      } catch {
+        // fail-soft; keep existing rows
+      }
+    })();
+  }, [rows.length]); // run when initial rows are set
 
   return (
     <div className="rounded-lg border bg-white overflow-x-auto">
