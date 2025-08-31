@@ -6,54 +6,62 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-type MaybeSession = { user?: { id?: string | null } } | null;
-
+/**
+ * Tries common model names: smartLink, link, shortLink.
+ * Normalizes to a simple shape the frontend expects.
+ */
 export async function GET() {
-  const session = (await getServerSession(authOptions)) as MaybeSession;
-  const userId = session?.user?.id ?? null;
-  if (!userId) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Be tolerant of field names across versions.
-  // Prefer a Link (or ShortLink) table if present.
-  // We try common field names and fall back with `as any`.
   try {
-    const links = await (prisma as any).link.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      select: {
-        id: true,
-        createdAt: true,
-        // common names; any missing fields will just be undefined
-        shortUrl: true,
-        code: true,
-        slug: true,
-        short: true,
-        targetUrl: true,
-        destUrl: true,
-        url: true,
-        clicks: true,
-        earningsCents: true,
-      },
-    });
+    const session = (await getServerSession(authOptions)) as any;
+    const userId: string | null = session?.user?.id ?? null;
 
-    // Normalize shape for the client
-    const normalized = links.map((l: any) => ({
-      id: l.id,
-      createdAt: l.createdAt,
-      shortUrl: l.shortUrl ?? l.short ?? (l.code ? `https://linkmint.co/r/${l.code}` : null) ?? (l.slug ? `https://linkmint.co/r/${l.slug}` : null),
-      targetUrl: l.targetUrl ?? l.destUrl ?? l.url ?? null,
-      clicks: l.clicks ?? 0,
-      earningsCents: l.earningsCents ?? null,
-    }));
+    // If not logged in, just return an empty list (UI will fallback to localStorage)
+    if (!userId) {
+      return NextResponse.json({ links: [] });
+    }
 
-    return NextResponse.json({ success: true, links: normalized });
-  } catch {
-    // If your table is named ShortLink instead of Link
-    try {
-      const links = await (prisma as any).shortLink.findMany({
+    const db: any = prisma as any;
+    let rows: any[] = [];
+
+    // Try SmartLink
+    if (db.smartLink?.findMany) {
+      rows = await db.smartLink.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          createdAt: true,
+          shortUrl: true,
+          targetUrl: true,
+          clicks: true,
+          earningsCents: true,
+        },
+      });
+    }
+    // Try Link
+    else if (db.link?.findMany) {
+      rows = await db.link.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          createdAt: true,
+          shortUrl: true,
+          code: true,
+          slug: true,
+          targetUrl: true,
+          destUrl: true,
+          url: true,
+          clicks: true,
+          earningsCents: true,
+        },
+      });
+    }
+    // Try ShortLink
+    else if (db.shortLink?.findMany) {
+      rows = await db.shortLink.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -68,18 +76,29 @@ export async function GET() {
           earningsCents: true,
         },
       });
-      const normalized = links.map((l: any) => ({
-        id: l.id,
-        createdAt: l.createdAt,
-        shortUrl: l.shortUrl ?? (l.code ? `https://linkmint.co/r/${l.code}` : null) ?? (l.slug ? `https://linkmint.co/r/${l.slug}` : null),
-        targetUrl: l.targetUrl ?? null,
-        clicks: l.clicks ?? 0,
-        earningsCents: l.earningsCents ?? null,
-      }));
-      return NextResponse.json({ success: true, links: normalized });
-    } catch (e) {
-      console.error("[links/list] error", e);
-      return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    } else {
+      // No matching model in this schema — return empty so UI can fallback
+      return NextResponse.json({ links: [] });
     }
+
+    // Normalize across possible model shapes
+    const normalized = rows.map((l: any) => ({
+      id: l.id,
+      createdAt: l.createdAt,
+      shortUrl:
+        l.shortUrl ??
+        (l.code ? `https://linkmint.co/r/${l.code}` : null) ??
+        (l.slug ? `https://linkmint.co/r/${l.slug}` : null) ??
+        null,
+      targetUrl: l.targetUrl ?? l.destUrl ?? l.url ?? null,
+      clicks: l.clicks ?? 0,
+      earningsCents: l.earningsCents ?? null,
+    }));
+
+    return NextResponse.json({ links: normalized });
+  } catch (err) {
+    console.error("GET /api/links/list failed:", err);
+    // Fail-soft so the client can fallback to localStorage
+    return NextResponse.json({ links: [] });
   }
 }
