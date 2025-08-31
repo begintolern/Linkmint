@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Provider = "PAYPAL" | "PAYONEER";
 
@@ -13,20 +13,52 @@ export default function PayoutMethodCard() {
 
   const [cashAmount, setCashAmount] = useState<string>("");
 
+  // NEW: Load existing default payout and prefill
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/payout-account", { cache: "no-store" });
+        const json = await res.json();
+        if (!json) return;
+
+        // Support either shape: {account:{...}} or {data:{...}}
+        const acct = json.account ?? json.data ?? null;
+        if (acct) {
+          if (acct.provider) setProvider(acct.provider as Provider);
+          if (acct.externalId) setExternalId(acct.externalId);
+          if (acct.label) setLabel(acct.label);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
   async function onSave() {
     setSaving(true);
     setMsg(null);
     try {
+      const body = {
+        provider,
+        // Backend may expect "email" or "externalId"; send both for compatibility.
+        email: externalId,
+        externalId,
+        label: label || (provider === "PAYPAL" ? "Personal PayPal" : "Payoneer"),
+      };
+
       const res = await fetch("/api/payout-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, externalId, label }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed");
+
       setMsg("Saved! This is now your default payout method.");
-      setExternalId("");
-      setLabel("");
+
+      // IMPORTANT: Do NOT clear externalId; keep it visible so it looks retained.
+      // setExternalId("");
+      // setLabel("");
     } catch (e: any) {
       setMsg(e.message || "Error saving payout method.");
     } finally {
@@ -51,7 +83,7 @@ export default function PayoutMethodCard() {
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed");
       alert("Payout requested!");
-      setCashAmount(""); // 👈 reset input after success
+      setCashAmount(""); // reset input after success
     } catch (e: any) {
       alert(e.message || "Error requesting payout.");
     }
@@ -128,10 +160,7 @@ export default function PayoutMethodCard() {
             value={cashAmount}
             onChange={(e) => setCashAmount(e.target.value)}
           />
-          <button
-            onClick={onCashOut}
-            className="rounded bg-gray-800 text-white px-3 py-2"
-          >
+          <button onClick={onCashOut} className="rounded bg-gray-800 text-white px-3 py-2">
             Request Payout
           </button>
         </div>
