@@ -16,6 +16,7 @@ import EarningsCard from "@/components/dashboard/EarningsCard";
 import ReferralLinkSection from "@/components/ReferralLinkSection";
 import AttachReferralOnload from "@/components/dashboard/AttachReferralOnload";
 import SmartLinkGenerator from "@/components/dashboard/SmartLinkGenerator";
+import PayoutMiniCard from "@/components/dashboard/PayoutMiniCard"; // 🆕 compact payouts widget
 
 export default async function DashboardPage() {
   const rawSession = await getServerSession(authOptions);
@@ -57,9 +58,11 @@ export default async function DashboardPage() {
         {/* <FounderRewardCard inviterEmail={""} bonusActive={false} bonusEndsAt={new Date()} /> */}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* 🆕 Add compact payouts widget alongside payout method and request */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <PayoutMethodCard />
         <PayoutRequestCard />
+        <PayoutMiniCard /> {/* shows default method + last payout at a glance */}
       </div>
 
       <ReferralCardWrapper />
