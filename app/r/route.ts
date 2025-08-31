@@ -31,7 +31,9 @@ export async function GET(req: Request) {
     }
 
     // build the exact short URL string being clicked (used as EventLog.detail)
-    const shortUrl = url.origin + url.pathname + url.search;
+    // Always normalize to your public domain so counts match table rows
+    const shortUrl = `https://linkmint.co${url.pathname}${url.search}`;
+
 
     // gather simple context for message
     const ip =
