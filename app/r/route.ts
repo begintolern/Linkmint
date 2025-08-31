@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
 /**
  * GET /r?to=<encoded target>&sid=<referralCode>
  * - Redirects to the target URL
- * - Best-effort logs a click (tries several model shapes, then no-ops on failure)
+ * - Logs a click into EventLog (type='LINK_CLICK', detail=<shortUrl>)
  */
 export async function GET(req: Request) {
   try {
@@ -30,79 +30,33 @@ export async function GET(req: Request) {
       return NextResponse.json({ ok: false, error: "Invalid target URL" }, { status: 400 });
     }
 
-    // gather simple context
+    // build the exact short URL string being clicked (used as EventLog.detail)
+    const shortUrl = url.origin + url.pathname + url.search;
+
+    // gather simple context for message
     const ip =
-      // common header set by proxies/CDNs
       (req.headers.get("x-forwarded-for") || "")
         .split(",")[0]
-        .trim() || null;
-    const ua = req.headers.get("user-agent") || null;
-    const referer = req.headers.get("referer") || null;
-    const clickedAt = new Date();
+        .trim() || undefined;
+    const ua = req.headers.get("user-agent") || undefined;
+    const referer = req.headers.get("referer") || undefined;
 
-    // --- Best-effort logging (schema-agnostic) ---
+    // --- Log click into EventLog (fail-soft) ---
     try {
-      const db: any = prisma as any;
-
-      // 1) If there's a dedicated Click model
-      if (db.linkClick?.create) {
-        await db.linkClick.create({
-          data: {
-            shortUrl: url.origin + url.pathname + url.search, // the /r?... URL itself
-            targetUrl: target.toString(),
-            sid,
-            ip,
-            userAgent: ua,
-            referer,
-            createdAt: clickedAt,
-          },
-        });
-      }
-      // 2) Or an EventLog model with flexible JSON
-      else if (db.eventLog?.create) {
-        await db.eventLog.create({
-          data: {
-            type: "LINK_CLICK",
-            // userId can be null/unknown for anonymous clicks
-            userId: null,
-            // put everything into a json/metadata field if present; fall back to message
-            payload: {
-              shortUrl: url.origin + url.pathname + url.search,
-              targetUrl: target.toString(),
-              sid,
-              ip,
-              ua,
-              referer,
-              clickedAt,
-            },
-            message: `CLICK ${sid ?? ""} -> ${target.toString()}`.trim(),
-            createdAt: clickedAt,
-          },
-        } as any);
-      }
-      // 3) Or a very generic Log/Tracking model
-      else if (db.trackingEvent?.create) {
-        await db.trackingEvent.create({
-          data: {
-            event: "LINK_CLICK",
-            data: {
-              shortUrl: url.origin + url.pathname + url.search,
-              targetUrl: target.toString(),
-              sid,
-              ip,
-              ua,
-              referer,
-            },
-            createdAt: clickedAt,
-          },
-        });
-      }
-      // if none of the above exist, we silently no-op
+      await prisma.eventLog.create({
+        data: {
+          type: "LINK_CLICK",
+          // store the exact short URL so we can count later
+          detail: shortUrl,
+          // optional human-readable context
+          message: `sid=${sid ?? ""} ip=${ip ?? ""} ua=${ua ?? ""} ref=${referer ?? ""} -> ${target.toString()}`.slice(0, 1000),
+        },
+      });
     } catch {
-      // never block the redirect on logging issues
+      // never block redirect on logging issues
     }
 
-    // finally redirect
+    // redirect to target
     return new Response(null, {
       status: 302,
       headers: { Location: target.toString() },
