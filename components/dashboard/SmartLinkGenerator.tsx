@@ -1,83 +1,111 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+/** Store a created link in localStorage so it persists across refreshes. */
+function rememberLink(row: { id: string; shortUrl: string; targetUrl: string }) {
+  try {
+    const key = "lm_links";
+    const prev = JSON.parse(localStorage.getItem(key) || "[]");
+    const now = new Date().toISOString();
+    const rec = { ...row, createdAt: now, clicks: 0, earningsCents: null };
+    const next = [rec, ...prev].slice(0, 50);
+    localStorage.setItem(key, JSON.stringify(next));
+    localStorage.setItem("lm_last_link_value", row.shortUrl);
+  } catch {
+    // ignore localStorage errors
+  }
+}
 
 export default function SmartLinkGenerator() {
   const [url, setUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [program, setProgram] = useState<"amazon" | "cj">("amazon");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [last, setLast] = useState<string | null>(null);
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    setResult(null);
+  // Restore the "last created" link on mount so it shows after refresh
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("lm_last_link_value");
+      if (saved) setLast(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
 
+  async function onGenerate() {
+    if (!url) return;
+    setBusy(true);
+    setMsg(null);
     try {
       const res = await fetch("/api/smartlink", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, program }),
+        body: JSON.stringify({ url }),
       });
-
       const json = await res.json();
-      if (!json.ok) {
-        setError(json.error || "Failed to generate link");
-      } else {
-        setResult(json.link);
+
+      if (!json?.ok) {
+        throw new Error(json?.error || "Failed to create smart link");
       }
-    } catch (err) {
-      setError("Server error, try again.");
+
+      const smart = (json.smartLink as string) || (json.link as string);
+      if (!smart) throw new Error("No link returned from API");
+
+      // Update UI
+      setLast(smart);
+      setUrl("");
+      setMsg("Link created!");
+
+      // Persist locally so it appears in /links table even without DB rows
+      console.log("Saving to localStorage:", smart);
+
+rememberLink({
+  id: crypto.randomUUID(),
+  shortUrl: smart,
+  targetUrl: url,
+});
+
+    } catch (e: any) {
+      setMsg(e?.message || "Error creating link");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
+  }
 
   return (
-    <div className="rounded-2xl p-5 border border-gray-200 shadow-sm bg-white">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold">Generate Smart Link</h2>
-        <select
-          value={program}
-          onChange={(e) => setProgram(e.target.value as "amazon" | "cj")}
-          className="text-sm border rounded px-2 py-1"
-        >
-          <option value="amazon">Amazon Associates</option>
-          <option value="cj">CJ Affiliate</option>
-        </select>
+    <div className="rounded-lg border bg-white p-4 shadow-sm space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold">Create Smart Link</h3>
       </div>
 
-      <input
-        type="text"
-        placeholder="Paste a product URL from Amazon or CJ"
-        className="w-full border rounded px-3 py-2 mb-3 text-sm"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-      />
+      <div className="flex flex-col md:flex-row gap-2">
+        <input
+          className="border rounded px-3 py-2 flex-1"
+          placeholder="Paste a product URL (Amazon or CJ)"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+        <button
+          className="rounded bg-indigo-600 text-white px-4 py-2 disabled:opacity-50"
+          onClick={onGenerate}
+          disabled={!url || busy}
+        >
+          {busy ? "Generating..." : "Generate"}
+        </button>
+      </div>
 
-      <button
-        onClick={handleGenerate}
-        disabled={loading || !url}
-        className={`px-4 py-2 rounded text-white ${
-          loading ? "bg-gray-400" : "bg-indigo-600 hover:bg-indigo-700"
-        }`}
-      >
-        {loading ? "Generating..." : "Generate"}
-      </button>
+      {msg && <p className="text-sm">{msg}</p>}
 
-      {error && (
-        <div className="mt-3 text-sm text-red-700 bg-red-100 border border-red-200 rounded p-2">
-          {error}
-        </div>
-      )}
-
-      {result && (
-        <div className="mt-3 text-sm text-green-700 bg-green-100 border border-green-200 rounded p-2">
-          ✅ Smart link generated:{" "}
-          <a href={result} target="_blank" rel="noopener noreferrer" className="underline">
-            {result}
-          </a>
+      {last && (
+        <div className="rounded border p-3 text-sm flex items-center justify-between">
+          <div className="truncate mr-2">{last}</div>
+          <button
+            className="rounded bg-gray-800 text-white px-3 py-1"
+            onClick={() => navigator.clipboard.writeText(last)}
+          >
+            Copy
+          </button>
         </div>
       )}
     </div>

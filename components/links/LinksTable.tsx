@@ -18,11 +18,70 @@ export default function LinksTable() {
   useEffect(() => {
     (async () => {
       try {
+        // 1) Try server list
         const res = await fetch("/api/links/list", { cache: "no-store" });
         const json = await res.json();
-        setRows(json?.links ?? []);
+        const serverRows: Row[] = Array.isArray(json?.links) ? json.links : [];
+
+        // 2) Also read localStorage cache written by SmartLinkGenerator
+        let localRows: Row[] = [];
+        try {
+          const raw = localStorage.getItem("lm_links");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              localRows = parsed.map((r: any) => ({
+                id: r.id,
+                createdAt: r.createdAt,
+                shortUrl: r.shortUrl ?? null,
+                targetUrl: r.targetUrl ?? null,
+                clicks: r.clicks ?? 0,
+                earningsCents: r.earningsCents ?? null,
+              }));
+            }
+          }
+        } catch {
+          // ignore localStorage errors
+        }
+
+        // 3) Merge & dedupe by shortUrl (prefer server copy if both exist)
+        const byKey = new Map<string, Row>();
+        const add = (r: Row) => {
+          const key = r.shortUrl || `local-${r.id}`;
+          if (!byKey.has(key)) byKey.set(key, r);
+        };
+        serverRows.forEach(add);
+        localRows.forEach(add);
+
+        const merged = Array.from(byKey.values())
+          .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+          .slice(0, 50);
+
+        setRows(merged);
       } catch {
-        setRows([]);
+        // Server failed — fall back to localStorage only
+        try {
+          const raw = localStorage.getItem("lm_links");
+          const parsed = raw ? JSON.parse(raw) : [];
+          if (Array.isArray(parsed)) {
+            setRows(
+              parsed
+                .map((r: any) => ({
+                  id: r.id,
+                  createdAt: r.createdAt,
+                  shortUrl: r.shortUrl ?? null,
+                  targetUrl: r.targetUrl ?? null,
+                  clicks: r.clicks ?? 0,
+                  earningsCents: r.earningsCents ?? null,
+                }))
+                .slice(0, 50)
+            );
+          } else {
+            setRows([]);
+          }
+        } catch {
+          setRows([]);
+        }
       } finally {
         setLoading(false);
       }
