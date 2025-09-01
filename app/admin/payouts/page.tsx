@@ -1,244 +1,120 @@
-'use client';
+// app/admin/payouts/page.tsx
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
-import React from 'react';
+import { prisma } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth/admin";
+import Link from "next/link";
+import SendButton from "./SendButton";
 
-type PayoutRow = {
-  id: string | null | undefined;
-  createdAt: string;
-  provider: 'PAYPAL' | 'PAYONEER' | string;
-  statusEnum: 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED';
-  netCents?: number | null;
-  feeCents?: number | null;
-  amount?: number | null; // some rows use amount instead of netCents
-  email?: string | null;
-  name?: string | null;
-};
-
-function centsToUsd(c?: number | null) {
-  if (typeof c !== 'number') return '-';
-  return `$${(c / 100).toFixed(2)}`;
+function fmtUSD(cents: number | null | undefined) {
+  const v = (Number(cents || 0) / 100).toFixed(2);
+  return `$${v}`;
 }
 
-export default function AdminPayoutsPage() {
-  const [loading, setLoading] = React.useState(false);
-  const [rows, setRows] = React.useState<PayoutRow[]>([]);
-  const [email, setEmail] = React.useState('');
-  const [status, setStatus] = React.useState<'ALL' | 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED'>('ALL');
-  const [msg, setMsg] = React.useState<string | null>(null);
+function fmtDate(d: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(d);
+}
 
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const qs = new URLSearchParams();
-      if (email.trim()) qs.set('email', email.trim());
-      if (status !== 'ALL') qs.set('status', status);
+export default async function AdminPayoutsPage() {
+  // Admin-gate this page
+  await requireAdmin();
 
-      const res = await fetch(`/api/admin/payouts/list?${qs.toString()}`, { cache: 'no-store' });
-      const json = await res.json();
-      if (!res.ok || !json?.ok) throw new Error(json?.error || 'Failed to load');
-      setRows(Array.isArray(json.rows) ? json.rows : []);
-    } catch (e) {
-      console.error(e);
-      alert('Failed to load payouts.');
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [email, status]);
-
-  React.useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // initial only
-
-  const totalNet = rows.reduce((sum, r) => sum + (r.netCents ?? 0), 0);
-
-  async function approve(logId: string) {
-    try {
-      const res = await fetch('/api/admin/payouts/approve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ logId, dryRun: true })
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.success) throw new Error(json?.error || 'Approve failed');
-      alert('Approved (dry‑run). Now mark paid to finalize.');
-      await load();
-    } catch (e: any) {
-      console.error(e);
-      alert(e.message || 'Approve failed');
-    }
-  }
-
-  // --- Robust Mark Paid: send id if present, else send fallback row metadata ---
-  async function markPaidFromIndex(e: React.MouseEvent<HTMLButtonElement>) {
-    const idxStr = (e.currentTarget.getAttribute('data-row-index') || '').trim();
-    const idx = Number(idxStr);
-    if (!Number.isFinite(idx) || idx < 0 || idx >= rows.length) {
-      alert('Missing payoutId');
-      return;
-    }
-    const row = rows[idx];
-    const payoutId = (row?.id || '').toString().trim();
-    const external = `ADMIN-MANUAL-${Date.now()}`;
-
-    // derive netCents fallback if only amount is present
-    const netCents = typeof row.netCents === 'number'
-      ? row.netCents
-      : (typeof row.amount === 'number' ? Math.round(row.amount * 100) : null);
-
-    const payload = {
-      payoutId: payoutId || null,
-      createdAt: row.createdAt,
-      email: row.email ?? null,
-      netCents,
-      externalPayoutId: external,
-    };
-
-    try {
-      const url = `/api/admin/payouts/mark-paid`; // server will resolve by id or fallback
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const json = await res.json();
-      if (!res.ok || !json?.success) throw new Error(json?.error || 'Mark paid failed');
-
-      setMsg('Marked as PAID.');
-      await load();
-      setTimeout(() => setMsg(null), 3000);
-    } catch (e: any) {
-      console.error(e);
-      alert(e.message || 'Mark paid failed');
-    }
-  }
+  // Load recent payouts (show PENDING first, then others)
+  const rows = await prisma.payout.findMany({
+    orderBy: [{ statusEnum: "asc" }, { createdAt: "desc" }],
+    take: 100,
+    select: {
+      id: true,
+      createdAt: true,
+      userId: true,
+      provider: true,
+      receiverEmail: true,
+      amount: true,     // optional float column in your schema
+      netCents: true,   // int cents actually sent
+      statusEnum: true,
+      user: { select: { email: true } },
+    },
+  });
 
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Admin · Payouts</h1>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <input
-          className="border rounded px-3 py-2 w-64"
-          placeholder="user@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <select
-          className="border rounded px-3 py-2"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as any)}
-        >
-          <option value="ALL">All statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="PROCESSING">Processing</option>
-          <option value="PAID">Paid</option>
-          <option value="FAILED">Failed</option>
-        </select>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-        >
-          {loading ? 'Loading…' : 'Refresh / Apply Filter'}
-        </button>
+    <main className="mx-auto max-w-6xl p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Admin · Payouts</h1>
+        <Link href="/admin" className="text-sm underline text-gray-600">
+          Back to Admin
+        </Link>
       </div>
 
-      {/* success message */}
-      {msg && (
-        <div className="px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
-          {msg}
-        </div>
-      )}
+      <p className="text-sm text-gray-600">
+        Review payout requests. Amount sent uses <code>netCents</code>. Only admins can access this page.
+      </p>
 
-      {/* Table */}
-      <div className="border rounded-md overflow-x-auto">
+      <div className="overflow-x-auto rounded-lg border">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 text-gray-600">
             <tr>
-              <th className="text-left px-3 py-2">Created</th>
-              <th className="text-left px-3 py-2">Email</th>
-              <th className="text-left px-3 py-2">Name</th>
-              <th className="text-left px-3 py-2">Provider</th>
-              <th className="text-left px-3 py-2">Status</th>
-              <th className="text-left px-3 py-2">Net</th>
-              <th className="text-left px-3 py-2">Fee</th>
-              <th className="text-left px-3 py-2">ID</th>
-              <th className="text-left px-3 py-2">Actions</th>
+              <th className="px-3 py-2 text-left">Created</th>
+              <th className="px-3 py-2 text-left">Status</th>
+              <th className="px-3 py-2 text-left">User</th>
+              <th className="px-3 py-2 text-left">Provider</th>
+              <th className="px-3 py-2 text-left">Destination</th>
+              <th className="px-3 py-2 text-right">Gross (amount)</th>
+              <th className="px-3 py-2 text-right">Net (sent)</th>
+              <th className="px-3 py-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-6 text-gray-500">
-                  No payouts match your filters.
-                </td>
-              </tr>
-            ) : (
-              rows.map((r, idx) => (
-                <tr key={(r.id as string) || `${r.createdAt}-${idx}`} className="border-t">
-                  <td className="px-3 py-2">{new Date(r.createdAt).toLocaleString()}</td>
-                  <td className="px-3 py-2">{r.email ?? '—'}</td>
-                  <td className="px-3 py-2">{r.name ?? '—'}</td>
-                  <td className="px-3 py-2">{r.provider}</td>
+            {rows.map((r) => {
+              const gross = Number(r.amount ?? (r.netCents ?? 0) / 100);
+              const netUsd = Number(r.netCents ?? 0) / 100;
+              const canSend =
+                r.statusEnum === "PENDING" &&
+                r.provider === "PAYPAL" &&
+                !!r.receiverEmail &&
+                netUsd > 0;
+
+              return (
+                <tr key={r.id} className="border-t">
+                  <td className="px-3 py-2">{fmtDate(r.createdAt)}</td>
                   <td className="px-3 py-2">
-                    <span
-                      className={
-                        {
-                          PENDING: 'text-amber-700',
-                          PROCESSING: 'text-blue-700',
-                          PAID: 'text-green-700',
-                          FAILED: 'text-red-700',
-                        }[r.statusEnum]
-                      }
-                    >
+                    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs border">
                       {r.statusEnum}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
-                    {typeof r.netCents === 'number'
-                      ? centsToUsd(r.netCents)
-                      : r.amount != null
-                      ? `$${r.amount.toFixed(2)}`
-                      : '—'}
-                  </td>
-                  <td className="px-3 py-2">{centsToUsd(r.feeCents)}</td>
-                  <td className="px-3 py-2">{r.id || '—'}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-2">
-                      {(r.statusEnum === 'PENDING' || r.statusEnum === 'PROCESSING') && (
-                        <>
-                          <button
-                            className="px-2 py-1 rounded bg-amber-100 hover:bg-amber-200"
-                            onClick={() => approve(String(r.id))}
-                            title="Approve (dry‑run)"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            className="px-2 py-1 rounded bg-green-100 hover:bg-green-200"
-                            data-row-index={idx}
-                            onClick={markPaidFromIndex}
-                            title={`Mark Paid`}
-                          >
-                            Mark Paid
-                          </button>
-                        </>
-                      )}
-                    </div>
+                  <td className="px-3 py-2">{r.user?.email ?? r.userId}</td>
+                  <td className="px-3 py-2">{r.provider}</td>
+                  <td className="px-3 py-2">{r.receiverEmail ?? "-"}</td>
+                  <td className="px-3 py-2 text-right">${gross.toFixed(2)}</td>
+                  <td className="px-3 py-2 text-right">{fmtUSD(r.netCents)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {canSend ? (
+                      <SendButton
+                        payoutId={r.id}
+                        amountUSD={netUsd}
+                        receiverEmail={r.receiverEmail}
+                      />
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
                   </td>
                 </tr>
-              ))
+              );
+            })}
+            {rows.length === 0 && (
+              <tr>
+                <td className="px-3 py-6 text-center text-gray-500" colSpan={8}>
+                  No payouts found.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
       </div>
-
-      <div className="text-sm text-gray-600">
-        In view total (net): <strong>{centsToUsd(totalNet)}</strong>
-      </div>
-    </div>
+    </main>
   );
 }
