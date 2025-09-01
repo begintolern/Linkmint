@@ -1,4 +1,13 @@
 // lib/paypal.ts
+/**
+ * Minimal PayPal Payouts client for manual/admin-triggered payouts.
+ *
+ * Required env vars:
+ *  - PAYPAL_CLIENT_ID
+ *  - PAYPAL_CLIENT_SECRET
+ *  - PAYPAL_ENV = "live" | "sandbox"   (defaults to "sandbox")
+ */
+
 type PayPalEnv = "live" | "sandbox";
 
 function getBase(env: PayPalEnv) {
@@ -14,6 +23,9 @@ function currentEnv(): PayPalEnv {
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
+/**
+ * Fetch and cache an OAuth2 token from PayPal
+ */
 export async function getPayPalAccessToken(): Promise<string> {
   if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
     throw new Error("Missing PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET");
@@ -61,6 +73,9 @@ export type SendPayoutInput = {
   emailSubject?: string;
 };
 
+/**
+ * Send a single payout via PayPal Payouts API
+ */
 export async function sendPayPalPayout(input: SendPayoutInput) {
   const { email, amountUSD, note, batchId } = input;
 
