@@ -5,11 +5,17 @@ export const revalidate = 0;
 
 import { NextRequest, NextResponse } from "next/server";
 import { adminGuard } from "@/lib/utils/adminGuard";
-import { getPayPalAccessToken } from "@/lib/paypal/client";
+// ✅ use the consolidated helper (no more "@/lib/paypal/client")
+import { getPayPalAccessToken } from "@/lib/paypal";
 import { logPayPalPayoutEvent } from "@/lib/payouts/logPayPalPayoutEvent";
 
+// Prefer PAYPAL_ENV (live|sandbox); fallback to legacy PAYPAL_MODE if present
+const MODE = (process.env.PAYPAL_ENV || process.env.PAYPAL_MODE || "sandbox")
+  .toString()
+  .toLowerCase();
+
 const API_BASE =
-  (process.env.PAYPAL_MODE || "sandbox").toLowerCase() === "live"
+  MODE === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 
@@ -24,8 +30,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const receiverEmail =
       (body?.toEmail as string) ||
-      process.env.PAYPAL_TEST_RECEIVER ||
+      (process.env.PAYPAL_TEST_RECEIVER as string) ||
       "sb-40kiz44539704@personal.example.com";
+
     const amountNum = Number(body?.amount ?? 4.55);
     const amount = amountNum.toFixed(2);
     const note = (body?.note as string) || "Linkmint sandbox payout";
@@ -37,16 +44,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Amount must be > 0" }, { status: 400 });
     }
 
-    // ---- DEBUG: print what the server actually sees from .env (masked) ----
+    // ---- DEBUG: what server sees (masked) ----
     console.log(
       "PP ENV check:",
       "CID_PREFIX", (process.env.PAYPAL_CLIENT_ID || "").slice(0, 6),
       "CID_LEN", (process.env.PAYPAL_CLIENT_ID || "").length,
       "SEC_LEN", (process.env.PAYPAL_CLIENT_SECRET || "").length,
-      "MODE", (process.env.PAYPAL_MODE || "sandbox")
+      "ENV/MODE", MODE
     );
 
-    // 1) get OAuth token
+    // 1) get OAuth token (from consolidated helper)
     const token = await getPayPalAccessToken();
 
     // 2) create payout (single item)
@@ -60,7 +67,9 @@ export async function POST(req: NextRequest) {
         sender_batch_header: {
           sender_batch_id: `batch_${Date.now()}`,
           email_subject: "You have a payout from Linkmint",
-          email_message: "You received a payout from Linkmint (sandbox).",
+          email_message: MODE === "live"
+            ? "You received a payout from Linkmint."
+            : "You received a payout from Linkmint (sandbox).",
         },
         items: [
           {
@@ -87,13 +96,13 @@ export async function POST(req: NextRequest) {
       data?.batch_header?.sender_batch_header?.sender_batch_id ??
       null;
 
-    // 3) Log to EventLog so it shows in /api/admin/logs?type=payout
+    // 3) Audit log
     await logPayPalPayoutEvent({
       userId: null, // unknown in this test route
       receiverEmail,
       amount: amountNum,
       paypalBatchId: batchId,
-      transactionId: null, // payouts API doesn't return txn id at creation time
+      transactionId: null, // txn id isn't returned at creation time
       note,
     });
 
