@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Footer from "@/components/site/Footer";
 import SessionProviderWrapper from "@/app/providers/SessionProviderWrapper";
+import ToastProvider from "@/components/ui/ToastProvider"; // 👈 add this
 
 // Avoid stale caching during dev
 export const dynamic = "force-dynamic";
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="min-h-screen">{children}</div>
         </SessionProviderWrapper>
         <Footer />
+        <ToastProvider /> {/* 👈 global toast provider */}
       </body>
     </html>
   );
