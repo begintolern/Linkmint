@@ -6,6 +6,7 @@ export const revalidate = 0;
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getToken } from "next-auth/jwt";
+import { runAutoPayoutEngine } from "@/lib/engines/autoPayoutEngine";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check role from token, fallback to DB
+    // Ensure ADMIN
     const role = (token as any).role ?? null;
     if (String(role || "").toUpperCase() !== "ADMIN") {
       const me = await prisma.user.findUnique({
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
       }
     }
 
+    // Flip the setting
     const key = "autoPayoutEnabled";
     const cur = await prisma.systemSetting.findUnique({ where: { key } });
     const current = cur?.value === "true";
@@ -37,7 +39,35 @@ export async function POST(req: Request) {
       update: { value: next ? "true" : "false" },
     });
 
-    return NextResponse.json({ success: true, value: next });
+    let triggered = false;
+
+    // If enabling, immediately run the engine once
+    if (next) {
+      try {
+        await runAutoPayoutEngine();
+        triggered = true;
+        await prisma.eventLog.create({
+          data: {
+            type: "payout",
+            message: "Auto-payout toggled ON → engine run triggered",
+          },
+        });
+      } catch (e) {
+        console.error("Auto-payout immediate run failed:", e);
+        await prisma.eventLog.create({
+          data: {
+            type: "error",
+            message: `Auto-payout immediate run failed: ${String(e)}`,
+          },
+        });
+      }
+    } else {
+      await prisma.eventLog.create({
+        data: { type: "payout", message: "Auto-payout toggled OFF" },
+      });
+    }
+
+    return NextResponse.json({ success: true, value: next, triggered });
   } catch (err) {
     console.error("auto-payout-toggle POST error:", err);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
