@@ -1,7 +1,6 @@
-// app/signup/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
@@ -10,10 +9,12 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [dob, setDob] = useState('');              // YYYY-MM-DD
+  const [ageConfirm, setAgeConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
@@ -22,21 +23,26 @@ export default function SignupPage() {
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, dob, ageConfirm }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({} as any));
 
       if (!res.ok || !data?.ok) {
-        // Map a few common cases to friendly messages
         if (res.status === 409) setError('That email is already in use.');
-        else if (res.status === 400) setError('Please fill in all fields.');
-        else setError('Signup failed. Please try again.');
+        else if (res.status === 403 && data?.error === 'must_be_18_or_older') {
+          setError('You must be at least 18 years old to sign up.');
+        } else if (res.status === 400 && data?.error === 'invalid_dob') {
+          setError('Please enter a valid date of birth.');
+        } else if (res.status === 400) {
+          setError('Please fill in all fields.');
+        } else {
+          setError('Signup failed. Please try again.');
+        }
         return;
       }
 
-      // Success: send them to verify page
-      router.push(`/verify-email`);
+      router.push('/verify-email');
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -59,7 +65,7 @@ export default function SignupPage() {
           <label className="block text-sm font-medium text-slate-700">Name</label>
           <input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setName(e.currentTarget.value)}
             className="mt-1 w-full rounded-md border px-3 py-2"
             autoComplete="name"
             required
@@ -71,7 +77,7 @@ export default function SignupPage() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.currentTarget.value)}
             className="mt-1 w-full rounded-md border px-3 py-2"
             autoComplete="email"
             required
@@ -83,11 +89,42 @@ export default function SignupPage() {
           <input
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.currentTarget.value)}
             className="mt-1 w-full rounded-md border px-3 py-2"
             autoComplete="new-password"
             required
           />
+        </div>
+
+        {/* Date of Birth */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Date of Birth</label>
+          <input
+            type="date"
+            value={dob}
+            onChange={(e) => setDob(e.currentTarget.value)}
+            className="mt-1 w-full rounded-md border px-3 py-2"
+            required
+          />
+          <p className="mt-1 text-xs text-gray-500">You must be at least 18 years old.</p>
+        </div>
+
+        {/* 18+ Confirmation */}
+        <div className="flex items-start gap-2">
+          <input
+            id="ageConfirm"
+            type="checkbox"
+            checked={ageConfirm}
+            onChange={(e) => setAgeConfirm(e.currentTarget.checked)}
+            required
+            className="mt-1"
+          />
+          <label htmlFor="ageConfirm" className="text-sm text-slate-700">
+            I confirm that I am 18 years or older and agree to the{' '}
+            <a className="underline" href="/terms" target="_blank" rel="noreferrer">Terms</a>{' '}
+            and{' '}
+            <a className="underline" href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+          </label>
         </div>
 
         <button
