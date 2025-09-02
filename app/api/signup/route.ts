@@ -73,7 +73,7 @@ export async function POST(req: Request) {
         dob: birthDate,
         ageConfirmed: true,
         ageConfirmedAt: new Date(),
-      },
+      } as any, // 👈 allow build even if Prisma Client types are stale
       select: { id: true, email: true },
     });
 
