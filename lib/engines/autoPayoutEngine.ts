@@ -48,17 +48,28 @@ export async function runAutoPayoutEngine() {
         data: {
           userId: user.id,
           amount: totalAmount,
-          status: "PAID" as any, // Use your enum value exactly
-          source: "AUTO_PAYOUT",
-          // Optional: store a placeholder tx id if you later wire PayPal
-          // paypalTransactionId: null
+
+          // Legacy required fields
+          method: "PAYPAL",          // required String
+          status: "PAID",            // required String
+
+          // New fields (enum-based)
+          provider: "PAYPAL" as any, // PayoutProvider enum
+          statusEnum: "PAID" as any, // PayoutStatus enum
+          paidAt: new Date(),
+
+          // Optional bookkeeping
+          externalPayoutId: null,
+          paypalBatchId: null,
+          transactionId: null,
+          receiverEmail: user.email ?? null,
         } as any,
       });
 
       await tx.commission.updateMany({
         where: { id: { in: approved.map((c) => c.id) } },
         data: {
-          status: "PAID" as any, // exact enum value
+          status: "PAID" as any, // exact enum/text value
           paidOut: true,
         },
       });
