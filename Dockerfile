@@ -1,64 +1,52 @@
-# ---- Node version used by all stages ----
-ARG NODE_VERSION=20
-
-# ---- 1) Dependencies (install dev deps for build, skip scripts) ----
-FROM node:${NODE_VERSION}-bookworm-slim AS deps
+# ---------- Base (deps + build tools)
+FROM node:20-slim AS base
+ENV PNPM_HOME="/pnpm" \
+    NODE_ENV=production
+RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends \
+    openssl ca-certificates git \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Copy only manifests for layer caching
-COPY package*.json ./
+# ---------- Deps
+FROM base AS deps
+# Copy only manifests first for better cache
+COPY package.json package-lock.json* pnpm-lock.yaml* .npmrc* ./
+RUN if [ -f pnpm-lock.yaml ]; then corepack pnpm i --frozen-lockfile; \
+    elif [ -f package-lock.json ]; then npm ci; \
+    else npm i --production=false; fi
 
-# Install deps but DO NOT run postinstall (which may call prisma generate)
-RUN npm ci --ignore-scripts
-
-# ---- 2) Builder (compile Next.js, generate Prisma client) ----
-FROM node:${NODE_VERSION}-bookworm-slim AS builder
-WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
-
-# Reuse deps from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package*.json ./
-
-# Copy Prisma schema BEFORE generate
+# ---------- Generate Prisma client
+FROM deps AS prisma-gen
 COPY prisma ./prisma
-
-# Generate Prisma client inside the image
+# Generate Prisma client at build-time (no DB needed)
 RUN npx prisma generate
 
-# Copy the rest of the source
+# ---------- Build
+FROM prisma-gen AS build
+# Copy the rest of the app
 COPY . .
-
-# Build Next.js output
+# Ensure node_modules from deps are available
+# (they are, we’re in the same layer ancestry)
 RUN npm run build
 
-# Keep only prod deps for runtime image
-RUN npm ci --omit=dev && npm cache clean --force
-
-# ---- 3) Runner (small, production) ----
-FROM node:${NODE_VERSION}-bookworm-slim AS runner
+# ---------- Runtime
+FROM node:20-slim AS runner
+ENV NODE_ENV=production \
+    PORT=3000 \
+    NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
 
-# Minimal OS deps for Prisma at runtime
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+# System certs for TLS
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
-# Run as non-root
-RUN useradd -m nextjs
-USER nextjs
-
-# Bring in production deps and build output
-COPY --chown=nextjs:nextjs --from=builder /app/node_modules ./node_modules
-COPY --chown=nextjs:nextjs --from=builder /app/package.json ./package.json
-COPY --chown=nextjs:nextjs --from=builder /app/.next ./.next
-COPY --chown=nextjs:nextjs --from=builder /app/public ./public
-# Include Prisma schema in runtime (for tooling like db pull)
-COPY --chown=nextjs:nextjs --from=builder /app/prisma ./prisma
+# Copy only what the app needs at runtime
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/public ./public
+# Keep schema so Prisma can validate at runtime (no generate needed here)
+COPY --from=build /app/prisma ./prisma
 
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+CMD ["npm", "start"]
