@@ -1,91 +1,88 @@
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
+// app/privacy/page.tsx
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy • Linkmint",
+  description:
+    "Linkmint Privacy Policy: what we collect, how we use it, who we share it with, cookies, retention, security, and contact.",
+};
 
 export default function PrivacyPage() {
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Privacy Policy</h1>
-      <p className="text-sm text-gray-500">Last updated: {new Date().toISOString().slice(0,10)}</p>
+    <main className="mx-auto max-w-3xl px-6 py-10">
+      <h1 className="text-3xl font-semibold">Privacy Policy</h1>
+      <p className="mt-2 text-sm text-slate-500">Last updated: September 1, 2025</p>
 
-      <p>
-        This Privacy Policy explains how <strong>Linkmint</strong> (“we”, “us”, “our”)
-        collects, uses, and protects information when you use our website and services.
-      </p>
-
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Information We Collect</h2>
-        <ul className="list-disc pl-6 space-y-1">
-          <li><strong>Account info:</strong> name, email, referral data you provide.</li>
-          <li><strong>Usage data:</strong> pages viewed, clicks, timestamps, device/browser.</li>
-          <li><strong>Payout data:</strong> payment email/identifier you submit to receive funds.</li>
+      <section className="prose prose-slate mt-8">
+        <h2>1. Information We Collect</h2>
+        <ul>
+          <li>Account info: email, name, password (stored as a hash).</li>
+          <li>Referral &amp; commission activity, payout account email.</li>
+          <li>Usage data (e.g., device/browser metadata) for security and analytics.</li>
         </ul>
-      </section>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">How We Use Information</h2>
-        <ul className="list-disc pl-6 space-y-1">
-          <li>Operate and improve our services, referrals, and payout features.</li>
-          <li>Prevent abuse and enforce our Terms of Service.</li>
-          <li>Comply with legal, tax, and accounting obligations.</li>
+        <h2>2. How We Use Your Information</h2>
+        <ul>
+          <li>Operate Linkmint: track referrals, calculate commissions, process payouts.</li>
+          <li>Send transactional messages (verification, payout notices, security alerts).</li>
+          <li>Prevent fraud and enforce our Terms and affiliate network rules.</li>
         </ul>
-      </section>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Cookies & Tracking</h2>
-        <p>
-          We use cookies and similar technologies for session management, analytics, and referral
-          attribution. You can control cookies via your browser settings. Disabling cookies may
-          limit some features.
-        </p>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Sharing of Information</h2>
-        <p>
-          We do not sell personal information. We share data with service providers (e.g., hosting,
-          payments) as needed to operate the service, and when required by law.
-        </p>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Data Retention</h2>
-        <p>
-          We retain information for as long as necessary to provide the service and meet legal
-          obligations. You may request deletion subject to lawful exceptions.
-        </p>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Security</h2>
-        <p>
-          We implement reasonable safeguards to protect information. No system is 100% secure, and
-          we cannot guarantee absolute security.
-        </p>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Your Choices</h2>
-        <ul className="list-disc pl-6 space-y-1">
-          <li>Update your account information in your dashboard.</li>
-          <li>Contact us to request access, correction, or deletion where applicable.</li>
+        <h2>3. Sharing of Data</h2>
+        <ul>
+          <li>
+            Affiliate networks (to attribute conversions and receive program payments).
+          </li>
+          <li>PayPal (to process payouts).</li>
+          <li>
+            Service providers (email, logging) under contract; we don’t sell personal data.
+          </li>
         </ul>
-      </section>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Children’s Privacy</h2>
+        <h2>4. Cookies &amp; Tracking</h2>
+        <ul>
+          <li>Session cookies for authentication and keeping you signed in.</li>
+          <li>
+            Referral tracking cookies/pixels (including those from affiliate networks) to
+            attribute conversions.
+          </li>
+        </ul>
+
+        <h2>5. Data Retention &amp; Deletion</h2>
+        <ul>
+          <li>
+            We retain account and transaction records as required by law and for audit.
+          </li>
+          <li>
+            You may request account deletion via{" "}
+            <a href="mailto:admin@linkmint.co">admin@linkmint.co</a>. Some records may be
+            retained where legally necessary (e.g., financial logs).
+          </li>
+        </ul>
+
+        <h2>6. Security</h2>
+        <ul>
+          <li>Passwords are hashed; sensitive data is stored securely.</li>
+          <li>
+            We employ access controls and monitoring to protect against unauthorized access.
+          </li>
+        </ul>
+
+        <h2>7. Children</h2>
         <p>
-          Our services are not directed to children under 13. If you believe a child provided
-          personal information, please contact us and we will take appropriate steps to remove it.
+          Linkmint is for adults 18+ only. We do not knowingly collect information from
+          children under 18.
         </p>
-      </section>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Contact Us</h2>
+        <h2>8. Changes</h2>
         <p>
-          Email: <a className="text-blue-600 underline" href="mailto:support@linkmint.co">support@linkmint.co</a>
-          <br />
-          Address: Linkmint, [Your Business Address]
+          We may update this Privacy Policy. Changes will be posted here with an updated
+          “Last updated” date.
+        </p>
+
+        <h2>9. Contact</h2>
+        <p>
+          Email <a href="mailto:admin@linkmint.co">admin@linkmint.co</a>.
         </p>
       </section>
     </main>
