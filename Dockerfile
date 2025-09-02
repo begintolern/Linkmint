@@ -9,8 +9,9 @@ WORKDIR /app
 
 # ---------- Deps
 FROM base AS deps
-# Copy only manifests first for better cache
+# Copy manifests + prisma schema first so postinstall can find it
 COPY package.json package-lock.json* pnpm-lock.yaml* .npmrc* ./
+COPY prisma ./prisma
 RUN if [ -f pnpm-lock.yaml ]; then corepack pnpm i --frozen-lockfile; \
     elif [ -f package-lock.json ]; then npm ci; \
     else npm i --production=false; fi
