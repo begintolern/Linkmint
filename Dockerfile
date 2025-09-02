@@ -38,4 +38,4 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx prisma generate && npm start"]
