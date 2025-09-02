@@ -38,6 +38,19 @@ export async function runAutoPayoutEngine() {
 
     if (totalAmount <= 0) continue;
 
+    // --- SIMULATED FAILURE for testing: if total is $9.99, throw before any DB writes
+if (Math.abs(totalAmount - 9.99) < 0.001) {
+  await prisma.eventLog.create({
+    data: {
+      type: "error",
+      message: `Auto-payout simulation: forced failure for ${user.email ?? user.id} total $${totalAmount.toFixed(2)}`,
+    },
+  });
+  throw new Error("Simulated payout provider failure");
+}
+// --- END SIMULATION ---
+
+
     console.log(
       `Processing auto-payout for ${user.email ?? user.id} — $${totalAmount.toFixed(2)}`
     );
