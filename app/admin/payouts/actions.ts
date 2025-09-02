@@ -4,13 +4,14 @@
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth/admin";
 import { sendPayPalPayout } from "@/lib/paypal";
+import { logEvent } from "@/lib/log/logEvent";
 
 /**
  * Admin-only action: send a single payout via PayPal Payouts.
  * - Guarded by requireAdmin()
  * - Uses payout.id as the idempotency key (lm_<id>)
  * - Updates Payout.statusEnum to PAID on success
- * - Writes EventLog for audit (v1 skips PayoutLog due to unknown schema)
+ * - Writes EventLog (type="payout") for audit
  *
  * NOTE: v1 supports PAYPAL provider only.
  */
@@ -53,7 +54,7 @@ export async function sendPayout(payoutId: string, note?: string) {
     batchId,
   });
 
-  // Optional references from PayPal
+  // Optional references from PayPal (field names vary)
   const payoutBatchId: string | undefined =
     res?.batch_header?.payout_batch_id ?? res?.payout_batch_id ?? undefined;
   const batchStatus: string | undefined =
@@ -65,22 +66,22 @@ export async function sendPayout(payoutId: string, note?: string) {
     data: { statusEnum: "PAID" as any },
   });
 
-  // Audit via EventLog (schema we know exists)
-  await prisma.eventLog.create({
-    data: {
-      userId: p.userId,
-      type: "PAYOUT_SENT",
-      message: [
-        `PAID via PayPal by ${adminEmail}`,
-        `payout=${p.id}`,
-        payoutBatchId ? `batch=${payoutBatchId}` : "",
-        batchStatus ? `status=${batchStatus}` : "",
-        note ? `note=${note}` : "",
-      ]
-        .filter(Boolean)
-        .join(" "),
-    },
-  });
+  // 🔔 Audit log (this shows up in /admin/logs with green "payout" style)
+  await logEvent(
+    "payout",
+    [
+      `PAID via PayPal by ${adminEmail}`,
+      `payout=${p.id}`,
+      `amount=$${amountUSD.toFixed(2)}`,
+      p.receiverEmail ? `to=${p.receiverEmail}` : "",
+      payoutBatchId ? `batch=${payoutBatchId}` : "",
+      batchStatus ? `status=${batchStatus}` : "",
+      note ? `note=${note}` : "",
+    ]
+      .filter(Boolean)
+      .join(" "),
+    p.userId
+  );
 
   return {
     ok: true,
