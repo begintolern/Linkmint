@@ -62,20 +62,20 @@ export async function POST(req: Request) {
 
     // 2) Create user
     const hash = await bcrypt.hash(String(password), 10);
-    const created = await prisma.user.create({
-      data: {
-        email: normalized,
-        name: (name ?? null) as string | null,
-        password: hash,
-        emailVerifiedAt: null,
+const created = await prisma.user.create({
+  data: {
+    email: normalized,
+    name: (name ?? null) as string | null,
+    password: hash,
+    emailVerifiedAt: null,
 
-        // NEW: age + DOB
-        dob: birthDate,
-        ageConfirmed: true,
-        ageConfirmedAt: new Date(),
-      },
-      select: { id: true, email: true },
-    });
+    // NEW: age + DOB
+    dob: birthDate,
+    ageConfirmed: true,
+    ageConfirmedAt: new Date(),
+  } as any, // <-- add this cast
+  select: { id: true, email: true },
+});
 
     // 2a) Assign unique referralCode (retry on rare collision)
     for (let i = 0; i < 5; i++) {
