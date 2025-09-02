@@ -1,4 +1,5 @@
 // lib/auth/options.ts
+// lib/auth/options.ts
 import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
@@ -7,9 +8,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-export const authOptions = {
+export const authOptions: any = {
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" as const },
+  session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   debug: true,
 
@@ -63,15 +64,12 @@ export const authOptions = {
   pages: { signIn: "/login" },
 
   callbacks: {
-    // Always hydrate referralCode (and role) from DB on every JWT calc.
     async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
-      // If just signed in, seed basics
       if (user) {
         token.sub = user.id ?? token.sub;
         (token as any).email = user.email ?? (token as any).email;
       }
 
-      // Refresh from DB using either freshly-logged-in user or existing token.sub
       const userId = (user?.id ?? token.sub) as string | undefined;
       if (userId) {
         try {
@@ -87,7 +85,6 @@ export const authOptions = {
           // leave token fields as-is on DB error
         }
       }
-
       return token;
     },
 
@@ -100,4 +97,4 @@ export const authOptions = {
       return session;
     },
   },
-} as any;
+};
