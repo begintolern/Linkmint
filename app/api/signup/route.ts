@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail";
+import { sendSignupAlert } from "@/lib/alerts/sendSignupAlert"; // ✅ NEW
 
 function genReferralCode() {
   // 8 hex chars, good entropy and URL-safe
@@ -62,20 +63,20 @@ export async function POST(req: Request) {
 
     // 2) Create user
     const hash = await bcrypt.hash(String(password), 10);
-const created = await prisma.user.create({
-  data: {
-    email: normalized,
-    name: (name ?? null) as string | null,
-    password: hash,
-    emailVerifiedAt: null,
+    const created = await prisma.user.create({
+      data: {
+        email: normalized,
+        name: (name ?? null) as string | null,
+        password: hash,
+        emailVerifiedAt: null,
 
-    // NEW: age + DOB
-    dob: birthDate,
-    ageConfirmed: true,
-    ageConfirmedAt: new Date(),
-  } as any, // <-- add this cast
-  select: { id: true, email: true },
-});
+        // NEW: age + DOB
+        dob: birthDate,
+        ageConfirmed: true,
+        ageConfirmedAt: new Date(),
+      } as any, // keep cast to satisfy Prisma client typing in CI
+      select: { id: true, email: true },
+    });
 
     // 2a) Assign unique referralCode (retry on rare collision)
     for (let i = 0; i < 5; i++) {
@@ -102,12 +103,15 @@ const created = await prisma.user.create({
       },
     });
 
-    // 4) Send email (non-blocking)
-    try {
-      await sendVerificationEmail(created.email, token);
-    } catch (e) {
+    // 4) Send verification email (non-blocking)
+    sendVerificationEmail(created.email, token).catch((e) => {
       console.error("[signup] email send failed:", e);
-    }
+    });
+
+    // 5) 🔔 Telegram alert (non-blocking)
+    sendSignupAlert(created.email).catch((e) => {
+      console.error("sendSignupAlert failed:", e);
+    });
 
     return NextResponse.json({ ok: true, message: "verification_sent" }, { status: 201 });
   } catch (err) {
