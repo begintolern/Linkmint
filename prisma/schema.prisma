@@ -12,6 +12,9 @@ model User {
   email                  String               @unique
   name                   String?
   password               String?
+  dob                    DateTime?          // user-provided date of birth (YYYY-MM-DD)
+  ageConfirmed           Boolean  @default(false)  // user checked "I am 18+"
+  ageConfirmedAt         DateTime?          // when they confirmed
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   emailVerifiedAt        DateTime?
