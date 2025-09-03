@@ -24,9 +24,10 @@ export async function GET(req: NextRequest) {
 
     // Buckets
     let pending = 0;
-    let approved = 0;   // commissions-only (payouts use PROCESSING/PAID/FAILED in your enum)
-    let processing = 0; // payouts-only
+    let approved = 0;   // commissions-only (legacy)
+    let processing = 0; // payouts
     let paid = 0;
+    let failed = 0;     // payouts
 
     // 1) Legacy commission-based balances (if still used anywhere)
     const commissions = await prisma.commission.findMany({
@@ -54,10 +55,10 @@ export async function GET(req: NextRequest) {
       if (s === "pending") pending += amt;
       else if (s === "processing") processing += amt;
       else if (s === "paid") paid += amt;
-      // NOTE: You can expose 'failed' later if desired.
+      else if (s === "failed") failed += amt;
     }
 
-    return NextResponse.json({ pending, approved, processing, paid });
+    return NextResponse.json({ pending, approved, processing, paid, failed });
   } catch (error) {
     console.error("Error fetching commission summary:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
