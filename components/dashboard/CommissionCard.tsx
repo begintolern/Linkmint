@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Summary = { pending: number; approved: number; paid: number };
+type Summary = { pending: number; approved: number; processing: number; paid: number };
 
 type RecentItem = {
   id: string;
@@ -77,9 +77,10 @@ export default function CommissionCard() {
       )}
 
       {/* Totals */}
-      <div className="mt-4 grid grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-4 gap-3">
         <Stat label="Pending" value={money(summary?.pending ?? 0)} />
         <Stat label="Approved" value={money(summary?.approved ?? 0)} />
+        <Stat label="Processing" value={money(summary?.processing ?? 0)} />
         <Stat label="Paid" value={money(summary?.paid ?? 0)} />
       </div>
 
