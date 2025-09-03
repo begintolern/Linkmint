@@ -20,10 +20,19 @@ type ApiResp = {
   error?: string;
 };
 
+type BonusResp = {
+  ok: boolean;
+  bonus?: { pending: number; approved: number; paid: number };
+  batchCount?: number;
+  error?: string;
+};
+
 export default function ReferralsTab() {
   const [data, setData] = useState<ApiResp | null>(null);
+  const [bonus, setBonus] = useState<BonusResp | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingBonus, setLoadingBonus] = useState(false);
 
   async function load() {
     try {
@@ -40,14 +49,31 @@ export default function ReferralsTab() {
     }
   }
 
+  async function loadBonus() {
+    try {
+      setLoadingBonus(true);
+      const r = await fetch("/api/referrals/bonus", { cache: "no-store" });
+      const j: BonusResp = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      setBonus(j);
+    } catch (e: any) {
+      setBonus({ ok: false, error: e.message || "Failed to load bonus" });
+    } finally {
+      setLoadingBonus(false);
+    }
+  }
+
   useEffect(() => {
     load();
+    loadBonus();
   }, []);
 
   const referralLink =
     typeof window !== "undefined" && data?.referralCode
       ? `${window.location.origin}/signup?ref=${data.referralCode}`
       : null;
+
+  const b = bonus?.bonus || { pending: 0, approved: 0, paid: 0 };
 
   return (
     <div className="rounded-2xl ring-1 ring-zinc-200 p-5 bg-white/70 dark:bg-zinc-900/70">
@@ -61,13 +87,15 @@ export default function ReferralsTab() {
             </div>
           )}
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="rounded-xl px-3 py-2 text-sm font-medium ring-1 ring-zinc-300 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50"
-        >
-          {loading ? "Refreshing…" : "Refresh"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { load(); loadBonus(); }}
+            disabled={loading || loadingBonus}
+            className="rounded-xl px-3 py-2 text-sm font-medium ring-1 ring-zinc-300 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50"
+          >
+            {loading || loadingBonus ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {err && (
@@ -94,6 +122,21 @@ export default function ReferralsTab() {
           Ungrouped invitees:{" "}
           <span className="font-semibold">{data?.ungroupedInvitees ?? 0}</span>
         </div>
+      </div>
+
+      {/* Referrer 5% Bonus */}
+      <div className="mt-5">
+        <div className="text-sm font-medium mb-2">Referrer 5% Bonus</div>
+        <div className="grid grid-cols-3 gap-3">
+          <Stat label="Bonus Pending" value={money(b.pending)} />
+          <Stat label="Bonus Approved" value={money(b.approved)} />
+          <Stat label="Bonus Paid" value={money(b.paid)} />
+        </div>
+        {!bonus?.ok && bonus?.error && (
+          <div className="mt-2 text-xs text-red-700 bg-red-50 ring-1 ring-red-200 rounded-md px-2 py-1">
+            {bonus.error}
+          </div>
+        )}
       </div>
 
       {/* Groups (batches of 3) */}
@@ -163,7 +206,7 @@ export default function ReferralsTab() {
           <summary className="cursor-pointer font-medium">
             Admin: Seed referral (create invitee)
           </summary>
-          <AdminSeeder onSeed={load} />
+          <AdminSeeder onSeed={() => { load(); loadBonus(); }} />
         </details>
       </div>
     </div>
@@ -202,7 +245,6 @@ function Countdown({ expiresAt }: { expiresAt: string | null }) {
   const minutes = Math.floor((totalSec % 3600) / 60);
   const seconds = totalSec % 60;
 
-  // thresholds
   const last24h = diff <= 24 * 60 * 60 * 1000;
   const nearing = !last24h && diff <= 7 * 24 * 60 * 60 * 1000;
 
@@ -255,7 +297,7 @@ function AdminSeeder({ onSeed }: { onSeed: () => void }) {
       if (!r.ok || !j.ok) throw new Error(j.error || `HTTP ${r.status}`);
       setMsg(`Seeded: ${j.invitee?.email} (inviter: ${j.inviter})`);
       setInviteeEmail("");
-      onSeed(); // refresh parent data
+      onSeed(); // refresh parent data + bonus
     } catch (e: any) {
       setErr(e.message || "Failed to seed referral");
     } finally {
@@ -316,4 +358,17 @@ function AdminSeeder({ onSeed }: { onSeed: () => void }) {
       </div>
     </div>
   );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl ring-1 ring-zinc-200 p-3">
+      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="text-lg font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+function money(n: number) {
+  return `$${(Math.round(n * 100) / 100).toFixed(2)}`;
 }
