@@ -17,13 +17,6 @@ type ApiResp = {
   groups: Group[];
   badge: string | null;
   referralCode: string | null;
-  debug?: {
-    inviterId: string | null;
-    inviterEmail: string | null;
-    batchCountAfter: number | null;
-    trustScoreAfter: number | null;
-    trustSyncUpdated: boolean | null;
-  };
   error?: string;
 };
 
@@ -38,7 +31,7 @@ export default function ReferralsTab() {
       setErr(null);
       const r = await fetch("/api/referrals", { cache: "no-store" });
       const j: ApiResp = await r.json();
-      if (!r.ok || !j.success) throw new Error(j.error || `HTTP ${r.status}`);
+      if (!r.ok || !j.success) throw new Error((j as any).error || `HTTP ${r.status}`);
       setData(j);
     } catch (e: any) {
       setErr(e.message || "Failed to load referrals");
@@ -159,16 +152,6 @@ export default function ReferralsTab() {
           </table>
         </div>
       </div>
-
-      {/* Optional debug surface */}
-      {data?.debug && (
-        <details className="mt-6 rounded-lg bg-zinc-50 p-3 text-xs ring-1 ring-zinc-200 dark:bg-zinc-900/50 dark:ring-zinc-700">
-          <summary className="cursor-pointer">Debug</summary>
-          <pre className="mt-2 whitespace-pre-wrap">
-{JSON.stringify(data.debug, null, 2)}
-          </pre>
-        </details>
-      )}
     </div>
   );
 }
