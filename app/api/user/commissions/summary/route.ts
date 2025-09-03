@@ -17,17 +17,23 @@ export async function GET(req: NextRequest) {
       where: { email: token.email },
       select: { id: true },
     });
+
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    let pending = 0, approved = 0, paid = 0;
+    // Buckets
+    let pending = 0;
+    let approved = 0;   // commissions-only (payouts use PROCESSING/PAID/FAILED in your enum)
+    let processing = 0; // payouts-only
+    let paid = 0;
 
-    // 1) Legacy commissions (if used anywhere)
+    // 1) Legacy commission-based balances (if still used anywhere)
     const commissions = await prisma.commission.findMany({
       where: { userId: user.id },
       select: { amount: true, status: true },
     });
+
     for (const c of commissions) {
       const amt = Number(c.amount ?? 0);
       const s = (c.status ?? "").toLowerCase();
@@ -36,20 +42,22 @@ export async function GET(req: NextRequest) {
       else if (s === "paid") paid += amt;
     }
 
-    // 2) Payouts-based balances (new flow)
+    // 2) Payout-based balances (current flow)
     const payouts = await prisma.payout.findMany({
       where: { userId: user.id },
       select: { amount: true, status: true },
     });
+
     for (const p of payouts) {
       const amt = Number(p.amount ?? 0);
       const s = (p.status ?? "").toLowerCase();
       if (s === "pending") pending += amt;
-      else if (s === "approved") approved += amt;
+      else if (s === "processing") processing += amt;
       else if (s === "paid") paid += amt;
+      // NOTE: You can expose 'failed' later if desired.
     }
 
-    return NextResponse.json({ pending, approved, paid });
+    return NextResponse.json({ pending, approved, processing, paid });
   } catch (error) {
     console.error("Error fetching commission summary:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
