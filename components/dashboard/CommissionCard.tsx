@@ -78,11 +78,11 @@ export default function CommissionCard() {
 
       {/* Totals */}
       <div className="mt-4 grid grid-cols-5 gap-3">
-        <Stat label="Pending" value={money(summary?.pending ?? 0)} />
-        <Stat label="Approved" value={money(summary?.approved ?? 0)} />
-        <Stat label="Processing" value={money(summary?.processing ?? 0)} />
-        <Stat label="Paid" value={money(summary?.paid ?? 0)} />
-        <Stat label="Failed" value={money(summary?.failed ?? 0)} />
+        <Stat label="Pending" value={money(summary?.pending ?? 0)} tone="yellow" />
+        <Stat label="Approved" value={money(summary?.approved ?? 0)} tone="blue" />
+        <Stat label="Processing" value={money(summary?.processing ?? 0)} tone="amber" />
+        <Stat label="Paid" value={money(summary?.paid ?? 0)} tone="green" />
+        <Stat label="Failed" value={money(summary?.failed ?? 0)} tone="red" />
       </div>
 
       {/* Recent list with 80/5/15 split */}
@@ -147,13 +147,63 @@ export default function CommissionCard() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+type Tone = "zinc" | "yellow" | "blue" | "amber" | "green" | "red";
+
+function Stat({ label, value, tone = "zinc" }: { label: string; value: string; tone?: Tone }) {
+  const cls = badgeClasses(tone);
   return (
-    <div className="rounded-xl ring-1 ring-zinc-200 p-3">
-      <div className="text-xs text-zinc-500">{label}</div>
-      <div className="text-lg font-semibold">{value}</div>
+    <div className={`rounded-xl p-3 ring-1 ${cls.ring} ${cls.bg}`}>
+      <div className={`text-xs ${cls.muted}`}>{label}</div>
+      <div className={`text-lg font-semibold ${cls.text}`}>{value}</div>
     </div>
   );
+}
+
+function badgeClasses(tone: Tone) {
+  switch (tone) {
+    case "yellow":
+      return {
+        bg: "bg-yellow-50 dark:bg-yellow-950/30",
+        ring: "ring-yellow-200 dark:ring-yellow-900/60",
+        text: "text-yellow-800 dark:text-yellow-200",
+        muted: "text-yellow-700/80 dark:text-yellow-300/80",
+      };
+    case "blue":
+      return {
+        bg: "bg-blue-50 dark:bg-blue-950/30",
+        ring: "ring-blue-200 dark:ring-blue-900/60",
+        text: "text-blue-800 dark:text-blue-200",
+        muted: "text-blue-700/80 dark:text-blue-300/80",
+      };
+    case "amber":
+      return {
+        bg: "bg-amber-50 dark:bg-amber-950/30",
+        ring: "ring-amber-200 dark:ring-amber-900/60",
+        text: "text-amber-800 dark:text-amber-200",
+        muted: "text-amber-700/80 dark:text-amber-300/80",
+      };
+    case "green":
+      return {
+        bg: "bg-green-50 dark:bg-green-950/30",
+        ring: "ring-green-200 dark:ring-green-900/60",
+        text: "text-green-800 dark:text-green-200",
+        muted: "text-green-700/80 dark:text-green-300/80",
+      };
+    case "red":
+      return {
+        bg: "bg-red-50 dark:bg-red-950/30",
+        ring: "ring-red-200 dark:ring-red-900/60",
+        text: "text-red-800 dark:text-red-200",
+        muted: "text-red-700/80 dark:text-red-300/80",
+      };
+    default:
+      return {
+        bg: "bg-zinc-50 dark:bg-zinc-900/40",
+        ring: "ring-zinc-200 dark:ring-zinc-700",
+        text: "text-zinc-900 dark:text-zinc-100",
+        muted: "text-zinc-500",
+      };
+  }
 }
 
 function money(n: number) {
