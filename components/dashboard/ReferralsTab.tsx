@@ -202,15 +202,26 @@ function Countdown({ expiresAt }: { expiresAt: string | null }) {
   const minutes = Math.floor((totalSec % 3600) / 60);
   const seconds = totalSec % 60;
 
-  const critical =
-    days === 0 && (hours < 24 || (days === 0 && hours === 0 && minutes <= 60));
+  // thresholds
+  const last24h = diff <= 24 * 60 * 60 * 1000;
+  const nearing = !last24h && diff <= 7 * 24 * 60 * 60 * 1000;
 
-  const cls = critical
-    ? "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900/60"
-    : "bg-zinc-100 text-zinc-800 ring-zinc-200 dark:bg-zinc-900/40 dark:text-zinc-100 dark:ring-zinc-700";
+  let cls =
+    "bg-zinc-100 text-zinc-800 ring-zinc-200 dark:bg-zinc-900/40 dark:text-zinc-100 dark:ring-zinc-700";
+  if (nearing) {
+    cls =
+      "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900/60";
+  }
+  if (last24h) {
+    cls =
+      "bg-red-50 text-red-800 ring-red-200 dark:bg-red-950/30 dark:text-red-200 dark:ring-red-900/60";
+  }
 
   return (
-    <span className={`rounded-md px-2 py-0.5 text-xs ring-1 inline-block ${cls}`}>
+    <span
+      className={`rounded-md px-2 py-0.5 text-xs ring-1 inline-block ${cls}`}
+      title={`Expires at: ${new Date(expiresAt).toLocaleString()}`}
+    >
       {days}d {hours}h {minutes}m {seconds}s
     </span>
   );
