@@ -1,16 +1,38 @@
 // app/dashboard/page.tsx
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import Link from "next/link";
-
+import { useEffect } from "react"; // ✅ moved import to top
 import LogoutButton from "@/components/dashboard/LogoutButton";
 import EarningsCard from "@/components/dashboard/EarningsCard";
 import CommissionCard from "@/components/dashboard/CommissionCard";
 import PayoutMiniCard from "@/components/dashboard/PayoutMiniCard";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+// ✅ FallbackAttach must be a client component
+function FallbackAttach() {
+  "use client";
+  useEffect(() => {
+    async function attach() {
+      try {
+        const res = await fetch("/api/referrals/default-fallback", {
+          cache: "no-store",
+        });
+        const j = await res.json();
+        if (j.ok && j.attached) {
+          console.log(`[Fallback] User attached to founder: ${j.inviter}`);
+        }
+      } catch (err) {
+        console.error("[Fallback attach] failed", err);
+      }
+    }
+    attach();
+  }, []);
+  return null;
+}
 
 export default async function DashboardOverviewPage() {
   const raw = await getServerSession(authOptions);
@@ -21,6 +43,9 @@ export default async function DashboardOverviewPage() {
 
   return (
     <main className="mx-auto max-w-6xl p-6 space-y-6">
+      {/* Run fallback referral attach once per session */}
+      <FallbackAttach />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -38,7 +63,9 @@ export default async function DashboardOverviewPage() {
         >
           <div className="text-sm text-gray-600">Go to</div>
           <div className="text-lg font-semibold">Smart Links</div>
-          <div className="text-xs text-gray-500 mt-1">Create & manage tracking links</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Create & manage tracking links
+          </div>
         </Link>
 
         <Link
@@ -47,7 +74,9 @@ export default async function DashboardOverviewPage() {
         >
           <div className="text-sm text-gray-600">Go to</div>
           <div className="text-lg font-semibold">Referrals</div>
-          <div className="text-xs text-gray-500 mt-1">Share invites & track bonuses</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Share invites & track bonuses
+          </div>
         </Link>
 
         <Link
@@ -56,7 +85,9 @@ export default async function DashboardOverviewPage() {
         >
           <div className="text-sm text-gray-600">Go to</div>
           <div className="text-lg font-semibold">Earnings</div>
-          <div className="text-xs text-gray-500 mt-1">Commissions & payout snapshot</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Commissions & payout snapshot
+          </div>
         </Link>
 
         <Link
@@ -65,7 +96,9 @@ export default async function DashboardOverviewPage() {
         >
           <div className="text-sm text-gray-600">Go to</div>
           <div className="text-lg font-semibold">Payouts</div>
-          <div className="text-xs text-gray-500 mt-1">History of payout requests</div>
+          <div className="text-xs text-gray-500 mt-1">
+            History of payout requests
+          </div>
         </Link>
       </div>
 
