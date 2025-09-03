@@ -119,9 +119,7 @@ export default function CommissionCard() {
                     <td className="px-3 py-2">{money(c.referrerShare)}</td>
                     <td className="px-3 py-2">{money(c.platformShare)}</td>
                     <td className="px-3 py-2">
-                      <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs">
-                        {c.status}
-                      </span>
+                      <StatusChip status={c.status} />
                     </td>
                     <td className="px-3 py-2 text-xs max-w-[28ch] truncate" title={c.id}>
                       {c.id}
@@ -157,6 +155,35 @@ function Stat({ label, value, tone = "zinc" }: { label: string; value: string; t
       <div className={`text-lg font-semibold ${cls.text}`}>{value}</div>
     </div>
   );
+}
+
+function StatusChip({ status }: { status: string }) {
+  const tone = statusTone(status);
+  const cls = badgeClasses(tone);
+  return (
+    <span
+      className={`rounded-md px-2 py-0.5 text-xs font-medium ${cls.bg} ${cls.text} ${cls.ring}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function statusTone(status: string): Tone {
+  switch (status.toLowerCase()) {
+    case "pending":
+      return "yellow";
+    case "approved":
+      return "blue";
+    case "processing":
+      return "amber";
+    case "paid":
+      return "green";
+    case "failed":
+      return "red";
+    default:
+      return "zinc";
+  }
 }
 
 function badgeClasses(tone: Tone) {
