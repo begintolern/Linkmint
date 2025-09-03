@@ -4,12 +4,12 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
+const TOKEN  = process.env.TELEGRAM_BOT_TOKEN!;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
-const SECRET = process.env.HEALTH_ALERT_SECRET!;
+const SECRET  = process.env.HEALTH_ALERT_SECRET!;
 const LATENCY = Number(process.env.HEALTH_LATENCY_THRESHOLD_MS ?? 600);
-const SITE_ENV = process.env.SITE_URL || "";
 
 async function sendTelegram(text: string) {
   if (!TOKEN || !CHAT_ID) return;
@@ -29,42 +29,38 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  // Build base URL from request origin; fallback to SITE_URL env if provided.
-  const origin = req.nextUrl.origin;
-  const base = SITE_ENV || origin;
+  // Inline health check (no internal HTTP)
+  const started = Date.now();
+  let dbOk = false, dbLatency: number | null = null, dbErr: string | null = null;
 
   const t0 = Date.now();
-  let health: any = null;
-  let status = 200;
-  let fetchErr: string | null = null;
-
   try {
-    const r = await fetch(`${base}/api/health`, { cache: "no-store" });
-    status = r.status;
-    health = await r.json().catch(() => null);
+    await prisma.$queryRaw`SELECT 1`;
+    dbOk = true;
   } catch (e: any) {
-    status = 503;
-    fetchErr = e?.message || String(e);
-    health = { ok: false, status: "error", error: fetchErr };
+    dbErr = e?.message ?? String(e);
+  } finally {
+    dbLatency = Date.now() - t0;
   }
-  const took = Date.now() - t0;
 
-  const dbLatency = Number(health?.db?.latencyMs ?? NaN);
-  const unhealthy = status !== 200 || !health?.ok;
-  const slow = Number.isFinite(dbLatency) && dbLatency > LATENCY;
+  const mem = typeof process.memoryUsage === "function" ? process.memoryUsage() : undefined;
+  const rssMB = mem ? Math.round((mem.rss / 1024 / 1024) * 10) / 10 : null;
+  const heapMB = mem ? Math.round((mem.heapUsed / 1024 / 1024) * 10) / 10 : null;
+
+  const unhealthy = !dbOk;
+  const slow = Number.isFinite(dbLatency!) && (dbLatency as number) > LATENCY;
+  const took = Date.now() - started;
 
   if (unhealthy || slow) {
     const msg =
       `*Linkmint Health Alert*\n` +
       `Status: ${unhealthy ? "UNHEALTHY" : "SLOW"}\n` +
-      `HTTP: ${status}\n` +
-      `DB latency: ${Number.isFinite(dbLatency) ? dbLatency + "ms" : "n/a"} (threshold ${LATENCY}ms)\n` +
-      `Uptime: ${health?.uptimeSec ?? "n/a"}s\n` +
-      `Commit: ${health?.version ?? "n/a"}\n` +
-      `Env: ${health?.env ?? "n/a"}\n` +
-      `Took: ${took}ms\n` +
-      `${fetchErr ? `Fetch error: ${fetchErr}\n` : ""}` +
-      `${unhealthy && health?.db?.error ? `DB error: ${health.db.error}` : ""}`;
+      `DB latency: ${dbLatency ?? "n/a"}ms (threshold ${LATENCY}ms)\n` +
+      `Uptime: ${Math.round((typeof process.uptime === "function" ? process.uptime() : 0))}s\n` +
+      `Commit: ${process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || "n/a"}\n` +
+      `Env: ${process.env.NODE_ENV || "n/a"}\n` +
+      `RSS: ${rssMB ?? "n/a"}MB, Heap: ${heapMB ?? "n/a"}MB\n` +
+      (dbErr ? `DB error: ${dbErr}` : "");
     await sendTelegram(msg);
   }
 
@@ -72,10 +68,22 @@ export async function GET(req: NextRequest) {
     ok: !unhealthy && !slow,
     unhealthy,
     slow,
-    status,
+    status: dbOk ? 200 : 503,
     dbLatency,
     threshold: LATENCY,
     tookMs: took,
-    health,
-  });
+    health: {
+      ok: dbOk,
+      status: dbOk ? "ok" : "error",
+      db: { ok: dbOk, latencyMs: dbLatency, error: dbErr },
+      runtime: {
+        node: process.version,
+        rssMB,
+        heapMB,
+        uptimeSec: Math.round((typeof process.uptime === "function" ? process.uptime() : 0)),
+        version: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null,
+        env: process.env.NODE_ENV || null,
+      },
+    },
+  }, { status: dbOk ? 200 : 503 });
 }
