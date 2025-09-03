@@ -16,12 +16,10 @@ type Row = {
   emailVerifiedAt: string | null;
 };
 
-// ✅ helper for safe trustScore parsing
-function parseIntSafe(v: string | null): number | null {
-  if (!v) return null;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  return Math.trunc(n);
+function parseIntSafe(x: string | null): number | null {
+  if (!x) return null;
+  const n = parseInt(x, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 export default function AdminUsersPage() {
@@ -161,15 +159,27 @@ export default function AdminUsersPage() {
                         </button>
                         <button
                           onClick={() => {
-                            const bump = prompt("Enter trust bump (+/-):", "5");
-                            const n = parseIntSafe(bump);
+                            const inc = prompt("Increase trust by (positive integer):", "5");
+                            const n = parseIntSafe(inc);
                             if (n) patchUser(u.id, { bumpTrust: n });
                           }}
                           disabled={busyId === u.id}
-                          className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 hover:bg-zinc-50"
-                          title="Bump trust score"
+                          className="text-xs rounded-md px-2 py-1 ring-1 ring-green-300 disabled:opacity-50 hover:bg-green-50"
+                          title="Increase trust score"
                         >
                           Bump Trust
+                        </button>
+                        <button
+                          onClick={() => {
+                            const dec = prompt("Reduce trust by (positive integer):", "5");
+                            const n = parseIntSafe(dec);
+                            if (n) patchUser(u.id, { dropTrust: n });
+                          }}
+                          disabled={busyId === u.id}
+                          className="text-xs rounded-md px-2 py-1 ring-1 ring-red-300 disabled:opacity-50 hover:bg-red-50"
+                          title="Reduce trust score"
+                        >
+                          Reduce Trust
                         </button>
                       </div>
                     </td>
