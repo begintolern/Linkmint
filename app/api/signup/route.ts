@@ -7,7 +7,8 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail";
-import { sendSignupAlert } from "@/lib/alerts/sendSignupAlert"; // ✅ NEW
+import { sendSignupAlert } from "@/lib/alerts/sendSignupAlert";
+import { logEvent } from "@/lib/log/logEvent"; // ✅ NEW
 
 function genReferralCode() {
   // 8 hex chars, good entropy and URL-safe
@@ -112,6 +113,9 @@ export async function POST(req: Request) {
     sendSignupAlert(created.email).catch((e) => {
       console.error("sendSignupAlert failed:", e);
     });
+
+    // 6) 📝 Event log (non-blocking, shows in Admin → Logs)
+    logEvent("signup", `New signup: ${created.email}`, created.id).catch(() => {});
 
     return NextResponse.json({ ok: true, message: "verification_sent" }, { status: 201 });
   } catch (err) {

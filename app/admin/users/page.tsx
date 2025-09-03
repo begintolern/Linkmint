@@ -131,7 +131,6 @@ export default function AdminUsersPage() {
                           onClick={() => patchUser(u.id, { verifyEmail: true })}
                           disabled={busyId === u.id || verified}
                           className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
-                          title={verified ? "Already verified" : "Mark email verified"}
                         >
                           Verify
                         </button>
@@ -139,7 +138,6 @@ export default function AdminUsersPage() {
                           onClick={() => patchUser(u.id, { makeAdmin: true })}
                           disabled={busyId === u.id || isAdmin}
                           className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
-                          title={isAdmin ? "Already admin" : "Make admin"}
                         >
                           Make Admin
                         </button>
@@ -147,7 +145,6 @@ export default function AdminUsersPage() {
                           onClick={() => patchUser(u.id, { makeUser: true })}
                           disabled={busyId === u.id || !isAdmin}
                           className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
-                          title={!isAdmin ? "Already user" : "Revoke admin"}
                         >
                           Make User
                         </button>

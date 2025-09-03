@@ -34,7 +34,7 @@ export default async function AdminPayoutsPage() {
       userId: true,
       provider: true,
       receiverEmail: true,
-      amount: true,     // optional float column in your schema
+      amount: true,     // optional float column
       netCents: true,   // int cents actually sent
       statusEnum: true,
       user: { select: { email: true } },
@@ -45,9 +45,15 @@ export default async function AdminPayoutsPage() {
     <main className="mx-auto max-w-6xl p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Admin · Payouts</h1>
-        <Link href="/admin" className="text-sm underline text-gray-600">
-          Back to Admin
-        </Link>
+        <div className="flex items-center gap-4 text-sm">
+          <Link href="/admin" className="underline text-gray-600">
+            Back to Admin
+          </Link>
+          {/* NEW: quick link to payout logs */}
+          <Link href="/admin/logs" className="underline text-gray-600">
+            Logs
+          </Link>
+        </div>
       </div>
 
       <p className="text-sm text-gray-600">

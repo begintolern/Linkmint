@@ -1,76 +1,56 @@
 // app/admin/page.tsx
-"use client";
-
-import { useEffect, useState } from "react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/options";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 
-export default function AdminHome() {
-  const [busy, setBusy] = useState(false);
-  const [value, setValue] = useState<boolean | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+export const dynamic = "force-dynamic";
 
-  async function fetchStatus() {
-    setErr(null);
-    try {
-      // read current flag via your setting (we’ll just hit the toggle endpoint harmlessly as a GET-like check)
-      const res = await fetch("/api/admin/auto-payout-set", { method: "POST", body: JSON.stringify({ value }) });
-      // not ideal for read; if you add a GET later, swap to that. For now we’ll assume false on first load.
-    } catch {
-      /* ignore */
-    }
+const tabs = [
+  { key: "users",     label: "Users",     href: "/admin/users",     desc: "All users, verification & flags" },
+  { key: "referrals", label: "Referrals", href: "/admin/referrals", desc: "Invites, bonuses, batches" },
+  { key: "payouts",   label: "Payouts",   href: "/admin/payouts",   desc: "Approvals, status, providers" },
+  { key: "logs",      label: "Logs",      href: "/admin/logs",      desc: "System & event logs" },
+  { key: "settings",  label: "Settings",  href: "/admin/settings",  desc: "Toggles, trust, providers" },
+];
+
+export default async function AdminHomePage() {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login?next=/admin");
+
+  const sess = session as any;
+const role = String(sess?.user?.role ?? "USER")
+  if (String(role).toUpperCase() !== "ADMIN") {
+    redirect("/login?next=/admin");
   }
-
-  async function toggleAutoPayout() {
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await fetch("/api/admin/auto-payout-toggle", { method: "POST" });
-      const json = await res.json();
-      if (!res.ok || !json?.success) throw new Error(json?.error || "Toggle failed");
-      setValue(!!json.value);
-    } catch (e: any) {
-      setErr(e?.message || "Server error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    // on first load we won’t know; after first toggle, state will reflect the value
-    // you can add a read-only GET later; for now we’ll leave as “unknown” until user clicks.
-    setValue(null);
-  }, []);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Admin</h1>
-        <Link href="/" className="text-sm rounded-lg border px-3 py-1.5 hover:bg-neutral-50">
-          ← Back to site
-        </Link>
-      </div>
+    <main className="mx-auto max-w-6xl px-6 py-10">
+      <header className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Admin</h1>
+        <span className="rounded-full border px-3 py-1 text-xs text-slate-600">
+          Role: {String(role).toUpperCase()}
+        </span>
+      </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Link href="/admin/users" className="rounded-xl border p-4 hover:bg-neutral-50">
-          <div className="text-lg font-medium">Users</div>
-          <div className="text-sm text-neutral-600">View verification status & details</div>
-        </Link>
+      {/* Tabs */}
+      <nav className="mt-6 flex flex-wrap gap-2">
+        {tabs.map((t) => (
+          <Link key={t.key} href={t.href} className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">
+            {t.label}
+          </Link>
+        ))}
+      </nav>
 
-        <button
-          onClick={toggleAutoPayout}
-          disabled={busy}
-          className="text-left rounded-xl border p-4 hover:bg-neutral-50 disabled:opacity-60"
-        >
-          <div className="text-lg font-medium">Auto Payouts</div>
-          <div className="text-sm text-neutral-600">
-            {value === null ? "Unknown (click to toggle)" : value ? "On" : "Off"}
-          </div>
-        </button>
-      </div>
-
-      {err && (
-        <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-red-700 text-sm">{err}</div>
-      )}
-    </div>
+      {/* Cards */}
+      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {tabs.map((t) => (
+          <Link key={t.key} href={t.href} className="rounded-lg border p-5 transition hover:shadow-sm">
+            <div className="text-base font-semibold">{t.label}</div>
+            <div className="mt-1 text-sm text-slate-600">{t.desc}</div>
+          </Link>
+        ))}
+      </section>
+    </main>
   );
 }
