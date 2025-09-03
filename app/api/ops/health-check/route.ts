@@ -1,4 +1,5 @@
 // app/api/ops/health-check/route.ts
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -8,16 +9,18 @@ const TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
 const SECRET = process.env.HEALTH_ALERT_SECRET!;
 const LATENCY = Number(process.env.HEALTH_LATENCY_THRESHOLD_MS ?? 600);
-const SITE = process.env.SITE_URL || "http://localhost:3000";
+const SITE_ENV = process.env.SITE_URL || "";
 
 async function sendTelegram(text: string) {
   if (!TOKEN || !CHAT_ID) return;
   const url = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
-  await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: "Markdown" }),
-  });
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: "Markdown" }),
+    });
+  } catch { /* best-effort */ }
 }
 
 export async function GET(req: NextRequest) {
@@ -26,16 +29,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  // Build base URL from request origin; fallback to SITE_URL env if provided.
+  const origin = req.nextUrl.origin;
+  const base = SITE_ENV || origin;
+
   const t0 = Date.now();
   let health: any = null;
   let status = 200;
+  let fetchErr: string | null = null;
+
   try {
-    const r = await fetch(`${SITE}/api/health`, { cache: "no-store" });
+    const r = await fetch(`${base}/api/health`, { cache: "no-store" });
     status = r.status;
     health = await r.json().catch(() => null);
   } catch (e: any) {
     status = 503;
-    health = { ok: false, status: "error", error: e?.message || String(e) };
+    fetchErr = e?.message || String(e);
+    health = { ok: false, status: "error", error: fetchErr };
   }
   const took = Date.now() - t0;
 
@@ -53,6 +63,7 @@ export async function GET(req: NextRequest) {
       `Commit: ${health?.version ?? "n/a"}\n` +
       `Env: ${health?.env ?? "n/a"}\n` +
       `Took: ${took}ms\n` +
+      `${fetchErr ? `Fetch error: ${fetchErr}\n` : ""}` +
       `${unhealthy && health?.db?.error ? `DB error: ${health.db.error}` : ""}`;
     await sendTelegram(msg);
   }
