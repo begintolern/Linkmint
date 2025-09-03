@@ -108,13 +108,14 @@ export default function ReferralsTab() {
                 <th className="px-3 py-2">Started</th>
                 <th className="px-3 py-2">Expires</th>
                 <th className="px-3 py-2">Days Left</th>
+                <th className="px-3 py-2">Countdown</th>
                 <th className="px-3 py-2">Members (emails)</th>
               </tr>
             </thead>
             <tbody>
               {!data || data.groups.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-4 text-zinc-500" colSpan={6}>
+                  <td className="px-3 py-4 text-zinc-500" colSpan={7}>
                     No referral batches yet. Invite three friends to complete a batch.
                   </td>
                 </tr>
@@ -134,6 +135,9 @@ export default function ReferralsTab() {
                       {g.expiresAt ? new Date(g.expiresAt).toLocaleString() : "—"}
                     </td>
                     <td className="px-3 py-2">{g.daysRemaining ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      <Countdown expiresAt={g.expiresAt} />
+                    </td>
                     <td className="px-3 py-2">
                       {g.members.length === 0 ? (
                         <span className="text-zinc-500">—</span>
@@ -156,7 +160,9 @@ export default function ReferralsTab() {
       {/* Admin-only: seed a referred user */}
       <div className="mt-8 border-t pt-4">
         <details className="text-sm">
-          <summary className="cursor-pointer font-medium">Admin: Seed referral (create invitee)</summary>
+          <summary className="cursor-pointer font-medium">
+            Admin: Seed referral (create invitee)
+          </summary>
           <AdminSeeder onSeed={load} />
         </details>
       </div>
@@ -175,6 +181,39 @@ function StatusChip({ status }: { status: Group["status"] }) {
     cls =
       "bg-red-50 text-red-800 ring-red-200 dark:bg-red-950/30 dark:text-red-200 dark:ring-red-900/60";
   return <span className={`rounded-md px-2 py-0.5 text-xs ring-1 ${cls}`}>{status}</span>;
+}
+
+function Countdown({ expiresAt }: { expiresAt: string | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!expiresAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  if (!expiresAt) return <span>—</span>;
+
+  const end = new Date(expiresAt).getTime();
+  const diff = Math.max(0, end - now);
+
+  const totalSec = Math.floor(diff / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+
+  const critical =
+    days === 0 && (hours < 24 || (days === 0 && hours === 0 && minutes <= 60));
+
+  const cls = critical
+    ? "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/30 dark:text-amber-200 dark:ring-amber-900/60"
+    : "bg-zinc-100 text-zinc-800 ring-zinc-200 dark:bg-zinc-900/40 dark:text-zinc-100 dark:ring-zinc-700";
+
+  return (
+    <span className={`rounded-md px-2 py-0.5 text-xs ring-1 inline-block ${cls}`}>
+      {days}d {hours}h {minutes}m {seconds}s
+    </span>
+  );
 }
 
 function AdminSeeder({ onSeed }: { onSeed: () => void }) {
