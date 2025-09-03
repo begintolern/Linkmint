@@ -9,6 +9,7 @@ import {
   DollarSign,
   Wallet,
   Settings,
+  Percent,
 } from "lucide-react";
 
 type Item = {
@@ -18,11 +19,11 @@ type Item = {
 };
 
 const items: Item[] = [
-  { href: "/dashboard", label: "Overview",  Icon: LayoutDashboard },
+  { href: "/dashboard", label: "Overview", Icon: LayoutDashboard },
   { href: "/dashboard/links", label: "Smart Links", Icon: Link2 },
-  { href: "/dashboard/referrals", label: "Referrals", Icon: Users },
   { href: "/dashboard/earnings", label: "Earnings", Icon: DollarSign },
   { href: "/dashboard/payouts", label: "Payouts", Icon: Wallet },
+  { href: "/dashboard/referrals", label: "Referrals 5% Bonus", Icon: Percent },
   { href: "/settings", label: "Settings", Icon: Settings },
 ];
 
@@ -72,7 +73,13 @@ export default function SidebarNav() {
         const active =
           pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
         return (
-          <NavItem key={href} href={href} label={label} Icon={Icon} active={!!active} />
+          <NavItem
+            key={href}
+            href={href}
+            label={label}
+            Icon={Icon}
+            active={!!active}
+          />
         );
       })}
     </nav>
