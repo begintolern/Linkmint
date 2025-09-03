@@ -152,6 +152,14 @@ export default function ReferralsTab() {
           </table>
         </div>
       </div>
+
+      {/* Admin-only: seed a referred user */}
+      <div className="mt-8 border-t pt-4">
+        <details className="text-sm">
+          <summary className="cursor-pointer font-medium">Admin: Seed referral (create invitee)</summary>
+          <AdminSeeder onSeed={load} />
+        </details>
+      </div>
     </div>
   );
 }
@@ -167,4 +175,95 @@ function StatusChip({ status }: { status: Group["status"] }) {
     cls =
       "bg-red-50 text-red-800 ring-red-200 dark:bg-red-950/30 dark:text-red-200 dark:ring-red-900/60";
   return <span className={`rounded-md px-2 py-0.5 text-xs ring-1 ${cls}`}>{status}</span>;
+}
+
+function AdminSeeder({ onSeed }: { onSeed: () => void }) {
+  const [inviteeEmail, setInviteeEmail] = useState("");
+  const [inviterEmail, setInviterEmail] = useState(""); // optional; empty = current admin
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit() {
+    setMsg(null);
+    setErr(null);
+    if (!inviteeEmail) {
+      setErr("Provide an invitee email");
+      return;
+    }
+    try {
+      setLoading(true);
+      const r = await fetch("/api/admin/seed-referral", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          inviteeEmail,
+          inviterEmail: inviterEmail || undefined,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j.error || `HTTP ${r.status}`);
+      setMsg(`Seeded: ${j.invitee?.email} (inviter: ${j.inviter})`);
+      setInviteeEmail("");
+      onSeed(); // refresh parent data
+    } catch (e: any) {
+      setErr(e.message || "Failed to seed referral");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 grid gap-2 max-w-xl">
+      {msg && (
+        <div className="rounded-md bg-green-50 text-green-800 ring-1 ring-green-200 px-3 py-2">
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="rounded-md bg-red-50 text-red-800 ring-1 ring-red-200 px-3 py-2">
+          {err}
+        </div>
+      )}
+
+      <label className="text-xs text-zinc-600">Invitee email</label>
+      <input
+        value={inviteeEmail}
+        onChange={(e) => setInviteeEmail(e.target.value)}
+        placeholder="new-invitee@example.com"
+        className="rounded-md ring-1 ring-zinc-300 px-3 py-2 text-sm"
+      />
+
+      <label className="text-xs text-zinc-600">
+        Inviter email (optional; defaults to current admin)
+      </label>
+      <input
+        value={inviterEmail}
+        onChange={(e) => setInviterEmail(e.target.value)}
+        placeholder="(leave blank to use your account)"
+        className="rounded-md ring-1 ring-zinc-300 px-3 py-2 text-sm"
+      />
+
+      <div className="flex gap-2 mt-2">
+        <button
+          onClick={submit}
+          disabled={loading || !inviteeEmail}
+          className="rounded-md px-3 py-2 text-sm font-medium ring-1 ring-zinc-300 hover:bg-zinc-50 disabled:opacity-50"
+        >
+          {loading ? "Seeding…" : "Seed referral"}
+        </button>
+        <button
+          onClick={() => {
+            setInviteeEmail("");
+            setInviterEmail("");
+            setMsg(null);
+            setErr(null);
+          }}
+          className="rounded-md px-3 py-2 text-sm ring-1 ring-zinc-300"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  );
 }
