@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type Summary = { pending: number; approved: number; processing: number; paid: number; failed: number };
+type Summary = { pending: number; approved: number; processing?: number; paid: number };
 
 type RecentItem = {
   id: string;
@@ -77,15 +77,22 @@ export default function CommissionCard() {
       )}
 
       {/* Totals */}
-      <div className="mt-4 grid grid-cols-5 gap-3">
-        <Stat label="Pending" value={money(summary?.pending ?? 0)} tone="yellow" />
-        <Stat label="Approved" value={money(summary?.approved ?? 0)} tone="blue" />
-        <Stat label="Processing" value={money(summary?.processing ?? 0)} tone="amber" />
-        <Stat label="Paid" value={money(summary?.paid ?? 0)} tone="green" />
-        <Stat label="Failed" value={money(summary?.failed ?? 0)} tone="red" />
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <Stat label="Pending" value={money(summary?.pending ?? 0)} />
+        <Stat label="Approved" value={money(summary?.approved ?? 0)} />
+        <Stat label="Paid" value={money(summary?.paid ?? 0)} />
       </div>
 
-      {/* Recent list with 80/5/15 split */}
+      {/* Referral bonus note */}
+      <div className="mt-2 text-xs text-zinc-500">
+        Note: Your <span className="font-medium">5% referral bonus</span> earnings are shown in the{" "}
+        <a href="/dashboard/referrals" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">
+          Referrals tab
+        </a>
+        .
+      </div>
+
+      {/* Recent list */}
       <div className="mt-6">
         <div className="text-sm font-medium mb-2">Recent commissions (80/5/15 split)</div>
         <div className="overflow-x-auto">
@@ -119,7 +126,9 @@ export default function CommissionCard() {
                     <td className="px-3 py-2">{money(c.referrerShare)}</td>
                     <td className="px-3 py-2">{money(c.platformShare)}</td>
                     <td className="px-3 py-2">
-                      <StatusChip status={c.status} />
+                      <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs">
+                        {c.status}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-xs max-w-[28ch] truncate" title={c.id}>
                       {c.id}
@@ -145,92 +154,13 @@ export default function CommissionCard() {
   );
 }
 
-type Tone = "zinc" | "yellow" | "blue" | "amber" | "green" | "red";
-
-function Stat({ label, value, tone = "zinc" }: { label: string; value: string; tone?: Tone }) {
-  const cls = badgeClasses(tone);
+function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className={`rounded-xl p-3 ring-1 ${cls.ring} ${cls.bg}`}>
-      <div className={`text-xs ${cls.muted}`}>{label}</div>
-      <div className={`text-lg font-semibold ${cls.text}`}>{value}</div>
+    <div className="rounded-xl ring-1 ring-zinc-200 p-3">
+      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="text-lg font-semibold">{value}</div>
     </div>
   );
-}
-
-function StatusChip({ status }: { status: string }) {
-  const tone = statusTone(status);
-  const cls = badgeClasses(tone);
-  return (
-    <span
-      className={`rounded-md px-2 py-0.5 text-xs font-medium ${cls.bg} ${cls.text} ${cls.ring}`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function statusTone(status: string): Tone {
-  switch (status.toLowerCase()) {
-    case "pending":
-      return "yellow";
-    case "approved":
-      return "blue";
-    case "processing":
-      return "amber";
-    case "paid":
-      return "green";
-    case "failed":
-      return "red";
-    default:
-      return "zinc";
-  }
-}
-
-function badgeClasses(tone: Tone) {
-  switch (tone) {
-    case "yellow":
-      return {
-        bg: "bg-yellow-50 dark:bg-yellow-950/30",
-        ring: "ring-yellow-200 dark:ring-yellow-900/60",
-        text: "text-yellow-800 dark:text-yellow-200",
-        muted: "text-yellow-700/80 dark:text-yellow-300/80",
-      };
-    case "blue":
-      return {
-        bg: "bg-blue-50 dark:bg-blue-950/30",
-        ring: "ring-blue-200 dark:ring-blue-900/60",
-        text: "text-blue-800 dark:text-blue-200",
-        muted: "text-blue-700/80 dark:text-blue-300/80",
-      };
-    case "amber":
-      return {
-        bg: "bg-amber-50 dark:bg-amber-950/30",
-        ring: "ring-amber-200 dark:ring-amber-900/60",
-        text: "text-amber-800 dark:text-amber-200",
-        muted: "text-amber-700/80 dark:text-amber-300/80",
-      };
-    case "green":
-      return {
-        bg: "bg-green-50 dark:bg-green-950/30",
-        ring: "ring-green-200 dark:ring-green-900/60",
-        text: "text-green-800 dark:text-green-200",
-        muted: "text-green-700/80 dark:text-green-300/80",
-      };
-    case "red":
-      return {
-        bg: "bg-red-50 dark:bg-red-950/30",
-        ring: "ring-red-200 dark:ring-red-900/60",
-        text: "text-red-800 dark:text-red-200",
-        muted: "text-red-700/80 dark:text-red-300/80",
-      };
-    default:
-      return {
-        bg: "bg-zinc-50 dark:bg-zinc-900/40",
-        ring: "ring-zinc-200 dark:ring-zinc-700",
-        text: "text-zinc-900 dark:text-zinc-100",
-        muted: "text-zinc-500",
-      };
-  }
 }
 
 function money(n: number) {
