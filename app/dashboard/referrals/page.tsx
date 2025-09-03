@@ -1,29 +1,26 @@
 // app/dashboard/referrals/page.tsx
-import { getServerSession } from "next-auth/next"; // ✅ correct import for NextAuth v4
-import { authOptions } from "@/lib/auth/options";
 import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/options";
+import dynamic from "next/dynamic";
+
+const ReferralsTab = dynamic(() => import("@/components/dashboard/ReferralsTab"), { ssr: false });
 
 export default async function ReferralsDashboardPage() {
-  const session = await getServerSession(authOptions);
+  const session: any = await getServerSession(authOptions); // loosen typing
 
-  // If not logged in → send to login, then back here
-  if (!session) {
+  if (!session?.user?.email) {
     redirect("/login?next=/dashboard/referrals");
   }
 
-  // 🔻 KEEP everything you already had below, unchanged
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      {/* ---- Your existing referral dashboard starts here ---- */}
+    <div className="space-y-4">
+      <div>
+        <div className="text-xs uppercase tracking-wide text-zinc-500">Dashboard</div>
+        <h1 className="text-2xl font-semibold mt-1">Referrals</h1>
+      </div>
 
-      {/* Example: if you had components like these, leave them as-is */}
-      {/* <ReferralSummary /> */}
-      {/* <ReferralInviteLink /> */}
-      {/* <ReferralBonuses /> */}
-      {/* <ReferralTable /> */}
-      {/* <ReferralFaq /> */}
-
-      {/* ---- End of your existing referral dashboard ---- */}
-    </main>
+      <ReferralsTab />
+    </div>
   );
 }
