@@ -8,6 +8,11 @@ import { prisma } from "@/lib/db";
 import { adminGuardFromReq } from "@/lib/utils/adminGuardReq";
 import { runAutoPayoutEngine } from "@/lib/engines/autoPayoutEngine"; // optional immediate run
 
+// Accept POST as an alias for PATCH (some clients/pages may still send POST)
+export async function POST(req: NextRequest) {
+  return PATCH(req);
+}
+
 const KEY = "autoPayoutEnabled";
 
 function parseBool(str: string | null | undefined): boolean | null {
@@ -90,4 +95,5 @@ export async function PATCH(req: NextRequest) {
     enabled: body.enabled,
     triggered,
   });
+  
 }
