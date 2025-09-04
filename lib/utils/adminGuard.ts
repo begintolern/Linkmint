@@ -1,45 +1,59 @@
 // lib/utils/adminGuard.ts
+export const dynamic = "force-dynamic";
+
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
-import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-export type AdminUser = {
-  id: string;
-  email: string;
-  role: "ADMIN" | "USER" | string;
-};
+type AdminGuardOk = { ok: true; userId: string };
+type AdminGuardFail = { ok: false; status: 401 | 403; reason: "Unauthorized" | "Forbidden" };
+export type AdminGuardResult = AdminGuardOk | AdminGuardFail;
 
 /**
- * Use inside server components or API routes to enforce admin.
- * Returns { ok: true, user } when admin; otherwise an HTTP response.
+ * Server-side guard to verify the current user is an admin.
+ * - Returns { ok: true, userId } when authorized
+ * - Returns { ok: false, status, reason } when not
  */
-export async function requireAdmin():
-  Promise<{ ok: true; user: AdminUser } | { ok: false; res: NextResponse }> {
+export async function adminGuard(): Promise<AdminGuardResult> {
   const session = (await getServerSession(authOptions)) as Session | null;
+
   const email = session?.user?.email ?? null;
   if (!email) {
-    return {
-      ok: false,
-      res: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }),
-    };
+    return { ok: false, status: 401, reason: "Unauthorized" };
   }
 
-  const user = await prisma.user.findUnique({
+  const me = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, email: true, role: true },
+    select: { id: true, role: true },
   });
 
-  if (!user || user.role !== "ADMIN") {
-    return {
-      ok: false,
-      res: NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 }),
-    };
+  if (!me) {
+    return { ok: false, status: 401, reason: "Unauthorized" };
   }
 
-  return { ok: true, user: user as AdminUser };
+  // Normalize role casing (supports "admin" or "ADMIN", etc.)
+  const role = (me.role ?? "").toString().toLowerCase();
+  if (role !== "admin") {
+    return { ok: false, status: 403, reason: "Forbidden" };
+  }
+
+  return { ok: true, userId: me.id };
 }
 
-// Backward-compat alias (old code still importing { adminGuard })
-export const adminGuard = requireAdmin;
+/**
+ * Assert admin in server components / route handlers.
+ * Redirects away when not authorized to avoid partial renders.
+ */
+export async function assertAdmin(): Promise<void> {
+  const res = await adminGuard();
+  if (!res.ok) {
+    if (res.status === 401) {
+      // Not logged in → send to login
+      redirect("/login");
+    }
+    // Logged in but not admin → send home (or a 403 page if you have one)
+    redirect("/");
+  }
+}
