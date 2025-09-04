@@ -3,20 +3,17 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuardFromReq } from "@/lib/utils/adminGuardReq";
 
 type Body = { action?: "approve" | "pay" | "reject" };
 
-export async function PATCH(req: Request, ctx: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
   // Admin auth via JWT (works reliably in route handlers)
   const gate = await adminGuardFromReq(req);
   if (!gate.ok) {
-    return NextResponse.json(
-      { success: false, error: gate.reason },
-      { status: gate.status }
-    );
+    return gate.res; // use guard’s own NextResponse
   }
 
   const id = ctx.params.id;
@@ -62,7 +59,6 @@ export async function PATCH(req: Request, ctx: { params: { id: string } }) {
       data: { status: "Approved" },
     });
 
-    // audit log
     await prisma.eventLog.create({
       data: {
         userId: commission.userId,

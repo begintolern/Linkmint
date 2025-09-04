@@ -1,8 +1,11 @@
 // app/admin/page.tsx
 export const dynamic = "force-dynamic";
 
+import type { Session } from "next-auth";
 import Link from "next/link";
 import { assertAdmin } from "@/lib/utils/adminGuard";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/options";
 
 const tabs = [
   { key: "users",     label: "Users",     href: "/admin/users",     desc: "All users, verification & flags" },
@@ -13,8 +16,12 @@ const tabs = [
 ];
 
 export default async function AdminHomePage() {
-  // Will redirect to /login (unauth) or /dashboard (non-admin)
-  const admin = await assertAdmin();
+  // Redirects away if not admin
+  await assertAdmin();
+
+  const session = (await getServerSession(authOptions)) as Session | null;
+  const email = session?.user?.email ?? "admin";
+  const role = (session?.user as any)?.role ?? "ADMIN";
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -22,11 +29,11 @@ export default async function AdminHomePage() {
         <div>
           <h1 className="text-2xl font-bold">Admin</h1>
           <p className="text-sm text-slate-600 mt-1">
-            Signed in as <span className="font-medium">{admin.email}</span>
+            Signed in as <span className="font-medium">{email}</span>
           </p>
         </div>
         <span className="rounded-full border px-3 py-1 text-xs text-slate-600">
-          Role: {String(admin.role).toUpperCase()}
+          Role: {String(role).toUpperCase()}
         </span>
       </header>
 
