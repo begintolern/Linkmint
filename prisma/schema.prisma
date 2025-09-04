@@ -8,25 +8,29 @@ datasource db {
 }
 
 model User {
-  id                     String               @id @default(cuid())
-  email                  String               @unique
-  name                   String?
-  password               String?
-  dob                    DateTime?          // user-provided date of birth (YYYY-MM-DD)
-  ageConfirmed           Boolean  @default(false)  // user checked "I am 18+"
-  ageConfirmedAt         DateTime?          // when they confirmed
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  emailVerifiedAt        DateTime?
-  verifyToken            String?              @unique
-  verifyTokenExpiry      DateTime?
-  referralGroupId        String?
-  referredById           String?
-  referralBadge          String?
-  referralCode           String?              @unique
-  role                   String?              @default("user")
-  trustScore             Int?                 @default(0)
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  password          String?
+  dob               DateTime?
+  ageConfirmed      Boolean   @default(false)
+  ageConfirmedAt    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  emailVerifiedAt   DateTime?
+  verifyToken       String?   @unique
+  verifyTokenExpiry DateTime?
+  referralGroupId   String?
+  referredById      String?
+  referralBadge     String?
+  referralCode      String?   @unique
+  role              String?   @default("user")
+  trustScore        Int?      @default(0)
 
+  // 🔹 Soft delete flag (null = active)
+  deletedAt DateTime?
+
+  // Relations (unchanged)
   commissions            Commission[]
   eventLogs              EventLog[]
   payoutLogs             PayoutLog[]
@@ -34,17 +38,18 @@ model User {
   overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
   passwordResetTokens    PasswordResetToken[]
 
-
   // NEW: payout accounts per provider (PayPal/Payoneer)
-  payoutAccounts         PayoutAccount[]
-  payouts                Payout[]
+  payoutAccounts PayoutAccount[]
+  payouts        Payout[]
 
-  referralBatches        ReferralBatch[]      @relation("UserReferralBatches")
-  referralGroupsCreated  ReferralGroup[]      @relation("UsersInGroupReferrer")
-  referralGroup          ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
-  referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals              User[]               @relation("UserReferrals")
-  verificationTokens     VerificationToken[]
+  referralBatches       ReferralBatch[]     @relation("UserReferralBatches")
+  referralGroupsCreated ReferralGroup[]     @relation("UsersInGroupReferrer")
+  referralGroup         ReferralGroup?      @relation("UsersInGroup", fields: [referralGroupId], references: [id])
+  referredBy            User?               @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals             User[]              @relation("UserReferrals")
+  verificationTokens    VerificationToken[]
+
+  @@index([deletedAt])
 }
 
 model ReferralGroup {
@@ -54,8 +59,8 @@ model ReferralGroup {
   createdAt  DateTime @default(now())
   startedAt  DateTime @default(now())
 
-  referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
-  users      User[]   @relation("UsersInGroup")
+  referrer User   @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
+  users    User[] @relation("UsersInGroup")
 }
 
 model ReferralBatch {
@@ -67,7 +72,7 @@ model ReferralBatch {
   status     String    @default("pending")
   createdAt  DateTime  @default(now())
 
-  referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
+  referrer User @relation("UserReferralBatches", fields: [referrerId], references: [id])
 }
 
 model EventLog {
@@ -78,7 +83,7 @@ model EventLog {
   message   String?
   createdAt DateTime @default(now())
 
-  user      User?    @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
 }
@@ -102,7 +107,7 @@ model PayoutAccount {
   user       User           @relation(fields: [userId], references: [id])
   userId     String
   provider   PayoutProvider
-  externalId String         // PayPal email OR Payoneer recipient ID/email
+  externalId String // PayPal email OR Payoneer recipient ID/email
   label      String?
   isDefault  Boolean        @default(false)
   status     String         @default("VERIFIED")
@@ -117,31 +122,31 @@ model PayoutAccount {
 // Keeps your original fields for compatibility (amount/method/PayPal logs)
 // Adds provider/feeCents/netCents/externalPayoutId/status for the new flow
 model Payout {
-  id               String        @id @default(cuid())
-  userId           String
-  user             User          @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   // Legacy fields (kept to avoid breaking existing code)
-  amount           Float
-  method           String        // legacy; prefer `provider` going forward
-  status           String        // legacy textual status; prefer enum below
-  details          String?
-  createdAt        DateTime      @default(now())
-  approvedAt       DateTime?
+  amount     Float
+  method     String // legacy; prefer `provider` going forward
+  status     String // legacy textual status; prefer enum below
+  details    String?
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
 
   // PayPal logging (existing)
-  paypalBatchId    String?       @db.VarChar(191)
-  transactionId    String?       @db.VarChar(191)
-  receiverEmail    String?       @db.VarChar(191)
-  paidAt           DateTime?
+  paypalBatchId String?   @db.VarChar(191)
+  transactionId String?   @db.VarChar(191)
+  receiverEmail String?   @db.VarChar(191)
+  paidAt        DateTime?
 
   // NEW fields for unified payout model
   provider         PayoutProvider?
   payoutAccountId  String?
-  externalPayoutId String?       // provider transaction id (PayPal/Payoneer/etc)
-  feeCents         Int           @default(0) // provider fee charged
-  netCents         Int           @default(0) // amountCents - feeCents (see note)
-  statusEnum       PayoutStatus  @default(PENDING)
+  externalPayoutId String? // provider transaction id (PayPal/Payoneer/etc)
+  feeCents         Int             @default(0) // provider fee charged
+  netCents         Int             @default(0) // amountCents - feeCents (see note)
+  statusEnum       PayoutStatus    @default(PENDING)
 
   @@index([userId, status])
   @@index([userId, statusEnum])
@@ -181,7 +186,7 @@ model Commission {
   description String?
   createdAt   DateTime       @default(now())
 
-  user        User           @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model OverrideCommission {
@@ -194,8 +199,8 @@ model OverrideCommission {
   status             String   @default("pending")
   createdAt          DateTime @default(now())
 
-  invitee            User     @relation("InviteeOverride", fields: [inviteeId], references: [id])
-  referrer           User     @relation("ReferrerOverride", fields: [referrerId], references: [id])
+  invitee  User @relation("InviteeOverride", fields: [inviteeId], references: [id])
+  referrer User @relation("ReferrerOverride", fields: [referrerId], references: [id])
 }
 
 model SystemSetting {
@@ -247,7 +252,7 @@ model VerificationToken {
   token   String   @unique
   expires DateTime
 
-  user    User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 enum CommissionType {
@@ -277,25 +282,26 @@ enum CommissionCalc {
 }
 
 model PayoutLog {
-  id             String   @id @default(cuid())
-  userId         String?
-  receiverEmail  String?
-  amount         Float?
-  paypalBatchId  String?
-  transactionId  String?
-  note           String?
-  status         String?            // e.g. "CREATED" | "PAID" | "FAILED"
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String?
+  receiverEmail String?
+  amount        Float?
+  paypalBatchId String?
+  transactionId String?
+  note          String?
+  status        String? // e.g. "CREATED" | "PAID" | "FAILED"
+  createdAt     DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
 }
+
 model PasswordResetToken {
   id      String   @id @default(cuid())
   userId  String
   token   String   @unique
   expires DateTime
 
-  user    User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
