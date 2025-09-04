@@ -9,20 +9,20 @@ import { prisma } from "@/lib/db";
 export default async function AdminReferralsPage() {
   await assertAdmin();
 
-  // Adjust to your schema: assuming a ReferralGroup table with:
-  // id, referrerId, startedAt, expiresAt, status, users (the 3 invitees)
+  // Adjust to your schema: no `status` column; we infer from expiresAt
   const groups = await prisma.referralGroup.findMany({
     orderBy: { startedAt: "desc" },
     take: 50,
     select: {
       id: true,
-      status: true,
       startedAt: true,
       expiresAt: true,
       referrer: { select: { id: true, email: true } },
-      users: { select: { id: true, email: true, emailVerifiedAt: true, createdAt: true } }, // invitees
+      users: { select: { id: true, email: true, emailVerifiedAt: true, createdAt: true } },
     },
   });
+
+  const nowMs = Date.now();
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-10">
@@ -33,10 +33,11 @@ export default async function AdminReferralsPage() {
 
       <div className="mt-6 grid gap-4">
         {groups.map((g) => {
-          const now = Date.now();
-          const expires = g.expiresAt ? new Date(g.expiresAt).getTime() : null;
+          const expiresMs = g.expiresAt ? new Date(g.expiresAt).getTime() : null;
           const daysLeft =
-            expires ? Math.max(0, Math.ceil((expires - now) / (1000 * 60 * 60 * 24))) : null;
+            expiresMs != null ? Math.max(0, Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))) : null;
+          const statusLabel =
+            expiresMs == null ? "ACTIVE" : expiresMs > nowMs ? "ACTIVE" : "EXPIRED";
 
           return (
             <div key={g.id} className="rounded-xl border p-5">
@@ -56,7 +57,7 @@ export default async function AdminReferralsPage() {
                   </div>
                 </div>
                 <span className="text-xs rounded-md border px-2 py-0.5">
-                  {String(g.status ?? "active").toUpperCase()}
+                  {statusLabel}
                 </span>
               </div>
 
