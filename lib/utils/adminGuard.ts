@@ -3,34 +3,33 @@ import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
+import { redirect } from "next/navigation";
 
-export type AdminGate =
-  | { ok: true; userId: string }
-  | { ok: false; status: 401 | 403; reason: "Unauthorized" | "Forbidden" };
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: "ADMIN" | "USER" | string;
+};
 
-export async function adminGuard(): Promise<AdminGate> {
+/**
+ * Call at the top of admin pages/server components.
+ * Redirects to /login (unauth) or /dashboard (non-admin).
+ * Returns the user row when admin.
+ */
+export async function assertAdmin(): Promise<AdminUser> {
   const session = (await getServerSession(authOptions)) as Session | null;
 
   const email = session?.user?.email ?? null;
-  if (!email) {
-    return { ok: false, status: 401, reason: "Unauthorized" };
-  }
+  if (!email) redirect("/login?next=/admin");
 
-  // Resolve role via DB to avoid relying only on session augmentation
-  const me = await prisma.user.findUnique({
+  const user = await prisma.user.findUnique({
     where: { email },
-    select: { id: true, role: true },
+    select: { id: true, email: true, role: true },
   });
 
-  if (!me) {
-    return { ok: false, status: 401, reason: "Unauthorized" };
-  }
-  if (String(me.role).toUpperCase() !== "ADMIN") {
-    return { ok: false, status: 403, reason: "Forbidden" };
+  if (!user || user.role !== "ADMIN") {
+    redirect("/dashboard");
   }
 
-  return { ok: true, userId: me.id };
+  return user as AdminUser;
 }
-
-// Export an alias for compatibility with callers expecting `assertProdAdmin`
-export { adminGuard as assertProdAdmin };
