@@ -13,12 +13,16 @@ export type AdminUser = {
  * Use inside API route handlers to enforce admin.
  * Returns { ok: true, user } when admin; otherwise an HTTP response.
  */
-export async function requireAdminFromReq(req: NextRequest):
-  Promise<{ ok: true; user: AdminUser } | { ok: false; res: NextResponse }> {
+export async function requireAdminFromReq(
+  req: NextRequest
+): Promise<{ ok: true; user: AdminUser } | { ok: false; res: NextResponse }> {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const email = token?.email;
   if (!email) {
-    return { ok: false, res: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }) };
+    return {
+      ok: false,
+      res: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }),
+    };
   }
 
   const user = await prisma.user.findUnique({
@@ -27,8 +31,14 @@ export async function requireAdminFromReq(req: NextRequest):
   });
 
   if (!user || user.role !== "ADMIN") {
-    return { ok: false, res: NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 }) };
+    return {
+      ok: false,
+      res: NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 }),
+    };
   }
 
   return { ok: true, user: user as AdminUser };
 }
+
+// Backward-compat alias (old code still importing { adminGuardFromReq })
+export const adminGuardFromReq = requireAdminFromReq;

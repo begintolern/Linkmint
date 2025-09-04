@@ -1,9 +1,9 @@
 // lib/utils/adminGuard.ts
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
+import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import { redirect } from "next/navigation";
 
 export type AdminUser = {
   id: string;
@@ -12,15 +12,19 @@ export type AdminUser = {
 };
 
 /**
- * Call at the top of admin pages/server components.
- * Redirects to /login (unauth) or /dashboard (non-admin).
- * Returns the user row when admin.
+ * Use inside server components or API routes to enforce admin.
+ * Returns { ok: true, user } when admin; otherwise an HTTP response.
  */
-export async function assertAdmin(): Promise<AdminUser> {
+export async function requireAdmin():
+  Promise<{ ok: true; user: AdminUser } | { ok: false; res: NextResponse }> {
   const session = (await getServerSession(authOptions)) as Session | null;
-
   const email = session?.user?.email ?? null;
-  if (!email) redirect("/login?next=/admin");
+  if (!email) {
+    return {
+      ok: false,
+      res: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }),
+    };
+  }
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -28,8 +32,14 @@ export async function assertAdmin(): Promise<AdminUser> {
   });
 
   if (!user || user.role !== "ADMIN") {
-    redirect("/dashboard");
+    return {
+      ok: false,
+      res: NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 }),
+    };
   }
 
-  return user as AdminUser;
+  return { ok: true, user: user as AdminUser };
 }
+
+// Backward-compat alias (old code still importing { adminGuard })
+export const adminGuard = requireAdmin;
