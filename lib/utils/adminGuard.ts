@@ -50,8 +50,8 @@ export async function assertAdmin(): Promise<void> {
   const res = await adminGuard();
   if (!res.ok) {
     if (res.status === 401) {
-      // Not logged in → send to login
-      redirect("/login");
+      // Not logged in → send to admin login
+      redirect("/admin/login");
     }
     // Logged in but not admin → send home (or a 403 page if you have one)
     redirect("/");
