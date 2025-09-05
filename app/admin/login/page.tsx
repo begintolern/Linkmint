@@ -20,8 +20,8 @@ export default function AdminLoginPage() {
         email,
         password,
       });
-      if (res?.error) {
-        setErr(res.error);
+      if ((res as any)?.error) {
+        setErr((res as any).error);
       }
     } catch (e: any) {
       setErr(e.message || "Login failed");
@@ -40,9 +40,14 @@ export default function AdminLoginPage() {
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700">Email</label>
+          <label htmlFor="admin-email" className="block text-sm font-medium text-slate-700">
+            Email
+          </label>
           <input
+            id="admin-email"
+            name="email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1 block w-full rounded-md border px-3 py-2 text-sm ring-1 ring-slate-300"
@@ -50,9 +55,14 @@ export default function AdminLoginPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700">Password</label>
+          <label htmlFor="admin-password" className="block text-sm font-medium text-slate-700">
+            Password
+          </label>
           <input
+            id="admin-password"
+            name="password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mt-1 block w-full rounded-md border px-3 py-2 text-sm ring-1 ring-slate-300"
