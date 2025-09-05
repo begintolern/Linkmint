@@ -53,6 +53,16 @@ export default function AdminUsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-refresh every 15s so new signups appear without clicking Refresh
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible" && !loading) {
+        load(null);
+      }
+    }, 15000);
+    return () => clearInterval(id);
+  }, [loading]);
+
   async function patchUser(id: string, body: any) {
     try {
       setBusyId(id);
