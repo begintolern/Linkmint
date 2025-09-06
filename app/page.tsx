@@ -11,16 +11,9 @@ export default function HomePage() {
       {/* Nav */}
       <header className="border-b">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            {/* Logo from /public/logo.png */}
-            <Image
-              src="/logo.png"
-              alt="Linkmint logo"
-              width={32}
-              height={32}
-              priority
-            />
-            <span className="font-semibold tracking-tight">Linkmint</span>
+          <Link href="/" className="flex items-center">
+            {/* Text-only header */}
+            <span className="font-semibold tracking-tight text-xl">Linkmint</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm">
@@ -48,6 +41,17 @@ export default function HomePage() {
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 to-white" />
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28 grid lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7">
+            {/* Add logo image inside hero */}
+            <div className="mb-6">
+              <Image
+                src="/logo.png"
+                alt="Linkmint logo"
+                width={64}
+                height={64}
+                priority
+              />
+            </div>
+
             <h1 className="text-4xl/tight sm:text-5xl font-bold tracking-tight">
               Earn from every link you share.
             </h1>
