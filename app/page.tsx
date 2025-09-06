@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HomePage() {
   return (
@@ -11,7 +12,14 @@ export default function HomePage() {
       <header className="border-b">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-gradient-to-br from-indigo-600 to-sky-500" />
+            {/* Logo from /public/logo.png */}
+            <Image
+              src="/logo.png"
+              alt="Linkmint logo"
+              width={32}
+              height={32}
+              priority
+            />
             <span className="font-semibold tracking-tight">Linkmint</span>
           </Link>
 
@@ -22,10 +30,7 @@ export default function HomePage() {
             <Link href="/faq" className="hover:text-slate-600">
               FAQ
             </Link>
-            <Link
-              href="/login"
-              className="hover:text-slate-600"
-            >
+            <Link href="/login" className="hover:text-slate-600">
               Login
             </Link>
             <Link
