@@ -90,7 +90,7 @@ export default function HomePage() {
               <video className="h-full w-full" controls preload="metadata">
                 <source src="/video/tutorial.mp4" type="video/mp4" />
                 <track
-                  src="/video/tutorial.srt"
+                  src="/video/tutorial.vtt"
                   kind="subtitles"
                   srcLang="en"
                   label="English"
