@@ -8,23 +8,49 @@ import Image from "next/image";
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      {/* Fixed brand logo (always visible while scrolling) */}
-      <div className="fixed left-6 top-6 z-50">
-        <Image
-          src="/logo.png"
-          alt="Linkmint logo"
-          width={180}
-          height={180}
-          priority
-          className="h-[120px] w-auto sm:h-[150px] md:h-[180px] drop-shadow-md"
-        />
-      </div>
+      {/* Nav */}
+      <header className="border-b">
+        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            {/* Removed small Linkmint text */}
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <Link href="/trust-center" className="hover:text-slate-600">
+              Trust Center
+            </Link>
+            <Link href="/faq" className="hover:text-slate-600">
+              FAQ
+            </Link>
+            <Link href="/login" className="hover:text-slate-600">
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-white"
+            >
+              Sign up
+            </Link>
+          </nav>
+        </div>
+      </header>
 
       {/* Hero */}
       <section className="relative isolate">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 to-white" />
-        <div className="mx-auto max-w-6xl px-6 pt-28 pb-20 lg:py-28 grid lg:grid-cols-12 gap-10">
+        <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28 grid lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7">
+            <div className="mb-6">
+              <Image
+                src="/logo.png"
+                alt="Linkmint"
+                width={220}
+                height={220}
+                priority
+                className="h-16 w-auto sm:h-20 md:h-24"
+              />
+            </div>
+
             <h1 className="text-4xl/tight sm:text-5xl font-bold tracking-tight">
               Earn from every link you share.
             </h1>
