@@ -8,13 +8,16 @@ import Image from "next/image";
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      {/* Nav */}
-      <header className="border-b">
+      {/* Sticky nav */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white/70 backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            {/* Removed small Linkmint text */}
-          </Link>
-
+          <Image
+            src="/logo.png"
+            alt="Linkmint logo"
+            width={40}
+            height={40}
+            priority
+          />
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/trust-center" className="hover:text-slate-600">
               Trust Center
@@ -36,11 +39,12 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section className="relative isolate">
+      <section className="relative isolate pt-28">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 to-white" />
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28 grid lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7">
             <div className="mb-6">
+              {/* Hero logo (bigger) */}
               <Image
                 src="/logo.png"
                 alt="Linkmint"
@@ -77,6 +81,31 @@ export default function HomePage() {
 
             <div className="mt-6 text-sm text-slate-500">
               Built for trust • Email verification • Transparent payouts
+            </div>
+
+            {/* Tutorial Video (self-hosted MP4) */}
+            <div className="mt-12">
+              <div className="aspect-video rounded-xl overflow-hidden border shadow-sm bg-black">
+                <video
+                  className="w-full h-full"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster="/video/tutorial-poster.jpg"
+                  controlsList="nodownload noplaybackrate"
+                  disablePictureInPicture
+                  // muted // <-- uncomment with `autoPlay` if you want silent autoplay
+                  // autoPlay
+                >
+                  <source src="/video/linkmint-tutorial.mp4" type="video/mp4" />
+                  {/* Optional webm for broader compatibility */}
+                  {/* <source src="/video/linkmint-tutorial.webm" type="video/webm" /> */}
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+              <p className="mt-3 text-sm text-slate-600">
+                Watch how easy it is to turn a simple link into real earnings.
+              </p>
             </div>
           </div>
 
