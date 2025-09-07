@@ -4,7 +4,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Footer from "@/components/site/Footer";
 import SessionProviderWrapper from "@/app/providers/SessionProviderWrapper";
-import ToastProvider from "@/components/ui/ToastProvider"; // 👈 add this
+import ToastProvider from "@/components/ui/ToastProvider";
+import StickyHeader from "@/app/components/StickyHeader"; // ✅ add header
 
 // Avoid stale caching during dev
 export const dynamic = "force-dynamic";
@@ -61,10 +62,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={inter.variable}>
       <body className="min-h-screen bg-white text-gray-900 antialiased">
         <SessionProviderWrapper>
+          {/* ✅ Global sticky header with centered large logo */}
+          <StickyHeader />
           <div className="min-h-screen">{children}</div>
         </SessionProviderWrapper>
         <Footer />
-        <ToastProvider /> {/* 👈 global toast provider */}
+        <ToastProvider />
       </body>
     </html>
   );
