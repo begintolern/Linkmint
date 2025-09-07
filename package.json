@@ -10,6 +10,10 @@
     "prisma": "prisma",
     "postinstall": "prisma generate",
     "check:routes": "node scripts/check-route-conflicts.mjs",
+    "seed": "tsx prisma/seed.ts",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
@@ -35,6 +39,7 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
