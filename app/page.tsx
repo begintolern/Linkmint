@@ -91,13 +91,13 @@ export default function HomePage() {
                 className="h-full w-full"
                 controls
                 preload="metadata"
-                poster="/video/tutorial-poster.jpg" // optional thumbnail in /public/video
+                poster="/video/tutorial-poster.jpg" // optional thumbnail
               >
                 <source src="/video/tutorial.mp4" type="video/mp4" />
                 <track
                   src="/video/tutorial.srt"
                   kind="subtitles"
-                  srclang="en"
+                  srcLang="en"      // ✅ fixed: camelCase
                   label="English"
                   default
                 />
