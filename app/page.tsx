@@ -1,5 +1,6 @@
 // app/page.tsx
 import Link from "next/link";
+import SmartSignupButton from "@/app/components/SmartSignupButton";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -21,28 +22,29 @@ export default function HomePage() {
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/signup"
-                className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-black transition"
-              >
-                Get started — it’s free
-              </Link>
-              <Link
+              <SmartSignupButton />
+              <a
                 href="#how-it-works"
                 className="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-3 font-medium hover:bg-gray-50 transition"
               >
                 How it works
-              </Link>
+              </a>
             </div>
           </div>
         </section>
 
         {/* Tutorial video block */}
-        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
+        <section
+          id="how-it-works"
+          className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16"
+        >
           <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 30 seconds</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold">
+              Watch: Linkmint in 30 seconds
+            </h2>
             <p className="mt-2 text-gray-600">
-              See how to create a smart link, share it, and get paid after approvals.
+              See how to create a smart link, share it, and get paid after
+              approvals.
             </p>
 
             <div className="mt-4 aspect-video w-full overflow-hidden rounded-xl border">
@@ -60,9 +62,21 @@ export default function HomePage() {
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <Step num="1" title="Paste a link" desc="Drop any product or page link into the smart-link creator." />
-              <Step num="2" title="Share anywhere" desc="Text it, post it, or DM it. We track clicks and valid purchases." />
-              <Step num="3" title="Get paid" desc="After affiliate approval and clearance, payouts hit your account." />
+              <Step
+                num="1"
+                title="Paste a link"
+                desc="Drop any product or page link into the smart-link creator."
+              />
+              <Step
+                num="2"
+                title="Share anywhere"
+                desc="Text it, post it, or DM it. We track clicks and valid purchases."
+              />
+              <Step
+                num="3"
+                title="Get paid"
+                desc="After affiliate approval and clearance, payouts hit your account."
+              />
             </div>
           </div>
         </section>
