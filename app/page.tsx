@@ -87,17 +87,12 @@ export default function HomePage() {
             </p>
 
             <div className="mt-4 aspect-video w-full overflow-hidden rounded-xl border">
-              <video
-                className="h-full w-full"
-                controls
-                preload="metadata"
-                poster="/video/tutorial-poster.jpg" // optional thumbnail
-              >
+              <video className="h-full w-full" controls preload="metadata">
                 <source src="/video/tutorial.mp4" type="video/mp4" />
                 <track
                   src="/video/tutorial.srt"
                   kind="subtitles"
-                  srcLang="en"      // ✅ fixed: camelCase
+                  srcLang="en"
                   label="English"
                   default
                 />
