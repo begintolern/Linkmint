@@ -5,53 +5,76 @@ export const fetchCache = "force-no-store";
 import Link from "next/link";
 import Image from "next/image";
 
+// --- Client header for blur + scroll shadow ---
+function StickyHeader() {
+  "use client";
+  import("react").then(); // hint bundler this is client-only
+  const React = require("react");
+  const { useEffect, useState } = React as typeof import("react");
+
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll(); // initial
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <header
+      className={[
+        "fixed top-0 left-0 right-0 z-50 border-b transition-all",
+        // frosted glass baseline
+        "bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60",
+        scrolled ? "shadow-sm" : "shadow-none",
+      ].join(" ")}
+    >
+      <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+        {/* Logo on left */}
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/logo.png"
+            alt="Linkmint logo"
+            width={40}
+            height={40}
+            priority
+          />
+        </Link>
+
+        {/* Nav on right */}
+        <nav className="hidden md:flex items-center gap-6 text-sm">
+          <Link href="/trust-center" className="hover:text-slate-600">
+            Trust Center
+          </Link>
+          <Link href="/faq" className="hover:text-slate-600">
+            FAQ
+          </Link>
+          <Link href="/login" className="hover:text-slate-600">
+            Login
+          </Link>
+          <Link
+            href="/signup"
+            className="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-white"
+          >
+            Sign up
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
-      {/* Nav */}
-      <header className="border-b">
-        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center">
-            {/* Text-only header */}
-            <span className="font-semibold tracking-tight text-xl">Linkmint</span>
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link href="/trust-center" className="hover:text-slate-600">
-              Trust Center
-            </Link>
-            <Link href="/faq" className="hover:text-slate-600">
-              FAQ
-            </Link>
-            <Link href="/login" className="hover:text-slate-600">
-              Login
-            </Link>
-            <Link
-              href="/signup"
-              className="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-white"
-            >
-              Sign up
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <StickyHeader />
 
       {/* Hero */}
-      <section className="relative isolate">
+      <section className="relative isolate pt-28">
         <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 to-white" />
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28 grid lg:grid-cols-12 gap-10">
           <div className="lg:col-span-7">
-            {/* Add logo image inside hero */}
-            <div className="mb-6">
-              <Image
-                src="/logo.png"
-                alt="Linkmint logo"
-                width={64}
-                height={64}
-                priority
-              />
-            </div>
-
             <h1 className="text-4xl/tight sm:text-5xl font-bold tracking-tight">
               Earn from every link you share.
             </h1>
@@ -143,7 +166,6 @@ export default function HomePage() {
             commissions. We batch referrals in groups of three to keep things
             fair and fraud-safe.
           </p>
-
           <div className="mt-6">
             <Link
               href="/dashboard/referrals"
@@ -152,7 +174,6 @@ export default function HomePage() {
               View referral program
             </Link>
           </div>
-
           <div className="mt-6 rounded-xl border bg-white p-5 shadow-sm">
             <h3 className="font-semibold">Example referral batch</h3>
             <p className="mt-2 text-sm text-slate-600">
@@ -181,7 +202,6 @@ export default function HomePage() {
               <li>Admin oversight &amp; event logs</li>
               <li>Respectful email policy and opt-outs</li>
             </ul>
-
             <div className="mt-6 flex items-center gap-3">
               <Link
                 href="/trust-center"
@@ -203,14 +223,12 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-
           <div className="lg:col-span-5">
             <div className="rounded-xl border p-5 shadow-sm">
               <h3 className="font-semibold">System status</h3>
               <p className="mt-2 text-sm text-slate-600">
                 Real-time health checks, reversible payouts, and manual overrides to keep things safe.
               </p>
-
               <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
                 <Badge label="Email Verified" />
                 <Badge label="Payouts Tracked" />
@@ -228,7 +246,6 @@ export default function HomePage() {
           <p className="mt-3 max-w-xl text-slate-600">
             Start free. Create Smart Links in seconds. Share anywhere.
           </p>
-
           <div className="mt-6 flex items-center gap-3">
             <Link
               href="/signup"
