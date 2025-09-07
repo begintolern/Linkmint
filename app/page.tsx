@@ -9,16 +9,17 @@ export const revalidate = 0;
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
-      {/* Header (kept) — logo updated to use logo.png */}
+      {/* Header (kept) — logo enlarged */}
       <header className="sticky top-0 z-50 bg-white/70 backdrop-blur border-b">
         <nav className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
+            {/* ✅ Enlarged logo */}
             <Image
               src="/logo.png"
               alt="linkmint.co"
-              width={64}
-              height={64}
-              className="h-10 w-10 md:h-12 md:w-12"
+              width={80}
+              height={80}
+              className="h-14 w-14 md:h-16 md:w-16"
               priority
             />
             <span className="font-semibold text-lg md:text-xl tracking-tight">
@@ -70,7 +71,6 @@ export default function HomePage() {
         {/* Tutorial video block */}
         <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
           <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
-            {/* ✅ Updated text to 30 seconds */}
             <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 30 seconds</h2>
             <p className="mt-2 text-gray-600">
               See how to create a smart link, share it, and get paid after approvals.
