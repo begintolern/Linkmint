@@ -9,17 +9,16 @@ export const revalidate = 0;
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
-      {/* Header (kept) — logo enlarged */}
+      {/* Header (logo enlarged) */}
       <header className="sticky top-0 z-50 bg-white/70 backdrop-blur border-b">
-        <nav className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <nav className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            {/* ✅ Enlarged logo */}
             <Image
               src="/logo.png"
               alt="linkmint.co"
-              width={80}
-              height={80}
-              className="h-14 w-14 md:h-16 md:w-16"
+              width={96}
+              height={96}
+              className="h-16 w-16 md:h-16 md:w-16"
               priority
             />
             <span className="font-semibold text-lg md:text-xl tracking-tight">
@@ -28,8 +27,12 @@ export default function HomePage() {
           </Link>
 
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/trust" className="text-sm hover:text-gray-700">Trust Center</Link>
-            <Link href="/login" className="text-sm hover:text-gray-700">Log in</Link>
+            <Link href="/trust" className="text-sm hover:text-gray-700">
+              Trust Center
+            </Link>
+            <Link href="/login" className="text-sm hover:text-gray-700">
+              Log in
+            </Link>
             <Link
               href="/signup"
               className="inline-flex items-center rounded-xl border border-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-900 hover:text-white transition"
@@ -41,6 +44,7 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1">
+        {/* Hero */}
         <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
           <div className="max-w-3xl">
             <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">
@@ -69,11 +73,17 @@ export default function HomePage() {
         </section>
 
         {/* Tutorial video block */}
-        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
+        <section
+          id="how-it-works"
+          className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16"
+        >
           <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 30 seconds</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold">
+              Watch: Linkmint in 30 seconds
+            </h2>
             <p className="mt-2 text-gray-600">
-              See how to create a smart link, share it, and get paid after approvals.
+              See how to create a smart link, share it, and get paid after
+              approvals.
             </p>
 
             <div className="mt-4 aspect-video w-full overflow-hidden rounded-xl border">
@@ -81,9 +91,9 @@ export default function HomePage() {
                 className="h-full w-full"
                 controls
                 preload="metadata"
-                poster="/video/tutorial-poster.jpg"
+                poster="/tutorial-poster.jpg" // optional thumbnail in /public
               >
-                <source src="/video/linkmint-tutorial.mp4" type="video/mp4" />
+                <source src="/video/tutorial.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>
@@ -109,14 +119,23 @@ export default function HomePage() {
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="border-t">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} linkmint.co — All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="/trust" className="hover:text-gray-700">Trust Center</Link>
-            <Link href="/terms" className="hover:text-gray-700">Terms</Link>
-            <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
-            <Link href="mailto:admin@linkmint.co" className="hover:text-gray-700">Contact</Link>
+            <Link href="/trust" className="hover:text-gray-700">
+              Trust Center
+            </Link>
+            <Link href="/terms" className="hover:text-gray-700">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-gray-700">
+              Privacy
+            </Link>
+            <Link href="mailto:admin@linkmint.co" className="hover:text-gray-700">
+              Contact
+            </Link>
           </div>
         </div>
       </footer>
