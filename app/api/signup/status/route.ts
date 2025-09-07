@@ -6,7 +6,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-const SIGNUP_CAP = Number(process.env.NEXT_PUBLIC_SIGNUP_CAP ?? 100);
+// 🔎 version marker to confirm we're on the new build/route code
+const VERSION = "status-v3";
+
+// Read cap from either env (server or public)
+const envCapPublic = process.env.NEXT_PUBLIC_SIGNUP_CAP;
+const envCapServer = process.env.SIGNUP_CAP;
+const SIGNUP_CAP = Number(envCapPublic ?? envCapServer ?? 100);
 
 export async function GET() {
   try {
@@ -18,11 +24,30 @@ export async function GET() {
     } catch {
       countedUsers = await prisma.user.count();
     }
+
     const remaining = Math.max(0, SIGNUP_CAP - countedUsers);
-    return NextResponse.json({ open: remaining > 0, remaining, cap: SIGNUP_CAP });
+
+    return NextResponse.json({
+      version: VERSION,
+      open: remaining > 0,
+      remaining,
+      cap: SIGNUP_CAP,
+      _debug: {
+        envCapPublic,
+        envCapServer,
+        countedUsers,
+        note: "remove _debug after verification",
+      },
+    });
   } catch {
     return NextResponse.json(
-      { open: true, remaining: SIGNUP_CAP, cap: SIGNUP_CAP, note: "fallback-no-db" },
+      {
+        version: VERSION,
+        open: true,
+        remaining: SIGNUP_CAP,
+        cap: SIGNUP_CAP,
+        _debug: { envCapPublic, envCapServer, note: "fallback-no-db" },
+      },
       { status: 200 }
     );
   }

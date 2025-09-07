@@ -8,16 +8,17 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail";
 import { sendSignupAlert } from "@/lib/alerts/sendSignupAlert";
-import { logEvent } from "@/lib/log/logEvent"; // ✅ NEW
+import { logEvent } from "@/lib/log/logEvent";
+
+// Read cap from env (public or server), fallback 100
+const SIGNUP_CAP = Number(process.env.NEXT_PUBLIC_SIGNUP_CAP ?? process.env.SIGNUP_CAP ?? 100);
 
 function genReferralCode() {
-  // 8 hex chars, good entropy and URL-safe
-  return crypto.randomBytes(4).toString("hex");
+  return crypto.randomBytes(4).toString("hex"); // 8 hex chars, URL-safe
 }
 
 function parseDOB(dob: unknown): Date | null {
   if (typeof dob !== "string" || !dob) return null;
-  // Expecting YYYY-MM-DD from the form
   const d = new Date(dob);
   return Number.isNaN(d.getTime()) ? null : d;
 }
@@ -53,7 +54,23 @@ export async function POST(req: Request) {
     // Normalize email
     const normalized = String(email).toLowerCase().trim();
 
-    // 1) Reject if user already exists
+    // 🔒 Enforce signup cap (exclude ADMIN/TEST)
+    const countedUsers = await prisma.user.count({
+      where: { NOT: { role: { in: ["ADMIN", "TEST"] as any } } } as any,
+    });
+    if (countedUsers >= SIGNUP_CAP) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "signups_closed",
+          message: "Signups are limited. Please join the waitlist.",
+          cap: SIGNUP_CAP,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Reject if user already exists
     const existing = await prisma.user.findUnique({
       where: { email: normalized },
       select: { id: true },
@@ -62,7 +79,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "account_exists" }, { status: 409 });
     }
 
-    // 2) Create user
+    // Create user
     const hash = await bcrypt.hash(String(password), 10);
     const created = await prisma.user.create({
       data: {
@@ -70,31 +87,29 @@ export async function POST(req: Request) {
         name: (name ?? null) as string | null,
         password: hash,
         emailVerifiedAt: null,
-
-        // NEW: age + DOB
         dob: birthDate,
         ageConfirmed: true,
         ageConfirmedAt: new Date(),
-      } as any, // keep cast to satisfy Prisma client typing in CI
+        role: "USER", // ensure new users count toward cap
+      } as any,
       select: { id: true, email: true },
     });
 
-    // 2a) Assign unique referralCode (retry on rare collision)
+    // Assign unique referralCode (retry on rare collision)
     for (let i = 0; i < 5; i++) {
       try {
         await prisma.user.update({
           where: { id: created.id },
           data: { referralCode: genReferralCode() },
         });
-        break; // success
+        break;
       } catch (e: any) {
-        // Prisma unique constraint violation
         if (e?.code !== "P2002") throw e;
-        if (i === 4) throw e; // give up after retries
+        if (i === 4) throw e;
       }
     }
 
-    // 3) Create verification token (24h)
+    // Create verification token (24h)
     const token = crypto.randomBytes(32).toString("hex");
     await prisma.verificationToken.create({
       data: {
@@ -104,17 +119,17 @@ export async function POST(req: Request) {
       },
     });
 
-    // 4) Send verification email (non-blocking)
+    // Send verification email (non-blocking)
     sendVerificationEmail(created.email, token).catch((e) => {
       console.error("[signup] email send failed:", e);
     });
 
-    // 5) 🔔 Telegram alert (non-blocking)
+    // 🔔 Telegram alert (non-blocking)
     sendSignupAlert(created.email).catch((e) => {
       console.error("sendSignupAlert failed:", e);
     });
 
-    // 6) 📝 Event log (non-blocking, shows in Admin → Logs)
+    // 📝 Event log (non-blocking)
     logEvent("signup", `New signup: ${created.email}`, created.id).catch(() => {});
 
     return NextResponse.json({ ok: true, message: "verification_sent" }, { status: 201 });
