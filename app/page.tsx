@@ -9,13 +9,12 @@ export const revalidate = 0;
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
-      {/* Header (kept) — logo made larger for mobile */}
+      {/* Header (kept) — logo updated to use logo.png */}
       <header className="sticky top-0 z-50 bg-white/70 backdrop-blur border-b">
         <nav className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            {/* ✅ Larger, responsive logo (no hero/body logo elsewhere) */}
             <Image
-              src="/logo.svg"            // <-- ensure this exists in /public
+              src="/logo.png"
               alt="linkmint.co"
               width={64}
               height={64}
@@ -40,7 +39,6 @@ export default function HomePage() {
         </nav>
       </header>
 
-      {/* Hero — no logo here anymore */}
       <main className="flex-1">
         <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
           <div className="max-w-3xl">
@@ -69,10 +67,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Tutorial video block (kept). No inline logo above it. */}
+        {/* Tutorial video block */}
         <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
           <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 90 seconds</h2>
+            {/* ✅ Updated text to 30 seconds */}
+            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 30 seconds</h2>
             <p className="mt-2 text-gray-600">
               See how to create a smart link, share it, and get paid after approvals.
             </p>
@@ -82,7 +81,7 @@ export default function HomePage() {
                 className="h-full w-full"
                 controls
                 preload="metadata"
-                poster="/video/tutorial-poster.jpg" // <-- ensure this exists in /public/video
+                poster="/video/tutorial-poster.jpg"
               >
                 <source src="/video/linkmint-tutorial.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
