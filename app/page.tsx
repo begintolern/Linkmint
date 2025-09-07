@@ -91,9 +91,16 @@ export default function HomePage() {
                 className="h-full w-full"
                 controls
                 preload="metadata"
-                poster="/tutorial-poster.jpg" // optional thumbnail in /public
+                poster="/video/tutorial-poster.jpg" // optional thumbnail in /public/video
               >
                 <source src="/video/tutorial.mp4" type="video/mp4" />
+                <track
+                  src="/video/tutorial.srt"
+                  kind="subtitles"
+                  srclang="en"
+                  label="English"
+                  default
+                />
                 Your browser does not support the video tag.
               </video>
             </div>
