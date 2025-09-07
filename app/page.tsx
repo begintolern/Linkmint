@@ -1,6 +1,6 @@
 // app/page.tsx
 import Link from "next/link";
-import SmartSignupButton from "@/app/components/SmartSignupButton";
+import SmartSignupButton from "./components/SmartSignupButton";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
