@@ -1,308 +1,140 @@
 // app/page.tsx
+import Image from "next/image";
+import Link from "next/link";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-
-import Link from "next/link";
-import Image from "next/image";
+export const revalidate = 0;
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      {/* Sticky nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white/70 backdrop-blur-md">
-        <div className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-          <Image
-            src="/logo.png"
-            alt="Linkmint logo"
-            width={40}
-            height={40}
-            priority
-          />
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link href="/trust-center" className="hover:text-slate-600">
-              Trust Center
-            </Link>
-            <Link href="/faq" className="hover:text-slate-600">
-              FAQ
-            </Link>
-            <Link href="/login" className="hover:text-slate-600">
-              Login
-            </Link>
+    <div className="min-h-screen flex flex-col bg-white text-gray-900">
+      {/* Header (kept) — logo made larger for mobile */}
+      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur border-b">
+        <nav className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            {/* ✅ Larger, responsive logo (no hero/body logo elsewhere) */}
+            <Image
+              src="/logo.svg"            // <-- ensure this exists in /public
+              alt="linkmint.co"
+              width={64}
+              height={64}
+              className="h-10 w-10 md:h-12 md:w-12"
+              priority
+            />
+            <span className="font-semibold text-lg md:text-xl tracking-tight">
+              linkmint.co
+            </span>
+          </Link>
+
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/trust" className="text-sm hover:text-gray-700">Trust Center</Link>
+            <Link href="/login" className="text-sm hover:text-gray-700">Log in</Link>
             <Link
               href="/signup"
-              className="inline-flex items-center rounded-md bg-slate-900 px-4 py-2 text-white"
+              className="inline-flex items-center rounded-xl border border-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-900 hover:text-white transition"
             >
               Sign up
             </Link>
-          </nav>
-        </div>
+          </div>
+        </nav>
       </header>
 
-      {/* Hero */}
-      <section className="relative isolate pt-28">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-50 to-white" />
-        <div className="mx-auto max-w-6xl px-6 py-20 lg:py-28 grid lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-7">
-            <div className="mb-6">
-              {/* Hero logo (bigger) */}
-              <Image
-                src="/logo.png"
-                alt="Linkmint"
-                width={220}
-                height={220}
-                priority
-                className="h-16 w-auto sm:h-20 md:h-24"
-              />
-            </div>
-
-            <h1 className="text-4xl/tight sm:text-5xl font-bold tracking-tight">
-              Earn from every link you share.
+      {/* Hero — no logo here anymore */}
+      <main className="flex-1">
+        <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">
+              Turn any link into a payout.
             </h1>
-            <p className="mt-4 text-lg text-slate-600 max-w-2xl">
-              Turn everyday recommendations into payouts—no audience required.
-              Linkmint matches your links with affiliate programs and tracks
-              commissions automatically, end-to-end.
+            <p className="mt-4 text-base sm:text-lg text-gray-600">
+              Share links you already love. Earn automatically when they drive
+              purchases. No followers required. Built for trust and transparency.
             </p>
 
-            <div className="mt-8 flex items-center gap-3">
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <Link
                 href="/signup"
-                className="inline-flex items-center rounded-md bg-slate-900 px-5 py-3 text-white"
+                className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-black transition"
               >
-                Get started
+                Get started — it’s free
               </Link>
               <Link
-                href="/trust-center"
-                className="inline-flex items-center rounded-md border px-5 py-3 hover:bg-slate-50"
+                href="#how-it-works"
+                className="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-3 font-medium hover:bg-gray-50 transition"
               >
-                Learn more
+                How it works
               </Link>
             </div>
-
-            <div className="mt-6 text-sm text-slate-500">
-              Built for trust • Email verification • Transparent payouts
-            </div>
-
-            {/* Tutorial Video (self-hosted MP4) */}
-            <div className="mt-12">
-              <div className="aspect-video rounded-xl overflow-hidden border shadow-sm bg-black">
-                <video
-                  className="w-full h-full"
-                  controls
-                  playsInline
-                  preload="metadata"
-                  poster="/video/tutorial-poster.jpg"
-                  controlsList="nodownload noplaybackrate"
-                  disablePictureInPicture
-                  // muted // <-- uncomment with `autoPlay` if you want silent autoplay
-                  // autoPlay
-                >
-                  <source src="/video/linkmint-tutorial.mp4" type="video/mp4" />
-                  {/* Optional webm for broader compatibility */}
-                  {/* <source src="/video/linkmint-tutorial.webm" type="video/webm" /> */}
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-              <p className="mt-3 text-sm text-slate-600">
-                Watch how easy it is to turn a simple link into real earnings.
-              </p>
-            </div>
           </div>
+        </section>
 
-          {/* Right card */}
-          <div className="lg:col-span-5">
-            <div className="rounded-xl border p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-slate-500">
-                    Smart Link
-                  </div>
-                  <div className="mt-1 font-semibold">
-                    Your unified tracking link
-                  </div>
-                </div>
-                <div className="h-10 w-10 rounded-md bg-gradient-to-br from-indigo-600 to-sky-500" />
-              </div>
-
-              <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm font-mono">
-                https://linkmint.co/smartlink/PRODUCT-ID
-              </div>
-
-              <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                <li>Auto-detects eligible affiliate programs</li>
-                <li>Tracks clicks, conversions, and payouts</li>
-                <li>Share anywhere—social, chat, email</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="border-t">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <h2 className="text-2xl font-semibold">How it works</h2>
-          <div className="mt-8 grid gap-6 sm:grid-cols-3">
-            <Card
-              step="01"
-              title="Create your account"
-              body="Verify your email and get your dashboard. No approval required."
-            />
-            <Card
-              step="02"
-              title="Turn any link into a Smart Link"
-              body="Paste a product or site URL. We attach tracking and route to active programs."
-            />
-            <Card
-              step="03"
-              title="Share, track, and get paid"
-              body="We attribute purchases, show earnings in real-time, and handle program rules."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Referral */}
-      <section className="border-t bg-slate-50">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <h2 className="text-2xl font-semibold">Referral boost</h2>
-          <p className="mt-3 text-slate-600">
-            Invite friends and unlock a 90-day 5% override on their approved
-            commissions. We batch referrals in groups of three to keep things
-            fair and fraud-safe.
-          </p>
-
-          <div className="mt-6">
-            <Link
-              href="/dashboard/referrals"
-              className="inline-flex items-center rounded-md border px-4 py-2 hover:bg-slate-50"
-            >
-              View referral program
-            </Link>
-          </div>
-
-          <div className="mt-6 rounded-xl border bg-white p-5 shadow-sm">
-            <h3 className="font-semibold">Example referral batch</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              3 verified invitees start your 90-day window. You earn 5% on their
-              approved commissions. TrustScore improves with healthy activity.
+        {/* Tutorial video block (kept). No inline logo above it. */}
+        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
+          <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 90 seconds</h2>
+            <p className="mt-2 text-gray-600">
+              See how to create a smart link, share it, and get paid after approvals.
             </p>
-            <div className="mt-4 rounded-md bg-slate-50 p-3 text-sm text-slate-600">
-              Tip: consistent, organic sharing builds the most value.
+
+            <div className="mt-4 aspect-video w-full overflow-hidden rounded-xl border">
+              <video
+                className="h-full w-full"
+                controls
+                preload="metadata"
+                poster="/video/tutorial-poster.jpg" // <-- ensure this exists in /public/video
+              >
+                <source src="/video/linkmint-tutorial.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <Step
+                num="1"
+                title="Paste a link"
+                desc="Drop any product or page link into the smart-link creator."
+              />
+              <Step
+                num="2"
+                title="Share anywhere"
+                desc="Text it, post it, or DM it. We track clicks and valid purchases."
+              />
+              <Step
+                num="3"
+                title="Get paid"
+                desc="After affiliate approval and clearance, payouts hit your account."
+              />
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
-      {/* Trust strip */}
-      <section className="border-t">
-        <div className="mx-auto max-w-6xl px-6 py-16 grid lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-7">
-            <h2 className="text-2xl font-semibold">Built for trust</h2>
-            <p className="mt-3 text-slate-600">
-              Linkmint is designed with transparency and safety in mind:
-              clear attribution, email verification, fraud checks, and an
-              audit-friendly trail.
-            </p>
-            <ul className="mt-4 space-y-2 text-sm text-slate-700">
-              <li>Transparent earnings and payout history</li>
-              <li>Admin oversight &amp; event logs</li>
-              <li>Respectful email policy and opt-outs</li>
-            </ul>
-
-            <div className="mt-6 flex items-center gap-3">
-              <Link
-                href="/trust-center"
-                className="inline-flex items-center rounded-md border px-4 py-2 hover:bg-slate-50"
-              >
-                Visit Trust Center
-              </Link>
-              <Link
-                href="/privacy"
-                className="inline-flex items-center rounded-md border px-4 py-2 hover:bg-slate-50"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/terms"
-                className="inline-flex items-center rounded-md border px-4 py-2 hover:bg-slate-50"
-              >
-                Terms
-              </Link>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5">
-            <div className="rounded-xl border p-5 shadow-sm">
-              <h3 className="font-semibold">System status</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Real-time health checks, reversible payouts, and manual overrides to keep things safe.
-              </p>
-
-              <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-                <Badge label="Email Verified" />
-                <Badge label="Payouts Tracked" />
-                <Badge label="Admin Audited" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="border-t bg-slate-50">
-        <div className="mx-auto max-w-6xl px-6 py-16 flex flex-col items-center text-center">
-          <h2 className="text-2xl font-semibold">Ready to earn from your links?</h2>
-          <p className="mt-3 max-w-xl text-slate-600">
-            Start free. Create Smart Links in seconds. Share anywhere.
-          </p>
-
-          <div className="mt-6 flex items-center gap-3">
-            <Link
-              href="/signup"
-              className="inline-flex items-center rounded-md bg-slate-900 px-5 py-3 text-white"
-            >
-              Create your account
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center rounded-md border px-5 py-3 hover:bg-slate-100"
-            >
-              I already have an account
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
       <footer className="border-t">
-        <div className="mx-auto max-w-6xl px-6 py-10 text-sm text-slate-600 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>© {new Date().getFullYear()} Linkmint. All rights reserved.</div>
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p>© {new Date().getFullYear()} linkmint.co — All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="/privacy" className="hover:text-slate-800">Privacy</Link>
-            <Link href="/terms" className="hover:text-slate-800">Terms</Link>
-            <a href="mailto:admin@linkmint.co" className="hover:text-slate-800">Contact</a>
+            <Link href="/trust" className="hover:text-gray-700">Trust Center</Link>
+            <Link href="/terms" className="hover:text-gray-700">Terms</Link>
+            <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
+            <Link href="mailto:admin@linkmint.co" className="hover:text-gray-700">Contact</Link>
           </div>
         </div>
       </footer>
-    </main>
-  );
-}
-
-function Card({ step, title, body }: { step: string; title: string; body: string }) {
-  return (
-    <div className="rounded-xl border p-5 shadow-sm">
-      <div className="text-xs uppercase tracking-wider text-slate-500">{step}</div>
-      <div className="mt-1 font-semibold">{title}</div>
-      <p className="mt-2 text-sm text-slate-600">{body}</p>
     </div>
   );
 }
 
-function Badge({ label }: { label: string }) {
+function Step({ num, title, desc }: { num: string; title: string; desc: string }) {
   return (
-    <div className="inline-flex items-center justify-center rounded-md border px-3 py-2">
-      <span className="text-xs font-medium text-slate-700">{label}</span>
+    <div className="rounded-xl border border-gray-200 p-4">
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 font-semibold">
+          {num}
+        </span>
+        <h3 className="font-semibold">{title}</h3>
+      </div>
+      <p className="mt-2 text-sm text-gray-600">{desc}</p>
     </div>
   );
 }
