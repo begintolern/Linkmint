@@ -9,6 +9,24 @@ export const revalidate = 0;
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
+      {/* Header with login/signup */}
+      <header className="w-full border-b border-gray-200">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <Link href="/" className="text-lg font-bold tracking-tight">
+            linkmint.co
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="rounded-xl px-4 py-2 text-sm font-medium hover:bg-gray-50 transition"
+            >
+              Log in
+            </Link>
+            <SmartSignupButton />
+          </div>
+        </nav>
+      </header>
+
       <main className="flex-1">
         {/* Hero */}
         <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
@@ -29,6 +47,17 @@ export default function HomePage() {
               >
                 How it works
               </a>
+            </div>
+
+            {/* Secondary CTA for existing users */}
+            <div className="mt-4 text-sm text-gray-600">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="font-medium text-emerald-600 hover:text-emerald-500"
+              >
+                Log in
+              </Link>
             </div>
           </div>
         </section>
@@ -81,6 +110,27 @@ export default function HomePage() {
           </div>
         </section>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 py-6 text-center text-sm text-gray-600">
+        <div className="space-x-4">
+          <Link href="/login" className="hover:underline">
+            Log in
+          </Link>
+          <Link href="/signup" className="hover:underline">
+            Sign up
+          </Link>
+          <Link href="/tos" className="hover:underline">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:underline">
+            Privacy
+          </Link>
+        </div>
+        <div className="mt-2 text-xs text-gray-400">
+          © {new Date().getFullYear()} linkmint.co
+        </div>
+      </footer>
     </div>
   );
 }
