@@ -1,0 +1,25 @@
+{
+  "id": "iolo",
+  "name": "iolo",
+  "category": "Software",
+  "network": "CJ",
+  "pidEnv": "CJ_PID",
+  "baseDomain": "iolo.com",
+  "coupon": {
+    "code": "af50iolo",
+    "validTo": "2025-12-31"
+  },
+  "links": [
+    { "label": "50% Off (generic)", "clickId": 12471071, "imgId": 12471071, "domain": "anrdoezrs.net", "imgDomain": "ftjcfx.com" },
+    { "label": "System Mechanic Ultimate Defense", "clickId": 13141090, "imgId": 13141090, "domain": "kqzyfj.com", "imgDomain": "ftjcfx.com" },
+    { "label": "System Mechanic Pro 25", "clickId": 10732628, "imgId": 10732628, "domain": "kqzyfj.com", "imgDomain": "lduhtrp.net" },
+    { "label": "System Mechanic 25", "clickId": 10394081, "imgId": 10394081, "domain": "kqzyfj.com", "imgDomain": "tqlkg.com" },
+    { "label": "System Mechanic Business", "clickId": 10380730, "imgId": 10380730, "domain": "anrdoezrs.net", "imgDomain": "lduhtrp.net" },
+    { "label": "Privacy Guardian", "clickId": 13019461, "imgId": 13019461, "domain": "tkqlhce.com", "imgDomain": "ftjcfx.com" },
+    { "label": "Malware Killer", "clickId": 13251018, "imgId": 13251018, "domain": "jdoqocy.com", "imgDomain": "awltovhc.com" },
+    { "label": "ByePass", "clickId": 13256738, "imgId": 13256738, "domain": "anrdoezrs.net", "imgDomain": "awltovhc.com" },
+    { "label": "System Shield AV/AS", "clickId": 10766618, "imgId": 10766618, "domain": "tkqlhce.com", "imgDomain": "ftjcfx.com" },
+    { "label": "Search and Recover", "clickId": 10383981, "imgId": 10383981, "domain": "jdoqocy.com", "imgDomain": "awltovhc.com" },
+    { "label": "DriveScrubber 3", "clickId": 10380909, "imgId": 10380909, "domain": "tkqlhce.com", "imgDomain": "awltovhc.com" }
+  ]
+}
