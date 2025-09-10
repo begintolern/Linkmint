@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuard } from "@/lib/utils/adminGuard";
 import { sendPaypalPayout } from "@/lib/payments/sendPaypalPayout";
+import { CommissionStatus } from "@prisma/client";
 
 /**
  * POST /api/admin/pay-all[?dryRun=true][&limit=200]
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     // pull Approved & unpaid commissions
     const rows = await prisma.commission.findMany({
-      where: { status: "Approved", paidOut: false },
+      where: { status: CommissionStatus.APPROVED, paidOut: false },
       orderBy: { createdAt: "asc" },
       take: limit,
       select: {
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
         await prisma.$transaction([
           prisma.commission.update({
             where: { id: it.id },
-            data: { status: "Paid", paidOut: true },
+            data: { status: CommissionStatus.PAID, paidOut: true },
           }),
           prisma.eventLog.create({
             data: {
