@@ -3,72 +3,44 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { adminGuardFromReq } from "@/lib/utils/adminGuardReq";
+import { adminGuard } from "@/lib/utils/adminGuard";
+import { CommissionStatus } from "@prisma/client";
 
-type Body = { action?: "approve" | "pay" | "reject" };
-
-export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
-  // Admin auth via JWT (works reliably in route handlers)
-  const gate = await adminGuardFromReq(req);
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const gate = await adminGuard();
   if (!gate.ok) {
-    return gate.res; // use guard’s own NextResponse
+    return NextResponse.json({ success: false, error: gate.reason }, { status: gate.status });
   }
 
-  const id = ctx.params.id;
-  let body: Body = {};
-  try {
-    body = await req.json();
-  } catch {
-    // noop – allow missing body, default to approve below if desired
-  }
-  const action = (body.action || "approve") as Body["action"];
+  const id = params.id;
+  const { action } = (await req.json()) as { action: "approve" | "pay" };
 
-  // Load commission
-  const commission = await prisma.commission.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      userId: true,
-      amount: true,
-      status: true,
-      paidOut: true,
-      type: true,
-      source: true,
-      description: true,
-      createdAt: true,
-    },
-  });
-
+  const commission = await prisma.commission.findUnique({ where: { id } });
   if (!commission) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
 
-  // Simple state machine
   if (action === "approve") {
-    if (commission.status === "Paid") {
+    if (commission.status === CommissionStatus.PAID) {
       return NextResponse.json({ success: false, error: "Already paid" }, { status: 400 });
     }
-    if (commission.status === "Approved") {
+    if (commission.status === CommissionStatus.APPROVED) {
       return NextResponse.json({ success: true, commission });
     }
 
     const updated = await prisma.commission.update({
       where: { id },
-      data: { status: "Approved" },
+      data: { status: CommissionStatus.APPROVED },
     });
 
     await prisma.eventLog.create({
       data: {
         userId: commission.userId,
         type: "commission",
-        message: `Commission ${id} approved`,
-        detail: JSON.stringify({
-          amount: commission.amount,
-          prevStatus: commission.status,
-          newStatus: "Approved",
-        }),
+        message: `Commission ${id} approved (manual)`,
+        detail: `Amount ${Number(commission.amount)}`,
       },
     });
 
@@ -76,19 +48,16 @@ export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
   }
 
   if (action === "pay") {
-    if (commission.status !== "Approved") {
+    if (commission.status !== CommissionStatus.APPROVED) {
       return NextResponse.json(
-        { success: false, error: "Must be Approved before paying" },
+        { success: false, error: "Only approved commissions can be paid" },
         { status: 400 }
       );
-    }
-    if (commission.paidOut) {
-      return NextResponse.json({ success: true, commission });
     }
 
     const updated = await prisma.commission.update({
       where: { id },
-      data: { status: "Paid", paidOut: true },
+      data: { status: CommissionStatus.PAID, paidOut: true },
     });
 
     await prisma.eventLog.create({
@@ -96,40 +65,7 @@ export async function PATCH(req: NextRequest, ctx: { params: { id: string } }) {
         userId: commission.userId,
         type: "commission",
         message: `Commission ${id} marked paid (manual)`,
-        detail: JSON.stringify({
-          amount: commission.amount,
-          prevStatus: commission.status,
-          newStatus: "Paid",
-        }),
-      },
-    });
-
-    return NextResponse.json({ success: true, commission: updated });
-  }
-
-  if (action === "reject") {
-    if (commission.status === "Paid") {
-      return NextResponse.json(
-        { success: false, error: "Cannot reject a Paid commission" },
-        { status: 400 }
-      );
-    }
-
-    const updated = await prisma.commission.update({
-      where: { id },
-      data: { status: "Rejected" },
-    });
-
-    await prisma.eventLog.create({
-      data: {
-        userId: commission.userId,
-        type: "commission",
-        message: `Commission ${id} rejected`,
-        detail: JSON.stringify({
-          amount: commission.amount,
-          prevStatus: commission.status,
-          newStatus: "Rejected",
-        }),
+        detail: `Amount ${Number(commission.amount)}`,
       },
     });
 
