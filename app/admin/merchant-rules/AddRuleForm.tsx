@@ -44,7 +44,7 @@ export default function AddRuleForm() {
         notes: notes.trim() || null,
       };
 
-      const res = await fetch("/api/admin/merchant-rules", {
+      const res = await fetch("/api/merchant-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

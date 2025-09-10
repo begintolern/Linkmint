@@ -15,7 +15,7 @@ export default function DeleteRuleButton({
     if (!confirm(`Delete "${name}"?\nThis cannot be undone.`)) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/merchant-rules/${id}`, {
+      const res = await fetch(`/api/merchant-rules/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
