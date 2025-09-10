@@ -6,6 +6,7 @@ export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuard } from "@/lib/utils/adminGuard";
+import { CommissionStatus } from "@prisma/client";
 
 type Body =
   | { ids: string[]; dryRun?: boolean }
@@ -25,9 +26,9 @@ export async function POST(req: NextRequest) {
 
     if ("ids" in body && Array.isArray(body.ids) && body.ids.length > 0) {
       const rows = await prisma.commission.findMany({
-        where: { id: { in: body.ids }, status: "Approved", paidOut: false },
-        select: { id: true, userId: true, amount: true },
-      });
+  where: { id: { in: body.ids }, status: CommissionStatus.APPROVED, paidOut: false },
+  select: { id: true, userId: true, amount: true },
+});
       targets = rows.map((r) => ({ id: r.id, userId: r.userId, amount: Number(r.amount) }));
     } else if ("all" in body && body.all === true) {
       const limit = Math.min(Math.max(Number((body as any).limit ?? 50), 1), 200);
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
 
       const rows = await prisma.commission.findMany({
         where: {
-          status: "Approved",
+          status: CommissionStatus.APPROVED,
           paidOut: false,
           ...(emailFilter
             ? { user: { is: { email: { contains: emailFilter, mode: "insensitive" } } } }
@@ -56,7 +57,13 @@ export async function POST(req: NextRequest) {
 
     if ((body as any).dryRun) {
       const totalAmount = targets.reduce((sum, t) => sum + t.amount, 0);
-      return NextResponse.json({ success: true, updated: 0, totalAmount, ids: targets.map(t => t.id), dryRun: true });
+      return NextResponse.json({
+        success: true,
+        updated: 0,
+        totalAmount,
+        ids: targets.map((t) => t.id),
+        dryRun: true,
+      });
     }
 
     // Pay them in a transaction
@@ -64,7 +71,7 @@ export async function POST(req: NextRequest) {
       const ids = targets.map((t) => t.id);
       await tx.commission.updateMany({
         where: { id: { in: ids } },
-        data: { status: "Paid", paidOut: true },
+        data: { status: CommissionStatus.PAID, paidOut: true },
       });
 
       // Write logs (best-effort, not blocking)
