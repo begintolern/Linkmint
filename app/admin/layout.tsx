@@ -20,6 +20,7 @@ export default async function AdminLayout({
           <Link href="/admin/users" className="block hover:underline">Users</Link>
           <Link href="/admin/referrals" className="block hover:underline">Referrals</Link>
           <Link href="/admin/payouts" className="block hover:underline">Payouts</Link>
+          <Link href="/admin/merchant-rules" className="block hover:underline">Merchant Rules</Link>
           <Link href="/admin/logs" className="block hover:underline">Logs</Link>
           <Link href="/admin/settings" className="block hover:underline">Settings</Link>
         </nav>
