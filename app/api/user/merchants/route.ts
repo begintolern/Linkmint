@@ -7,32 +7,16 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
+    // No 'select' to avoid TS mismatch with your current Prisma types
     const rows = await prisma.merchantRule.findMany({
-      // Order by fields that exist in your model
       orderBy: [{ active: "desc" }, { merchantName: "asc" }],
-      select: {
-        id: true,
-        active: true,
-        merchantName: true,
-        network: true,
-        status: true,
-        domainPattern: true,
-        commissionType: true,
-        commissionRate: true, // Decimal?
-        rate: true,           // Float? (fallback)
-        cookieWindowDays: true,
-        payoutDelayDays: true,
-        notes: true,
-        allowedSources: true, // Json
-        disallowed: true,     // Json
-      },
     });
 
-    const merchants = rows.map((r) => {
-      // normalize Decimal/Float to number
+    const merchants = rows.map((r: any) => {
+      // Normalize commission rate: prefer Decimal -> number, else Float 'rate'
       let commissionRateNum: number | null = null;
       if (r.commissionRate !== null && r.commissionRate !== undefined) {
-        commissionRateNum = Number(r.commissionRate as unknown as any);
+        commissionRateNum = Number(r.commissionRate);
       } else if (typeof r.rate === "number") {
         commissionRateNum = r.rate;
       }
@@ -45,11 +29,12 @@ export async function GET() {
 
       return {
         id: r.id,
-        name: r.merchantName,
-        domain: r.domainPattern,
-        network: r.network,
-        status: r.status,
-        commissionType: String(r.commissionType),
+        name: r.merchantName ?? null,
+        domain: r.domainPattern ?? null,
+        network: r.network ?? null,
+        // Fallback to ACTIVE/PENDING using 'active' if your schema's 'status' isn't present at runtime
+        status: r.status ?? (r.active ? "ACTIVE" : "PENDING"),
+        commissionType: String(r.commissionType ?? ""),
         commissionRate: commissionRateNum,
         cookieDays: r.cookieWindowDays ?? null,
         payoutDelayDays: r.payoutDelayDays ?? null,
