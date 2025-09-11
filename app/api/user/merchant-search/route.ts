@@ -5,104 +5,150 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function parseTags(notes: string | null) {
-  const result: { categories: string[]; brands: string[]; keywords: string[] } = {
-    categories: [],
-    brands: [],
-    keywords: [],
-  };
-  if (!notes) return result;
+type Tags = { categories: string[]; brands: string[]; keywords: string[] };
 
+function parseTags(notes: string | null): Tags {
+  const out: Tags = { categories: [], brands: [], keywords: [] };
+  if (!notes) return out;
   const lines = notes.split("\n").map((l) => l.trim().toLowerCase());
+  const parseList = (s: string) =>
+    s.replace(/^[a-z]+=\[/, "").replace(/\]$/, "")
+      .split(",").map((x) => x.trim()).filter(Boolean);
+
   for (const line of lines) {
-    if (line.startsWith("categories=[")) {
-      result.categories = line
-        .replace("categories=[", "")
-        .replace("]", "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    } else if (line.startsWith("brands=[")) {
-      result.brands = line
-        .replace("brands=[", "")
-        .replace("]", "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    } else if (line.startsWith("keywords=[")) {
-      result.keywords = line
-        .replace("keywords=[", "")
-        .replace("]", "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
+    if (line.startsWith("categories=[")) out.categories = parseList(line);
+    else if (line.startsWith("brands=[")) out.brands = parseList(line);
+    else if (line.startsWith("keywords=[")) out.keywords = parseList(line);
   }
-  return result;
+  return out;
+}
+
+function tokenize(q: string): { phrase?: string; terms: string[] } {
+  const s = q.trim().toLowerCase();
+  if (!s) return { terms: [] };
+  if (s.startsWith('"') && s.endsWith('"') && s.length > 2) {
+    return { phrase: s.slice(1, -1), terms: [] };
+  }
+  return { terms: s.split(/\s+/).filter((t) => t.length >= 3) };
 }
 
 export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const qRaw = url.searchParams.get("q") ?? "";
-  const category = url.searchParams.get("category") ?? "";
-  const q = qRaw.trim().toLowerCase();
+  try {
+    const url = new URL(req.url);
+    const qRaw = url.searchParams.get("q") ?? "";
+    const category = (url.searchParams.get("category") ?? "").toLowerCase();
 
-  // Fetch candidates (active only)
-  const rows = await prisma.merchantRule.findMany({
-    where: { active: true },
-    orderBy: [{ merchantName: "asc" }],
-    take: 200,
-  });
+    const { phrase, terms } = tokenize(qRaw);
 
-  const results = [];
-  for (const r of rows) {
-    const tags = parseTags(r.notes ?? "");
-    let score = 0;
+    // choose a cheap "needle" to narrow DB scan (if any)
+    const needle = phrase || terms.sort((a, b) => b.length - a.length)[0] || "";
 
-    // Category filter
-    if (category) {
-      if (!tags.categories.includes(category.toLowerCase())) continue;
-      score += 10;
+    // active-only candidate set
+    const candidates = await prisma.merchantRule.findMany({
+      where: {
+        active: true,
+        ...(needle
+          ? {
+              OR: [
+                { merchantName: { contains: needle, mode: "insensitive" } },
+                { domainPattern: { contains: needle, mode: "insensitive" } },
+                { notes: { contains: needle, mode: "insensitive" } },
+              ],
+            }
+          : undefined),
+      },
+      orderBy: [{ merchantName: "asc" }],
+      take: 300,
+    });
+
+    // score & filter in app layer
+    const scored: { score: number; item: any }[] = [];
+    for (const r of candidates) {
+      const tags = parseTags(r.notes ?? "");
+      if (category && !tags.categories.includes(category)) continue;
+
+      const name = (r.merchantName ?? "").toLowerCase();
+      const domain = (r.domainPattern ?? "").toLowerCase();
+      const hayBrands = tags.brands.join(" ");
+      const hayKeywords = tags.keywords.join(" ");
+      const hayNotes = (r.notes ?? "").toLowerCase();
+
+      // strict match rule
+      let pass = true;
+      if (phrase) {
+        const hay = `${hayBrands} ${hayKeywords} ${name} ${domain} ${hayNotes}`;
+        pass = hay.includes(phrase);
+      } else if (terms.length) {
+        const hay = `${hayBrands} ${hayKeywords} ${name} ${domain} ${hayNotes}`;
+        pass = terms.every((t) => hay.includes(t));
+      }
+      if (!pass) continue;
+
+      // score: brands(5) > keywords(3) > name(2) > domain(1)
+      let score = 0;
+      const bump = (text: string, w: number) => {
+        if (!text) return;
+        if (phrase) {
+          if (text.includes(phrase)) score += w * 3;
+        } else {
+          for (const t of terms) if (text.includes(t)) score += w;
+        }
+      };
+      bump(hayBrands, 5);
+      bump(hayKeywords, 3);
+      bump(name, 2);
+      bump(domain, 1);
+
+      // slight bonus for explicit category match
+      if (category) score += 10;
+
+      scored.push({
+        score,
+        item: {
+          id: r.id,
+          name: r.merchantName ?? "",
+          domain: r.domainPattern ?? null,
+          categories: tags.categories,
+          brands: tags.brands,
+          keywords: tags.keywords,
+        },
+      });
     }
 
-    // Text query filter
-    if (q) {
-      const terms = q.startsWith('"') && q.endsWith('"')
-        ? [q.slice(1, -1)]
-        : q.split(/\s+/).filter((t) => t.length >= 3);
+    scored.sort((a, b) => b.score - a.score);
+    const merchants = scored.slice(0, 20).map((x) => x.item);
 
-      const haystack = [
-        ...tags.brands,
-        ...tags.keywords,
-        r.merchantName?.toLowerCase() ?? "",
-        r.domainPattern?.toLowerCase() ?? "",
-        r.notes?.toLowerCase() ?? "",
-      ].join(" ");
-
-      // Require all terms
-      if (!terms.every((t) => haystack.includes(t))) continue;
-
-      // Scoring
-      for (const t of terms) {
-        if (tags.brands.some((b) => b.includes(t))) score += 5;
-        if (tags.keywords.some((k) => k.includes(t))) score += 3;
-        if ((r.merchantName ?? "").toLowerCase().includes(t)) score += 2;
-        if ((r.domainPattern ?? "").toLowerCase().includes(t)) score += 1;
+    // If user clicked a category with no query, allow zero-needle fetch:
+    if (!needle && (category || qRaw.trim() === "")) {
+      // return top 20 by name for that category if empty from scoring pass
+      if (merchants.length === 0 && category) {
+        const rows = await prisma.merchantRule.findMany({
+          where: { active: true },
+          orderBy: [{ merchantName: "asc" }],
+          take: 500,
+        });
+        const fallback = rows
+          .map((r) => ({
+            r,
+            tags: parseTags(r.notes ?? ""),
+          }))
+          .filter(({ tags }) => tags.categories.includes(category))
+          .slice(0, 20)
+          .map(({ r, tags }) => ({
+            id: r.id,
+            name: r.merchantName ?? "",
+            domain: r.domainPattern ?? null,
+            categories: tags.categories,
+            brands: tags.brands,
+            keywords: tags.keywords,
+          }));
+        return NextResponse.json({ merchants: fallback });
       }
     }
 
-    results.push({
-      id: r.id,
-      name: r.merchantName,
-      domain: r.domainPattern,
-      categories: tags.categories,
-      brands: tags.brands,
-      keywords: tags.keywords,
-      notes: r.notes,
-      score,
-    });
+    return NextResponse.json({ merchants });
+  } catch (e) {
+    console.error("[api/user/merchant-search] error:", e);
+    return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
-
-  results.sort((a, b) => b.score - a.score);
-  return NextResponse.json({ merchants: results.slice(0, 20) });
 }
