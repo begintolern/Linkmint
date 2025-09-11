@@ -6,8 +6,6 @@ import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import Link from "next/link";
-import MerchantsSection from "@/components/merchant/MerchantsSection";
-
 import LogoutButton from "@/components/dashboard/LogoutButton";
 import EarningsCard from "@/components/dashboard/EarningsCard";
 import CommissionCard from "@/components/dashboard/CommissionCard";
@@ -86,7 +84,6 @@ export default async function DashboardOverviewPage() {
       </div>
 
       {/* Merchants section */}
-      <MerchantsSection />
-    </main>
+          </main>
   );
 }
