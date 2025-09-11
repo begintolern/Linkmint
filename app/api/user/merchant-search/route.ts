@@ -33,13 +33,21 @@ function tokenize(q: string): { phrase?: string; terms: string[] } {
   return { terms: s.split(/\s+/).filter((t) => t.length >= 3) };
 }
 
+// Heuristic fallbacks when merchants aren't tagged yet
+const CAT_SYNONYMS: Record<string, string[]> = {
+  apparel: ["apparel", "clothing", "fashion", "garment", "shirt", "pants", "dress", "hoodie", "t-shirt", "jeans"],
+  shoes: ["shoe", "shoes", "sneaker", "sneakers", "footwear", "boot", "boots", "heel", "heels"],
+  beauty: ["beauty", "cosmetic", "cosmetics", "makeup", "skincare", "hair", "wig", "wigs", "fragrance", "perfume"],
+  accessories: ["accessor", "bag", "handbag", "backpack", "belt", "hat", "cap", "watch", "jewelry", "wallet", "glasses", "sunglass"],
+};
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const qRaw = url.searchParams.get("q") ?? "";
     const category = (url.searchParams.get("category") ?? "").toLowerCase();
 
-    // ⛔ Default: if no chip and no query, return nothing
+    // Default: no chip and no query → no results
     if (!category && !qRaw.trim()) {
       return NextResponse.json({ merchants: [] });
     }
@@ -62,36 +70,41 @@ export async function GET(req: Request) {
           : undefined),
       },
       orderBy: [{ merchantName: "asc" }],
-      take: 300,
+      take: 500,
     });
 
     const scored: { score: number; item: any }[] = [];
     for (const r of candidates) {
       const tags = parseTags(r.notes ?? "");
-      if (category && !tags.categories.includes(category)) continue;
-
       const name = (r.merchantName ?? "").toLowerCase();
       const domain = (r.domainPattern ?? "").toLowerCase();
       const hayBrands = tags.brands.join(" ");
       const hayKeywords = tags.keywords.join(" ");
       const hayNotes = (r.notes ?? "").toLowerCase();
 
-      let pass = true;
-      if (phrase) {
-        const hay = `${hayBrands} ${hayKeywords} ${name} ${domain} ${hayNotes}`;
-        pass = hay.includes(phrase);
-      } else if (terms.length) {
-        const hay = `${hayBrands} ${hayKeywords} ${name} ${domain} ${hayNotes}`;
-        pass = terms.every((t) => hay.includes(t));
+      // Category gating (prefer explicit tag, else heuristic synonyms)
+      if (category) {
+        const tagged = tags.categories.includes(category);
+        const synonyms = CAT_SYNONYMS[category] ?? [];
+        const hay = `${name} ${domain} ${hayNotes}`;
+        const heuristic = synonyms.some((t) => hay.includes(t));
+        if (!tagged && !heuristic) continue;
       }
-      if (!pass) continue;
 
+      // Query gating
+      if (phrase || terms.length) {
+        const hay = `${hayBrands} ${hayKeywords} ${name} ${domain} ${hayNotes}`;
+        const pass = phrase ? hay.includes(phrase) : terms.every((t) => hay.includes(t));
+        if (!pass) continue;
+      }
+
+      // Scoring: brands(5) > keywords(3) > name(2) > domain(1) + category bonus
       let score = 0;
       const bump = (text: string, w: number) => {
         if (!text) return;
         if (phrase) {
           if (text.includes(phrase)) score += w * 3;
-        } else {
+        } else if (terms.length) {
           for (const t of terms) if (text.includes(t)) score += w;
         }
       };
@@ -114,30 +127,39 @@ export async function GET(req: Request) {
       });
     }
 
-    scored.sort((a, b) => b.score - a.score);
-    const merchants = scored.slice(0, 20).map((x) => x.item);
-
-    // Fallback for chip-only (no query) and zero matches: return by category
-    if (!needle && category && merchants.length === 0) {
+    // If chip-only and nothing matched yet, do a pure heuristic fallback over all active
+    if (category && !qRaw.trim() && scored.length === 0) {
       const rows = await prisma.merchantRule.findMany({
         where: { active: true },
         orderBy: [{ merchantName: "asc" }],
-        take: 500,
+        take: 1000,
       });
-      const fallback = rows
-        .map((r) => ({ r, tags: parseTags(r.notes ?? "") }))
-        .filter(({ tags }) => tags.categories.includes(category))
-        .slice(0, 20)
-        .map(({ r, tags }) => ({
-          id: r.id,
-          name: r.merchantName ?? "",
-          domain: r.domainPattern ?? null,
-          categories: tags.categories,
-          brands: tags.brands,
-          keywords: tags.keywords,
-        }));
-      return NextResponse.json({ merchants: fallback });
+      const synonyms = CAT_SYNONYMS[category] ?? [];
+      for (const r of rows) {
+        const tags = parseTags(r.notes ?? "");
+        const name = (r.merchantName ?? "").toLowerCase();
+        const domain = (r.domainPattern ?? "").toLowerCase();
+        const hayNotes = (r.notes ?? "").toLowerCase();
+        const hay = `${name} ${domain} ${hayNotes}`;
+
+        if (tags.categories.includes(category) || synonyms.some((t) => hay.includes(t))) {
+          scored.push({
+            score: 5, // base score for heuristic result
+            item: {
+              id: r.id,
+              name: r.merchantName ?? "",
+              domain: r.domainPattern ?? null,
+              categories: tags.categories,
+              brands: tags.brands,
+              keywords: tags.keywords,
+            },
+          });
+        }
+      }
     }
+
+    scored.sort((a, b) => b.score - a.score);
+    const merchants = scored.slice(0, 20).map((x) => x.item);
 
     return NextResponse.json({ merchants });
   } catch (e) {
