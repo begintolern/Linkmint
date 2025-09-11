@@ -1,63 +1,79 @@
 // scripts/seed-invitee-commission.ts
-import { prisma } from "@/lib/db";
+import { PrismaClient, CommissionStatus, CommissionType } from "@prisma/client";
 
-/**
- * Usage:
- *   npx tsx scripts/seed-invitee-commission.ts <inviteeEmail> <amount> [status] [type]
- *
- * Examples:
- *   npx tsx scripts/seed-invitee-commission.ts seed1@example.com 10 pending referral_purchase
- *   npx tsx scripts/seed-invitee-commission.ts seed2@example.com 25 approved referral_purchase
- *   npx tsx scripts/seed-invitee-commission.ts seed3@example.com 40 paid referral_purchase
- */
+const prisma = new PrismaClient();
+
+function parseStatus(s: string | undefined): CommissionStatus {
+  switch ((s ?? "").toUpperCase()) {
+    case "APPROVED":
+      return CommissionStatus.APPROVED;
+    case "PAID":
+      return CommissionStatus.PAID;
+    case "PENDING":
+      return CommissionStatus.PENDING;
+    case "UNVERIFIED":
+      return CommissionStatus.UNVERIFIED;
+    default:
+      return CommissionStatus.PENDING;
+  }
+}
+
+function parseType(s: string | undefined): CommissionType {
+  switch ((s ?? "").toLowerCase()) {
+    case "override_bonus":
+      return CommissionType.override_bonus;
+    case "payout":
+      return CommissionType.payout;
+    case "referral_purchase":
+    default:
+      return CommissionType.referral_purchase;
+  }
+}
+
 async function main() {
-  const email = process.argv[2];
-  const amount = Number(process.argv[3]);
-  const statusArg = (process.argv[4] || "pending").toLowerCase(); // pending|approved|paid (string)
-  const typeArg = (process.argv[5] || "referral_purchase").toLowerCase(); // enum value
+  const [, , emailArg, amountArg, statusArg, typeArg] = process.argv;
 
-  if (!email || !amount) {
-    console.error(
-      "Usage: npx tsx scripts/seed-invitee-commission.ts <inviteeEmail> <amount> [status] [type]"
-    );
+  if (!emailArg || !amountArg) {
+    console.error("Usage: ts-node scripts/seed-invitee-commission.ts <email> <amount> [status] [type]");
     process.exit(1);
   }
 
-  const allowedTypes = new Set(["referral_purchase", "override_bonus", "payout"]);
-  if (!allowedTypes.has(typeArg)) {
-    console.error(
-      `Invalid type "${typeArg}". Allowed: referral_purchase, override_bonus, payout`
-    );
+  const amount = Number(amountArg);
+  if (!isFinite(amount)) {
+    console.error("Amount must be a number");
     process.exit(1);
   }
 
   const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, email: true },
+    where: { email: emailArg.toLowerCase().trim() },
+    select: { id: true },
   });
   if (!user) {
-    console.error(`Invitee not found: ${email}`);
+    console.error("User not found:", emailArg);
     process.exit(1);
   }
 
-  // Note: Prisma requires the exact enum string; TS type-check may complain unless cast to any.
-  const commission = await prisma.commission.create({
+  const created = await prisma.commission.create({
     data: {
       userId: user.id,
       amount,
-      status: statusArg,                 // plain string field in your schema
-      type: typeArg as any,              // Prisma enum expects exact string literal
+      status: parseStatus(statusArg),
+      type: parseType(typeArg),
+      description: "Seeded via script",
+      paidOut: false,
+      source: "seed-script",
     },
     select: { id: true, amount: true, status: true, type: true, userId: true, createdAt: true },
   });
 
-  console.log("Created commission:", commission);
+  console.log("Created commission:", created);
 }
 
 main()
   .catch((e) => {
-    console.error("Failed to create commission:");
     console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
