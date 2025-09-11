@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import Link from "next/link";
+import MerchantsSection from "@/components/merchant/MerchantsSection";
 
 import LogoutButton from "@/components/dashboard/LogoutButton";
 import EarningsCard from "@/components/dashboard/EarningsCard";
@@ -83,6 +84,9 @@ export default async function DashboardOverviewPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <PayoutMiniCard />
       </div>
+
+      {/* Merchants section */}
+      <MerchantsSection />
     </main>
   );
 }
