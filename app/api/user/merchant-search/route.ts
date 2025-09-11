@@ -10,6 +10,7 @@ type Tags = { categories: string[]; brands: string[]; keywords: string[] };
 function parseTags(notes: string | null): Tags {
   const out: Tags = { categories: [], brands: [], keywords: [] };
   if (!notes) return out;
+
   const lines = notes.split("\n").map((l) => l.trim().toLowerCase());
   const parseList = (s: string) =>
     s.replace(/^[a-z]+=\[/, "").replace(/\]$/, "")
@@ -38,12 +39,15 @@ export async function GET(req: Request) {
     const qRaw = url.searchParams.get("q") ?? "";
     const category = (url.searchParams.get("category") ?? "").toLowerCase();
 
-    const { phrase, terms } = tokenize(qRaw);
+    // ⛔ Default: if no chip and no query, return nothing
+    if (!category && !qRaw.trim()) {
+      return NextResponse.json({ merchants: [] });
+    }
 
-    // choose a cheap "needle" to narrow DB scan (if any)
+    const { phrase, terms } = tokenize(qRaw);
     const needle = phrase || terms.sort((a, b) => b.length - a.length)[0] || "";
 
-    // active-only candidate set
+    // Active-only candidates (optionally narrowed by a needle)
     const candidates = await prisma.merchantRule.findMany({
       where: {
         active: true,
@@ -61,7 +65,6 @@ export async function GET(req: Request) {
       take: 300,
     });
 
-    // score & filter in app layer
     const scored: { score: number; item: any }[] = [];
     for (const r of candidates) {
       const tags = parseTags(r.notes ?? "");
@@ -73,7 +76,6 @@ export async function GET(req: Request) {
       const hayKeywords = tags.keywords.join(" ");
       const hayNotes = (r.notes ?? "").toLowerCase();
 
-      // strict match rule
       let pass = true;
       if (phrase) {
         const hay = `${hayBrands} ${hayKeywords} ${name} ${domain} ${hayNotes}`;
@@ -84,7 +86,6 @@ export async function GET(req: Request) {
       }
       if (!pass) continue;
 
-      // score: brands(5) > keywords(3) > name(2) > domain(1)
       let score = 0;
       const bump = (text: string, w: number) => {
         if (!text) return;
@@ -98,8 +99,6 @@ export async function GET(req: Request) {
       bump(hayKeywords, 3);
       bump(name, 2);
       bump(domain, 1);
-
-      // slight bonus for explicit category match
       if (category) score += 10;
 
       scored.push({
@@ -118,32 +117,26 @@ export async function GET(req: Request) {
     scored.sort((a, b) => b.score - a.score);
     const merchants = scored.slice(0, 20).map((x) => x.item);
 
-    // If user clicked a category with no query, allow zero-needle fetch:
-    if (!needle && (category || qRaw.trim() === "")) {
-      // return top 20 by name for that category if empty from scoring pass
-      if (merchants.length === 0 && category) {
-        const rows = await prisma.merchantRule.findMany({
-          where: { active: true },
-          orderBy: [{ merchantName: "asc" }],
-          take: 500,
-        });
-        const fallback = rows
-          .map((r) => ({
-            r,
-            tags: parseTags(r.notes ?? ""),
-          }))
-          .filter(({ tags }) => tags.categories.includes(category))
-          .slice(0, 20)
-          .map(({ r, tags }) => ({
-            id: r.id,
-            name: r.merchantName ?? "",
-            domain: r.domainPattern ?? null,
-            categories: tags.categories,
-            brands: tags.brands,
-            keywords: tags.keywords,
-          }));
-        return NextResponse.json({ merchants: fallback });
-      }
+    // Fallback for chip-only (no query) and zero matches: return by category
+    if (!needle && category && merchants.length === 0) {
+      const rows = await prisma.merchantRule.findMany({
+        where: { active: true },
+        orderBy: [{ merchantName: "asc" }],
+        take: 500,
+      });
+      const fallback = rows
+        .map((r) => ({ r, tags: parseTags(r.notes ?? "") }))
+        .filter(({ tags }) => tags.categories.includes(category))
+        .slice(0, 20)
+        .map(({ r, tags }) => ({
+          id: r.id,
+          name: r.merchantName ?? "",
+          domain: r.domainPattern ?? null,
+          categories: tags.categories,
+          brands: tags.brands,
+          keywords: tags.keywords,
+        }));
+      return NextResponse.json({ merchants: fallback });
     }
 
     return NextResponse.json({ merchants });

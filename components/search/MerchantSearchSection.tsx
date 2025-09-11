@@ -37,19 +37,23 @@ export default function MerchantSearchSection() {
     }
   }
 
-  // immediate load on chip click
   function toggleCategory(cat: string) {
     const next = category === cat ? "" : cat;
     setCategory(next);
+    // trigger immediate search on chip click (may be empty if no q and no category)
     runSearch({ category: next, q });
   }
 
-  // debounce for query typing
   useEffect(() => {
+    // ⛔ Guard: no chip & no query → show nothing, do not fetch
+    if (!category && !q.trim()) {
+      setResults([]);
+      return;
+    }
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => runSearch({ category, q }), 300);
     return () => clearTimeout(debounce.current);
-  }, [q]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, category]); // re-run when typing or chip toggles
 
   return (
     <section className="mt-8">
@@ -63,7 +67,9 @@ export default function MerchantSearchSection() {
               key={cat}
               onClick={() => toggleCategory(cat)}
               className={`px-3 py-1 rounded-full text-sm border transition ${
-                active ? "bg-blue-600 text-white border-blue-600" : "bg-white text-gray-700 border-gray-300"
+                active
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-gray-700 border-gray-300"
               }`}
             >
               {cat[0].toUpperCase() + cat.slice(1)}
