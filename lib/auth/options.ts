@@ -6,10 +6,11 @@ import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { verifyPin } from "@/lib/pin";
 
 export const authOptions: any = {
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 }, // 30 days
   secret: process.env.NEXTAUTH_SECRET,
   debug: true,
 
@@ -17,9 +18,10 @@ export const authOptions: any = {
     EmailProvider({
       server: process.env.EMAIL_SERVER!,
       from: process.env.EMAIL_FROM!,
-      maxAge: 60 * 60, // 1 hour
+      maxAge: 60 * 60 * 24 * 30, // 30 days
     }),
 
+    // Username/Password login
     CredentialsProvider({
       name: "Email & Password",
       credentials: {
@@ -58,6 +60,44 @@ export const authOptions: any = {
         if (user.deletedAt) {
           return null;
         }
+
+        return {
+          id: user.id,
+          name: user.name ?? "",
+          email: user.email,
+          role: user.role ?? "USER",
+          referralCode: user.referralCode ?? null,
+        } as any;
+      },
+    }),
+
+    // PIN (per-device) login
+    CredentialsProvider({
+      id: "pin",
+      name: "PIN",
+      credentials: {
+        deviceId: { label: "Device ID", type: "text" },
+        pin: { label: "PIN", type: "password" },
+      },
+      async authorize(creds) {
+        const deviceId = String(creds?.deviceId || "").trim();
+        const pin = String(creds?.pin || "").trim();
+        if (!deviceId || !pin) return null;
+
+        const cred = await prisma.pinCredential.findFirst({
+          where: { deviceId },
+          select: { userId: true, pinHash: true },
+        });
+        if (!cred) return null;
+
+        const ok = await verifyPin(pin, cred.pinHash);
+        if (!ok) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { id: cred.userId },
+          select: { id: true, email: true, name: true, role: true, referralCode: true, deletedAt: true },
+        });
+        if (!user || user.deletedAt) return null;
 
         return {
           id: user.id,
