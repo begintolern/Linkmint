@@ -10,6 +10,7 @@ type MerchantItem = {
   categories: string[];
   brands: string[];
   keywords: string[];
+  apply?: string | null; // (unused here, but harmless if present)
 };
 
 // Provisioned primary + near-future categories
@@ -23,6 +24,17 @@ const PRIMARY = [
   "electronics",
   "software",
 ];
+
+function buildMerchantUrl(name: string, domain?: string | null) {
+  if (domain && domain.trim()) {
+    const d = domain.trim();
+    if (d.startsWith("http://") || d.startsWith("https://")) return d;
+    return `https://${d}`;
+  }
+  // Fallback: search by name
+  const q = encodeURIComponent(name);
+  return `https://www.google.com/search?q=${q}`;
+}
 
 export default function MerchantSearchSection() {
   const [category, setCategory] = useState<string>("");
@@ -107,21 +119,38 @@ export default function MerchantSearchSection() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {results.map((m) => (
-              <div key={m.id} className="rounded-xl border bg-white p-4 shadow-sm">
-                <div className="font-semibold">{m.name}</div>
-                <div className="text-xs text-gray-500">{m.domain ?? "—"}</div>
-                <div className="mt-2 text-xs text-gray-600">
-                  {m.categories.length ? `Categories: ${m.categories.join(", ")}` : null}
+            {results.map((m) => {
+              const href = buildMerchantUrl(m.name, m.domain ?? undefined);
+              return (
+                <div key={m.id} className="rounded-xl border bg-white p-4 shadow-sm">
+                  <div className="font-semibold">{m.name}</div>
+                  <div className="text-xs text-gray-500">{m.domain ?? "—"}</div>
+
+                  <div className="mt-2 text-xs text-gray-600">
+                    {m.categories.length ? `Categories: ${m.categories.join(", ")}` : null}
+                  </div>
+                  {m.brands.length ? (
+                    <div className="mt-1 text-xs text-gray-600">Brands: {m.brands.join(", ")}</div>
+                  ) : null}
+                  {m.keywords.length ? (
+                    <div className="mt-1 text-xs text-gray-600">Keywords: {m.keywords.join(", ")}</div>
+                  ) : null}
+
+                  {/* Visit Merchant button */}
+                  <div className="mt-3">
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block rounded-lg bg-gray-900 px-3 py-1.5 text-white text-sm hover:bg-black"
+                      aria-label={`Visit ${m.name}`}
+                    >
+                      Visit Merchant
+                    </a>
+                  </div>
                 </div>
-                {m.brands.length ? (
-                  <div className="mt-1 text-xs text-gray-600">Brands: {m.brands.join(", ")}</div>
-                ) : null}
-                {m.keywords.length ? (
-                  <div className="mt-1 text-xs text-gray-600">Keywords: {m.keywords.join(", ")}</div>
-                ) : null}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
