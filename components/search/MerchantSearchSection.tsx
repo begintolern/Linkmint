@@ -12,7 +12,17 @@ type MerchantItem = {
   keywords: string[];
 };
 
-const PRIMARY = ["apparel", "shoes", "beauty", "accessories"];
+// Provisioned primary + near-future categories
+const PRIMARY = [
+  "apparel",
+  "shoes",
+  "beauty",
+  "accessories",
+  "travel",
+  "pets",
+  "electronics",
+  "software",
+];
 
 export default function MerchantSearchSection() {
   const [category, setCategory] = useState<string>("");
@@ -40,12 +50,11 @@ export default function MerchantSearchSection() {
   function toggleCategory(cat: string) {
     const next = category === cat ? "" : cat;
     setCategory(next);
-    // trigger immediate search on chip click (may be empty if no q and no category)
     runSearch({ category: next, q });
   }
 
   useEffect(() => {
-    // ⛔ Guard: no chip & no query → show nothing, do not fetch
+    // default-empty: no chip & no query → do not fetch
     if (!category && !q.trim()) {
       setResults([]);
       return;
@@ -53,7 +62,7 @@ export default function MerchantSearchSection() {
     if (debounce.current) clearTimeout(debounce.current);
     debounce.current = setTimeout(() => runSearch({ category, q }), 300);
     return () => clearTimeout(debounce.current);
-  }, [q, category]); // re-run when typing or chip toggles
+  }, [q, category]);
 
   return (
     <section className="mt-8">
@@ -90,7 +99,9 @@ export default function MerchantSearchSection() {
           <div className="rounded-xl border bg-white p-4 text-sm text-gray-600">Loading…</div>
         ) : results.length === 0 ? (
           <div className="rounded-xl border bg-white p-4 text-sm text-gray-600">
-            {category || q.trim()
+            {category
+              ? `No merchants tagged for ${category}.`
+              : q.trim()
               ? "No matching merchants."
               : "Pick a category or type a brand/item."}
           </div>
