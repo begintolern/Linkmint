@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const [pending, approved, paid] = await Promise.all([
       prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "Pending" as any } }),
-      prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "Approved" as any } }),
+      prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "APPROVED" as any } }),
       prisma.commission.aggregate({ _sum: { amount: true }, where: { status: "Paid" as any } }),
     ]);
 
