@@ -1,31 +1,37 @@
 // scripts/update-commission.ts
-import { prisma } from "@/lib/db";
+import { PrismaClient, CommissionStatus } from "@prisma/client";
 
-/**
- * Usage:
- *   npx tsx scripts/update-commission.ts <commissionId> <status>
- * Examples:
- *   npx tsx scripts/update-commission.ts cmf4hwgls0001oi2ci1ot1rq5 approved
- *   npx tsx scripts/update-commission.ts <id> paid
- */
+const prisma = new PrismaClient();
+
+function parseStatus(s: string | undefined): CommissionStatus {
+  switch ((s ?? "").toUpperCase()) {
+    case "APPROVED":
+      return CommissionStatus.APPROVED;
+    case "PAID":
+      return CommissionStatus.PAID;
+    case "PENDING":
+      return CommissionStatus.PENDING;
+    case "UNVERIFIED":
+      return CommissionStatus.UNVERIFIED;
+    default:
+      throw new Error(
+        `Invalid status "${s}". Use one of: UNVERIFIED | PENDING | APPROVED | PAID`
+      );
+  }
+}
+
 async function main() {
-  const id = process.argv[2];
-  const statusArg = (process.argv[3] || "").toLowerCase(); // pending | approved | paid
-
+  const [, , id, statusArg] = process.argv;
   if (!id || !statusArg) {
-    console.error("Usage: npx tsx scripts/update-commission.ts <commissionId> <status>");
+    console.error("Usage: ts-node scripts/update-commission.ts <id> <status>");
     process.exit(1);
   }
 
-  const allowed = new Set(["pending", "approved", "paid"]);
-  if (!allowed.has(statusArg)) {
-    console.error(`Invalid status "${statusArg}". Allowed: pending, approved, paid`);
-    process.exit(1);
-  }
+  const status = parseStatus(statusArg);
 
   const updated = await prisma.commission.update({
     where: { id },
-    data: { status: statusArg },
+    data: { status },
     select: { id: true, amount: true, status: true, userId: true, createdAt: true },
   });
 
@@ -34,7 +40,9 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error("Failed to update commission:", e);
+    console.error(e);
     process.exit(1);
   })
-  .finally(() => prisma.$disconnect());
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
