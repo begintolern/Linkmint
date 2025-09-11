@@ -11,6 +11,7 @@ import EarningsCard from "@/components/dashboard/EarningsCard";
 import CommissionCard from "@/components/dashboard/CommissionCard";
 import PayoutMiniCard from "@/components/dashboard/PayoutMiniCard";
 import FallbackAttach from "@/components/dashboard/FallbackAttach";
+import MerchantSearchSection from "@/components/search/MerchantSearchSection";
 
 export default async function DashboardOverviewPage() {
   const raw = await getServerSession(authOptions);
@@ -83,7 +84,8 @@ export default async function DashboardOverviewPage() {
         <PayoutMiniCard />
       </div>
 
-      {/* Merchants section */}
-          </main>
+      {/* Merchant search */}
+      <MerchantSearchSection />
+    </main>
   );
 }
