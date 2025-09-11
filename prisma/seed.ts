@@ -1,5 +1,11 @@
 // prisma/seed.ts
-import { PrismaClient, CommissionCalc, ImportMethod } from "@prisma/client";
+import {
+  PrismaClient,
+  CommissionCalc,
+  ImportMethod,
+  CommissionStatus,
+  CommissionType,
+} from "@prisma/client";
 import fs from "fs";
 import path from "path";
 
@@ -8,8 +14,7 @@ const prisma = new PrismaClient();
 /** ---------- helpers ---------- */
 function toCommissionCalc(value?: string | null): CommissionCalc {
   if (!value) return CommissionCalc.PERCENT;
-  // Accept "PERCENT", "FIXED", etc. (case-sensitive to your enum)
-  const maybe = (CommissionCalc as any)[value];
+  const maybe = (CommissionCalc as any)[value as keyof typeof CommissionCalc];
   return maybe ?? CommissionCalc.PERCENT;
 }
 
@@ -30,15 +35,16 @@ async function seedAdminAndCommissions() {
     select: { id: true, email: true },
   });
 
-  // Only insert if there are no approved+unpaid commissions yet
-  const sampleRows = [
-    { amount: 3.5, type: "referral_purchase" as const, status: "approved" },
-    { amount: 4.25, type: "referral_purchase" as const, status: "approved" },
-    { amount: 2.0, type: "referral_purchase" as const, status: "pending" },
+  // Sample rows using ENUMS (not strings)
+  const sampleRows: Array<{ amount: number; type: CommissionType; status: CommissionStatus }> = [
+    { amount: 3.5,  type: CommissionType.referral_purchase, status: CommissionStatus.APPROVED },
+    { amount: 4.25, type: CommissionType.referral_purchase, status: CommissionStatus.APPROVED },
+    { amount: 2.0,  type: CommissionType.referral_purchase, status: CommissionStatus.PENDING  },
   ];
 
+  // Only insert if there are no approved+unpaid commissions yet
   const existing = await prisma.commission.count({
-    where: { userId: user.id, status: "approved", paidOut: false },
+    where: { userId: user.id, status: CommissionStatus.APPROVED, paidOut: false },
   });
 
   let createdCount = 0;
@@ -81,16 +87,16 @@ async function seedMerchantRulesFromJson() {
     paramKey?: string | null;
     paramValue?: string | null;
     linkTemplate?: string | null;
-    allowedSources?: any; // Json
-    disallowed?: any; // Json
+    allowedSources?: any;
+    disallowed?: any;
     cookieWindowDays?: number | null;
     payoutDelayDays?: number | null;
-    commissionType?: string | null; // map to CommissionCalc
-    commissionRate?: number | null; // Decimal
+    commissionType?: string | null;
+    commissionRate?: number | null;
     calc?: string | null;
     rate?: number | null;
     notes?: string | null;
-    importMethod?: string | null; // map to ImportMethod if you want; default MANUAL
+    importMethod?: string | null;
     apiBaseUrl?: string | null;
     apiAuthType?: string | null;
     apiKeyRef?: string | null;
@@ -106,7 +112,6 @@ async function seedMerchantRulesFromJson() {
     const merchantName = m.merchantName?.trim();
     if (!merchantName) continue;
 
-    // find existing (merchantName is not unique in DB, so we'll update by id if found)
     const existing = await prisma.merchantRule.findFirst({
       where: { merchantName },
       select: { id: true },
@@ -137,10 +142,7 @@ async function seedMerchantRulesFromJson() {
     };
 
     if (existing) {
-      await prisma.merchantRule.update({
-        where: { id: existing.id },
-        data: payload,
-      });
+      await prisma.merchantRule.update({ where: { id: existing.id }, data: payload });
     } else {
       await prisma.merchantRule.create({ data: payload });
     }
