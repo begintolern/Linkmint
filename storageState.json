@@ -1,0 +1,45 @@
+{
+  "cookies": [
+    {
+      "name": "__Host-next-auth.csrf-token",
+      "value": "48e82c5d3b3432e987aada015c3fe06a8c290416c79fdb69f9490388be8cb1e9%7C3dfa1d212c7466024332b465f9085e721d1c4aab528b64ed1082e9cb38aacb91",
+      "domain": "linkmint.co",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__Secure-next-auth.callback-url",
+      "value": "https%3A%2F%2Flinkmint.co%2Fadmin",
+      "domain": "linkmint.co",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "__Secure-next-auth.session-token",
+      "value": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..w3108HFdQn6vlmq-.HoHRmjenk2TaXoFyD6dyJdbMz5X-A9_p3N-fQ71YoqekS6OpsC-VOLO9yP71GXJjLZKmkjX7sStvVCU3vo75zE1hcp2I9nTg_ntDI6civpSEYCKvL85qT8ioAETu-AB6kko_8nqgPOtKSLaougEXqXUSfd1mICBTWd0fkBFbDayizv9VqhGprbEpeVUJI8t5lPhpkncne6q53VtsAz9dwtT8QIlhgheEukT4mKxrEYEkh9d9ARPS9kamL2UECK03GE2bxqeGdegSj1ggaUWG.jpPnXkMch_P2gdItRVoIpg",
+      "domain": "linkmint.co",
+      "path": "/",
+      "expires": 1759635274.112074,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "https://linkmint.co",
+      "localStorage": [
+        {
+          "name": "nextauth.message",
+          "value": "{\"event\":\"session\",\"data\":{\"trigger\":\"getSession\"},\"timestamp\":1757043274}"
+        }
+      ]
+    }
+  ]
+}

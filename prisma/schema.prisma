@@ -196,6 +196,7 @@ model MerchantRule {
   active           Boolean        @default(true)
   merchantName     String
   network          String?
+  status           String   @default("PENDING") // "ACTIVE" | "PENDING" | "REJECTED"
   domainPattern    String?
   paramKey         String?
   paramValue       String?

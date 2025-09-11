@@ -1,0 +1,4 @@
+id,email,name,role,trustScore,referralCode,referredById,referralGroupId,createdAt,updatedAt,deletedAt
+cmfbij1j30000oi3gt7c8g793,testuser@example.com,,ADMIN,80,,,,2025-09-08T19:26:34.623Z,2025-09-08T19:26:34.623Z,
+usr_ca0638b30782b6d25cc8,epo78741@gmail.com,,ADMIN,0,,,,2025-09-08T20:18:19.839Z,2025-09-08T20:23:32.877Z,
+usr_01b5159a73c86d016ace,fluterby_25@yahoo.com,,ADMIN,0,,,,2025-09-08T20:18:19.839Z,2025-09-08T21:25:33.702Z,

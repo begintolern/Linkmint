@@ -1,0 +1,1 @@
+ALTER TABLE "Commission" ADD COLUMN IF NOT EXISTS "merchantRuleId" TEXT;

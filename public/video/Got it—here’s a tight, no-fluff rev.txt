@@ -1,0 +1,43 @@
+Got it—here’s a tight, no-fluff review of the landing video (based on the context right on the page: “Watch: Linkmint in 30 seconds” + “See how to create a smart link, share it, and get paid after approvals.”). ([Linkmint][1])
+
+# What’s working
+
+* **Clear promise up front.** “Turn any link into a payout” + “no followers required” is a great hook for casually curious visitors. ([Linkmint][1])
+* **Simple 3-step flow.** Paste → Share → Get paid mirrors the headline steps and reduces perceived effort. ([Linkmint][1])
+* **Expectation setting.** The “after approvals/clearance” line avoids over-promising, which fits your “trust & transparency” positioning. ([Linkmint][1])
+
+# What’s likely missing (and would lift conversions)
+
+1. **One specific outcome.** Add a concrete example (e.g., “\$18 earned from 47 clicks on a \$120 blender”) to make the payout feel real, not theoretical.
+2. **Social proof in 3–5 seconds.** A single merchant badge row (Expedia, Walmart, etc.) or “Trusted by 1,243 creators” splash helps visitors believe this works.
+3. **Timeline clarity.** A tiny lower-third like “Approval: \~24–72h · Payout: net-15/30” reduces “when do I get paid?” friction.
+4. **Disqualifier clarity.** One card that flashes “No brand bidding, no coupon abuse” turns policy into confidence (pre-empts edge-case doubts).
+5. **Micro-CTA on the video end frame.** “Create your first smart link →” with a keyboard/paste animation nudges immediate action.
+
+# 30-second script that’ll land (feel free to reuse)
+
+* **0–3s (Hook):** “Turn any link into a payout—no followers required.”
+* **3–6s (Paste):** Show paste → auto-detect merchant → “Smart link created.”
+* **6–12s (Share):** Quick cuts: Messages, Twitter, IG bio, email footer. Overlay: “We track clicks & valid purchases.”
+* **12–17s (Proof):** Dashboard pop: “47 clicks → 3 purchases → \$18.40 pending.”
+* **17–21s (Trust):** “Approvals & payout timing shown up front.” Tiny row of merchant/network logos + “No brand bidding, no impersonation.”
+* **21–26s (How fast?):** “Approval \~24–72h • Payout net-15/30\*” (\*shows a small policy icon)
+* **26–30s (CTA):** “Paste your first link now.” Button animates to **Sign up**.
+
+# Craft notes for the actual cut
+
+* **On-screen text > voice-only.** Most visitors watch muted. Add crisp subtitles and anchored labels.
+* **Pacing:** Keep cuts at \~2–3s, but hold on the **result** screen for a full beat so the numbers register.
+* **Brand feel:** Keep your “trust/transparency” angle: neutral colors, unobtrusive sound, no hypey sfx.
+* **Accessibility:** Include a captions track; set `muted playsInline` so it autoplays on mobile; show a poster for fast LCP. (Your copy already hints at a standard HTML5 embed.) ([Linkmint][1])
+
+# Quick checklist (so we’re done in one pass)
+
+* Add one **real example** payout moment.
+* Flash **policy/timeline** for 2s (keeps you honest, boosts confidence).
+* End with a strong **CTA frame** that visually matches your “Sign up” button.
+* Burn in **subtitles**; keep the total under **30s**.
+
+If you want, I can draft the subtitle file (VTT) + the final text overlays so your editor can drop them straight in.
+
+[1]: https://linkmint.co/ "Linkmint — Earn From Every Link You Share"

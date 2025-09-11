@@ -59,10 +59,23 @@ export default function SmartLinkGenerator() {
       const res = await fetch("/api/smartlink", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: raw }),
+        body: JSON.stringify({ url: raw }), // server decides Amazon vs CJ (and merchant config)
       });
-      const json = await res.json();
-      if (!json?.ok) throw new Error(json?.error || "Failed to create link");
+
+      let json: any = null;
+      try {
+        json = await res.json();
+      } catch {
+        // non-JSON error response
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || `HTTP ${res.status}`);
+        }
+      }
+
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || "Failed to create link");
+      }
 
       const smart: string = json.smartLink || json.link;
       if (!smart) throw new Error("No link returned");

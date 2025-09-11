@@ -1,64 +1,64 @@
 // app/api/admin/merchant-rules/[id]/route.ts
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/admin/auth";
+import { getToken } from "next-auth/jwt";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/options";
 
-type Params = { params: { id: string } };
+const ADMIN_EMAILS = new Set<string>([
+  "epo78741@yahoo.com",
+  "admin@linkmint.co",
+  "ertorig3@gmail.com",
+]);
 
-export async function GET(_req: Request, { params }: Params) {
-  const auth = await requireAdmin();
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  const rule = await prisma.merchantRule.findUnique({ where: { id: params.id } });
-  if (!rule) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  return NextResponse.json({ success: true, rule });
-}
-
-export async function PATCH(req: Request, { params }: Params) {
-  const auth = await requireAdmin();
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
+async function allow(req: NextRequest) {
+  // 1) Server session (DB sessions)
   try {
-    const body = await req.json();
-    const updated = await prisma.merchantRule.update({
-      where: { id: params.id },
-      data: {
-        ...(body.active === undefined ? {} : { active: !!body.active }),
-        ...(body.merchantName === undefined ? {} : { merchantName: String(body.merchantName) }),
-        ...(body.network === undefined ? {} : { network: body.network }),
-        ...(body.domainPattern === undefined ? {} : { domainPattern: String(body.domainPattern) }),
-        ...(body.paramKey === undefined ? {} : { paramKey: String(body.paramKey) }),
-        ...(body.paramValue === undefined ? {} : { paramValue: String(body.paramValue) }),
-        ...(body.linkTemplate === undefined ? {} : { linkTemplate: body.linkTemplate }),
-        ...(body.allowedSources === undefined ? {} : { allowedSources: body.allowedSources }),
-        ...(body.disallowed === undefined ? {} : { disallowed: body.disallowed }),
-        ...(body.cookieWindowDays === undefined ? {} : { cookieWindowDays: body.cookieWindowDays }),
-        ...(body.payoutDelayDays === undefined ? {} : { payoutDelayDays: body.payoutDelayDays }),
-        ...(body.commissionType === undefined ? {} : { commissionType: body.commissionType }),
-        ...(body.commissionRate === undefined ? {} : { commissionRate: body.commissionRate }),
-        ...(body.importMethod === undefined ? {} : { importMethod: body.importMethod }),
-        ...(body.apiBaseUrl === undefined ? {} : { apiBaseUrl: body.apiBaseUrl }),
-        ...(body.apiAuthType === undefined ? {} : { apiAuthType: body.apiAuthType }),
-        ...(body.apiKeyRef === undefined ? {} : { apiKeyRef: body.apiKeyRef }),
-        ...(body.notes === undefined ? {} : { notes: body.notes }),
-      },
-    });
+    const session = (await getServerSession(authOptions as any)) as any;
+    const email = session?.user?.email;
+    const role = String(session?.user?.role ?? "").toUpperCase();
+    if (email) {
+      const emailLc = String(email).toLowerCase();
+      if (role === "ADMIN" || ADMIN_EMAILS.has(emailLc)) return true;
+    }
+  } catch {}
 
-    return NextResponse.json({ success: true, rule: updated });
-  } catch (e: any) {
-    console.error("Update MerchantRule failed:", e?.message || e);
-    return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
-  }
+  // 2) JWT token (jwt strategy)
+  try {
+    const token = (await getToken({ req, secret: process.env.NEXTAUTH_SECRET })) as any;
+    const email = token?.email;
+    const role = String(token?.role ?? "").toUpperCase();
+    if (email) {
+      const emailLc = String(email).toLowerCase();
+      if (role === "ADMIN" || ADMIN_EMAILS.has(emailLc)) return true;
+    }
+  } catch {}
+
+  return false;
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
-  const auth = await requireAdmin();
-  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
-
-  await prisma.merchantRule.delete({ where: { id: params.id } });
-  return NextResponse.json({ success: true });
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  if (!(await allow(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const id = params?.id;
+  if (!id) {
+    return NextResponse.json({ error: "Missing id" }, { status: 400 });
+  }
+  try {
+    await prisma.merchantRule.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "DELETE failed", detail: String(err?.message ?? err) },
+      { status: 500 }
+    );
+  }
 }

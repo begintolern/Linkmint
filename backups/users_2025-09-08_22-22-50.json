@@ -1,0 +1,41 @@
+[
+  {
+    "id": "cmfbij1j30000oi3gt7c8g793",
+    "email": "testuser@example.com",
+    "name": null,
+    "role": "ADMIN",
+    "trustScore": 80,
+    "referralCode": null,
+    "referredById": null,
+    "referralGroupId": null,
+    "createdAt": "2025-09-08T19:26:34.623Z",
+    "updatedAt": "2025-09-08T19:26:34.623Z",
+    "deletedAt": null
+  },
+  {
+    "id": "usr_ca0638b30782b6d25cc8",
+    "email": "epo78741@gmail.com",
+    "name": null,
+    "role": "ADMIN",
+    "trustScore": 0,
+    "referralCode": null,
+    "referredById": null,
+    "referralGroupId": null,
+    "createdAt": "2025-09-08T20:18:19.839Z",
+    "updatedAt": "2025-09-08T20:23:32.877Z",
+    "deletedAt": null
+  },
+  {
+    "id": "usr_01b5159a73c86d016ace",
+    "email": "fluterby_25@yahoo.com",
+    "name": null,
+    "role": "ADMIN",
+    "trustScore": 0,
+    "referralCode": null,
+    "referredById": null,
+    "referralGroupId": null,
+    "createdAt": "2025-09-08T20:18:19.839Z",
+    "updatedAt": "2025-09-08T21:25:33.702Z",
+    "deletedAt": null
+  }
+]

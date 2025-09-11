@@ -1,112 +1,115 @@
+// app/api/admin/merchant-rules/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextResponse } from "next/server";
-import { CommissionCalc, ImportMethod } from "@prisma/client";
+import { NextResponse, type NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
+import { getToken } from "next-auth/jwt";
 
-// helpers
-function asString(v: unknown): string | null { if (typeof v === "string") return v.trim(); return null; }
-function asBool(v: unknown, fallback = true): boolean { return typeof v === "boolean" ? v : fallback; }
-function asInt(v: unknown): number | null { const n = Number(v); return Number.isFinite(n) ? Math.trunc(n) : null; }
-function asFloat(v: unknown): number | null { const n = Number(v); return Number.isFinite(n) ? n : null; }
-function asJson(v: unknown): any | null { if (v == null) return null; if (typeof v === "object") return v; try { return JSON.parse(String(v)); } catch { return null; } }
-function clampRate(rate: number | null): number | null { if (rate == null) return null; if (rate < 0) return 0; if (rate > 100) return 100; return rate; }
+const ADMIN_EMAILS = new Set<string>([
+  "epo78741@yahoo.com",
+  "admin@linkmint.co",
+  "ertorig3@gmail.com",
+]);
 
-// POST /api/merchant-rules
-export async function POST(req: Request) {
+async function allow(req: NextRequest) {
+  // 1) Header key
+  const configured = (process.env.ADMIN_KEY ?? "").trim();
+  const headerKey = (req.headers.get("x-admin-key") ?? "").trim();
+  if (configured && headerKey === configured) return true;
+
+  // 2) NextAuth token (role/email)
   try {
-    // lazy import prisma; if this fails we return JSON instead of 502
-    const { prisma } = await import("@/lib/db");
-
-    const body = await req.json().catch(() => ({}));
-    const merchantName = asString(body.merchantName);
-    if (!merchantName) {
-      return NextResponse.json({ success: false, error: "merchantName is required" }, { status: 400 });
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (token?.email) {
+      const emailLc = String(token.email).toLowerCase();
+      const role = String((token as any).role ?? "").toUpperCase();
+      if (role === "ADMIN" || ADMIN_EMAILS.has(emailLc)) return true;
     }
+  } catch {
+    // ignore
+  }
 
-    const network = asString(body.network) ?? "Unknown";
-    const domainPattern = asString(body.domainPattern) ?? "*";
-    const active = asBool(body.active, true);
-    const paramKey = asString(body.paramKey);
-    const paramValue = asString(body.paramValue);
-    const linkTemplate = asString(body.linkTemplate);
-    const allowedSources = asJson(body.allowedSources) ?? {};
-    const disallowed = asJson(body.disallowed) ?? {};
-    const cookieWindowDays = asInt(body.cookieWindowDays);
-    const payoutDelayDays = asInt(body.payoutDelayDays);
+  // 3) Dev fallback
+  if (process.env.NODE_ENV !== "production") return true;
 
-    const commissionType: CommissionCalc =
-      (asString(body.commissionType)?.toUpperCase() === "FIXED")
-        ? CommissionCalc.FIXED
-        : CommissionCalc.PERCENT;
+  return false;
+}
 
-    const importMethod: ImportMethod =
-      (asString(body.importMethod)?.toUpperCase() === "API")
-        ? ImportMethod.API
-        : ImportMethod.MANUAL;
-
-    const rate = clampRate(asFloat(body.rate));
-    const commissionRate =
-      typeof body.commissionRate === "string" || typeof body.commissionRate === "number"
-        ? (body.commissionRate as any)
-        : null;
-
-    const calc = asString(body.calc);
-    const notes = asString(body.notes);
-    const apiBaseUrl = asString(body.apiBaseUrl);
-    const apiAuthType = asString(body.apiAuthType);
-    const apiKeyRef = asString(body.apiKeyRef);
-
-    const created = await prisma.merchantRule.create({
-      data: {
-        active,
-        merchantName,
-        network,
-        domainPattern,
-        paramKey: paramKey ?? null,
-        paramValue: paramValue ?? null,
-        linkTemplate: linkTemplate ?? null,
-        allowedSources,
-        disallowed,
-        cookieWindowDays,
-        payoutDelayDays,
-        commissionType,
-        commissionRate,
-        calc: calc ?? null,
-        rate: rate ?? null,
-        notes: notes ?? null,
-        importMethod,
-        apiBaseUrl: apiBaseUrl ?? null,
-        apiAuthType: apiAuthType ?? null,
-        apiKeyRef: apiKeyRef ?? null,
-      },
+// GET: list all rules
+export async function GET(req: NextRequest) {
+  if (!(await allow(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    const rules = await prisma.merchantRule.findMany({
+      orderBy: { merchantName: "asc" },
     });
-
-    return NextResponse.json({ success: true, rule: created });
-  } catch (e: any) {
-    console.error("POST /merchant-rules fatal:", e?.message || e);
+    return NextResponse.json({ success: true, rules });
+  } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: "merchant_rules_failed", detail: String(e?.message || e) },
+      { error: "GET failed", detail: String(err?.message ?? err) },
       { status: 500 }
     );
   }
 }
 
-// GET /api/merchant-rules
-export async function GET(req: Request) {
+// POST: create a rule
+export async function POST(req: NextRequest) {
+  if (!(await allow(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
-    const { prisma } = await import("@/lib/db");
-    const { searchParams } = new URL(req.url);
-    const take = Math.min(Number(searchParams.get("take") ?? 20), 100);
-    const skip = Math.max(Number(searchParams.get("skip") ?? 0), 0);
-
-    const rules = await prisma.merchantRule.findMany({ orderBy: { merchantName: "asc" }, skip, take });
-    const total = await prisma.merchantRule.count();
-    return NextResponse.json({ success: true, total, rules, skip, take });
-  } catch (e: any) {
-    console.error("GET /merchant-rules fatal:", e?.message || e);
+    const data = await req.json();
+    const created = await prisma.merchantRule.create({
+      data: {
+        active: data.active ?? true,
+        merchantName: data.merchantName,
+        network: data.network ?? null,
+        domainPattern: data.domainPattern ?? null,
+        paramKey: data.paramKey ?? null,
+        paramValue: data.paramValue ?? null,
+        linkTemplate: data.linkTemplate ?? null,
+        allowedSources: data.allowedSources ?? [],
+        disallowed: data.disallowed ?? [],
+        cookieWindowDays: data.cookieWindowDays ?? null,
+        payoutDelayDays: data.payoutDelayDays ?? null,
+        commissionType: data.commissionType ?? "PERCENT",
+        commissionRate: data.commissionRate ?? null,
+        calc: data.calc ?? null,
+        rate: data.rate ?? null,
+        notes: data.notes ?? null,
+        importMethod: data.importMethod ?? "MANUAL",
+        apiBaseUrl: data.apiBaseUrl ?? null,
+        apiAuthType: data.apiAuthType ?? null,
+        apiKeyRef: data.apiKeyRef ?? null,
+        lastImportedAt: data.lastImportedAt ?? null,
+      },
+    });
+    return NextResponse.json({ success: true, created });
+  } catch (err: any) {
     return NextResponse.json(
-      { success: false, error: "merchant_rules_list_failed", detail: String(e?.message || e) },
+      { error: "POST failed", detail: String(err?.message ?? err) },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE: remove a rule by id
+export async function DELETE(req: NextRequest) {
+  if (!(await allow(req))) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    const { id } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
+    await prisma.merchantRule.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "DELETE failed", detail: String(err?.message ?? err) },
       { status: 500 }
     );
   }

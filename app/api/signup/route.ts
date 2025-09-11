@@ -54,17 +54,20 @@ export async function POST(req: Request) {
     // Normalize email
     const normalized = String(email).toLowerCase().trim();
 
-    // 🔒 Enforce signup cap (exclude ADMIN/TEST)
+    // 🔒 Enforce signup cap (exclude ADMIN/TEST from counted users)
     const countedUsers = await prisma.user.count({
       where: { NOT: { role: { in: ["ADMIN", "TEST"] as any } } } as any,
     });
+
     if (countedUsers >= SIGNUP_CAP) {
+      // Return helpful waitlist hint when closed
       return NextResponse.json(
         {
           ok: false,
           error: "signups_closed",
           message: "Signups are limited. Please join the waitlist.",
           cap: SIGNUP_CAP,
+          waitlist: "/waitlist",
         },
         { status: 403 }
       );
@@ -80,7 +83,7 @@ export async function POST(req: Request) {
     }
 
     // Create user
-    const hash = await bcrypt.hash(String(password), 10);
+    const hash = await bcrypt.hash(String(password), 8); // tuned for launch; can raise later
     const created = await prisma.user.create({
       data: {
         email: normalized,

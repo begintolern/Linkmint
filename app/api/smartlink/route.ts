@@ -7,8 +7,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import fs from "fs";
-import path from "path";
+
+// 👇 JSON is imported so it’s bundled into the server output
+import ioloConfig from "@/config/merchants/iolo.json";
 
 type Body = {
   url?: string;
@@ -39,38 +40,27 @@ function buildAmazonLink(u: URL, tag: string, subtag: string | null): string {
     "psc","smid","spIA","spm","pd_rd_i","pd_rd_r","pd_rd_w","pd_rd_wg","th",
     "linkCode","creative","creativeASIN","ref_","ref","qid","sr"
   ].forEach((k) => u.searchParams.delete(k));
-
   u.searchParams.set("tag", tag);
   if (subtag) u.searchParams.set("ascsubtag", subtag);
   return u.toString();
 }
 
-function buildCjLink(base: string, target: URL, sidKey: string, sidVal: string | null): string {
-  const sidPart = sidVal ? `?${encodeURIComponent(sidKey)}=${encodeURIComponent(sidVal)}` : "";
-  return `${base}${sidPart}`;
+function appendQuery(urlStr: string, key: string, val: string | null) {
+  if (!val) return urlStr;
+  const u = new URL(urlStr);
+  u.searchParams.set(key, val);
+  return u.toString();
 }
 
-// --- iolo merchant config loader ---
-function loadIoloBase(): string | null {
-  const candidates = [
-    ["config", "merchants", "iolo.json"],          // preferred: root/config
-    ["app", "config", "merchants", "iolo.json"],   // fallback: app/config
-  ];
-
-  for (const parts of candidates) {
-    const file = path.join(process.cwd(), ...parts);
-    if (fs.existsSync(file)) {
-      try {
-        const json = JSON.parse(fs.readFileSync(file, "utf8"));
-        const first = json?.links?.[0];
-        const url: unknown = first?.url;
-        if (typeof url === "string" && url.length > 0) return url;
-      } catch {
-        // ignore and try next
-      }
-    }
+// --- iolo base click link (NO deep-linking) ---
+function getIoloBase(): string | null {
+  try {
+    const first = (ioloConfig as any)?.links?.[0];
+    const url = first?.url;
+    return typeof url === "string" && url.length > 0 ? url : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 export async function POST(req: Request) {
@@ -89,9 +79,10 @@ export async function POST(req: Request) {
 
     const inputUrl = assertHttpUrl(rawUrl);
 
+    // ensure user has a referralCode
     const me = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, referralCode: true }
+      select: { id: true, referralCode: true },
     });
     if (!me) return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
 
@@ -102,42 +93,47 @@ export async function POST(req: Request) {
     }
 
     const AMAZON_TAG = (process.env.AMAZON_ASSOC_TAG || process.env.AMAZON_TAG) as string | undefined;
-    const CJ_BASE = (process.env.CJ_DEEPLINK_BASE || process.env.CJ_LINK_BASE || "") as string;
-    const CJ_SID_KEY = (process.env.CJ_SID_PARAM || "sid") as string;
-
-    // pick program
-    let program: "amazon" | "cj" | "iolo" =
+    const program: "amazon" | "cj" | "iolo" =
       body?.program ?? (isAmazon(inputUrl) ? "amazon" : "iolo");
 
-    let link: string | null = null;
+    let networkLink: string;
 
     if (program === "amazon") {
       if (!AMAZON_TAG) {
         return NextResponse.json({ ok: false, error: "Missing AMAZON_ASSOC_TAG env" }, { status: 500 });
       }
       if (inputUrl.hostname.toLowerCase() === "amzn.to") {
-        return NextResponse.json({ ok: false, error: "Please paste the full Amazon product URL (not amzn.to)." }, { status: 400 });
+        return NextResponse.json(
+          { ok: false, error: "Please paste the full Amazon product URL (not amzn.to)." },
+          { status: 400 }
+        );
       }
-      link = buildAmazonLink(inputUrl, AMAZON_TAG, referralCode);
-    } else if (program === "iolo") {
-      const base = loadIoloBase();
-      if (!base) {
-        return NextResponse.json({ ok: false, error: "iolo config missing or invalid" }, { status: 500 });
-      }
-      link = buildCjLink(base, inputUrl, CJ_SID_KEY, referralCode);
+      networkLink = buildAmazonLink(inputUrl, AMAZON_TAG, referralCode);
     } else {
-      if (!CJ_BASE) {
-        return NextResponse.json({ ok: false, error: "Missing CJ_DEEPLINK_BASE env" }, { status: 500 });
+      // CJ: iolo (NO ?url= deep-linking)
+      const host = inputUrl.hostname.toLowerCase();
+      if (host.endsWith("iolo.com")) {
+        const base = getIoloBase();
+        if (!base) {
+          return NextResponse.json({ ok: false, error: "iolo config missing or invalid" }, { status: 500 });
+        }
+        networkLink = appendQuery(base, "sid", referralCode);
+      } else {
+        // not-yet-supported CJ merchant — pass through
+        networkLink = inputUrl.toString();
       }
-      link = buildCjLink(CJ_BASE, inputUrl, CJ_SID_KEY, referralCode);
     }
 
+    // wrap with our redirect logger
     const origin = (process.env.NEXT_PUBLIC_SITE_URL as string | undefined) ?? new URL(req.url).origin;
-    const smart = `${origin}/r?to=${encodeURIComponent(link!)}&sid=${encodeURIComponent(referralCode ?? "")}`;
+    const smart = `${origin}/r?to=${encodeURIComponent(networkLink)}&sid=${encodeURIComponent(referralCode ?? "")}`;
 
     return NextResponse.json({ ok: true, link: smart, smartLink: smart });
   } catch (err: any) {
     console.error("POST /api/smartlink error:", err);
-    return NextResponse.json({ ok: false, error: "Server error", detail: String(err?.message ?? err) }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Server error", detail: String(err?.message ?? err) },
+      { status: 500 }
+    );
   }
 }
