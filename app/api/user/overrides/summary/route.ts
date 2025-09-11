@@ -5,7 +5,7 @@ export const fetchCache = "force-no-store";
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { prisma } from "@/lib/db";
-import { CommissionType } from "@prisma/client";
+import { CommissionType, CommissionStatus } from "@prisma/client";
 
 type Totals = { pending: number; approved: number; paid: number };
 type Ok = { success: true; totals: Totals };
@@ -36,9 +36,13 @@ export async function GET(req: NextRequest): Promise<NextResponse<Ok | Err>> {
 
     let pending = 0, approved = 0, paid = 0;
     for (const r of rows) {
-      if (r.status === "Pending") pending += Number(r.amount);
-      else if (r.status === "Approved") approved += Number(r.amount);
-      else if (r.status === "Paid") paid += Number(r.amount);
+      if (r.status === CommissionStatus.PENDING) {
+        pending += Number(r.amount);
+      } else if (r.status === CommissionStatus.APPROVED) {
+        approved += Number(r.amount);
+      } else if (r.status === CommissionStatus.PAID) {
+        paid += Number(r.amount);
+      }
     }
 
     return NextResponse.json({ success: true, totals: { pending, approved, paid } });
