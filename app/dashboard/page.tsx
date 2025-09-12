@@ -11,6 +11,8 @@ import EarningsCard from "@/components/dashboard/EarningsCard";
 import CommissionCard from "@/components/dashboard/CommissionCard";
 import PayoutMiniCard from "@/components/dashboard/PayoutMiniCard";
 import FallbackAttach from "@/components/dashboard/FallbackAttach";
+
+// ⬇️ add this import
 import MerchantSearchSection from "@/components/search/MerchantSearchSection";
 
 export default async function DashboardOverviewPage() {
@@ -84,7 +86,7 @@ export default async function DashboardOverviewPage() {
         <PayoutMiniCard />
       </div>
 
-      {/* Merchant search */}
+      {/* Merchants + Smart Link drawer */}
       <MerchantSearchSection />
     </main>
   );
