@@ -8,11 +8,11 @@ import { authOptions } from "@/lib/auth/options";
 import Link from "next/link";
 import LogoutButton from "@/components/dashboard/LogoutButton";
 
-// Merchant search (chips, search bar, Visit Merchant, Generate Smart Link drawer)
+// Keep merchant search on this page
 import MerchantSearchSection from "@/components/search/MerchantSearchSection";
 
-// (Optional) your existing generator on this page. If you don’t need it here yet, you can remove it.
-// import SmartLinkGenerator from "@/components/dashboard/SmartLinkGenerator";
+// Your existing one-button generator + history
+import SmartLinkGenerator from "@/components/dashboard/SmartLinkGenerator";
 
 export default async function SmartLinksPage() {
   const raw = await getServerSession(authOptions);
@@ -38,16 +38,14 @@ export default async function SmartLinksPage() {
         </div>
       </div>
 
-      {/* Merchant discovery + Smart Link drawer (all-in-one) */}
+      {/* Find merchants (with Visit Merchant only) */}
       <MerchantSearchSection />
 
-      {/* If you still want the legacy generator on this page, keep this block; otherwise remove it. */}
-      {/*
+      {/* Single-button Smart Link generator + history */}
       <section className="mt-8">
-        <h2 className="text-lg font-semibold mb-2">Manual Link Generator</h2>
+        <h2 className="text-lg font-semibold mb-2">Create Smart Link</h2>
         <SmartLinkGenerator />
       </section>
-      */}
     </main>
   );
 }
