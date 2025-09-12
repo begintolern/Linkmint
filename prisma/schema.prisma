@@ -27,6 +27,7 @@ model User {
   ageConfirmedAt    DateTime?
   deletedAt         DateTime?
   dob               DateTime?
+  smartLinks      SmartLink[]   @relation("UserToSmartLink")
 
   // Relations
   commissions            Commission[]
@@ -218,6 +219,8 @@ model MerchantRule {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   commissions      Commission[]
+  smartLinks      SmartLink[]   @relation("MerchantRuleToSmartLink")
+
 }
 
 model VerificationToken {
@@ -318,4 +321,17 @@ model PinCredential {
   updatedAt  DateTime  @updatedAt
 
   @@unique([userId, deviceId]) // one PIN per user+device
+}
+model SmartLink {
+  id             String   @id @default(cuid())
+  user           User         @relation(name: "UserToSmartLink", fields: [userId], references: [id])
+  userId         String
+  merchantRule   MerchantRule? @relation(name: "MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
+  merchantRuleId String?
+  merchantName   String
+  merchantDomain String?
+  originalUrl    String
+  shortUrl       String
+  label          String?
+  createdAt      DateTime @default(now())
 }

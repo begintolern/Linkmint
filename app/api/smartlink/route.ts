@@ -1,139 +1,114 @@
 // app/api/smartlink/route.ts
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-// 👇 JSON is imported so it’s bundled into the server output
-import ioloConfig from "@/config/merchants/iolo.json";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-type Body = {
+type InBody = {
   url?: string;
-  program?: "amazon" | "cj" | "iolo";
+  merchantRuleId?: string | null;
+  merchantName?: string;
+  merchantDomain?: string | null;
+  label?: string | null;
 };
 
-// -------- helpers --------
-function assertHttpUrl(raw: string): URL {
-  let u: URL;
-  try {
-    u = new URL(raw);
-  } catch {
-    throw new Error("Invalid URL");
-  }
-  if (u.protocol !== "http:" && u.protocol !== "https:") {
-    throw new Error("Only http/https URLs are allowed");
-  }
-  return u;
-}
-
-function isAmazon(u: URL): boolean {
-  const h = u.hostname.toLowerCase();
-  return h === "amazon.com" || h.endsWith(".amazon.com");
-}
-
-function buildAmazonLink(u: URL, tag: string, subtag: string | null): string {
-  [
-    "psc","smid","spIA","spm","pd_rd_i","pd_rd_r","pd_rd_w","pd_rd_wg","th",
-    "linkCode","creative","creativeASIN","ref_","ref","qid","sr"
-  ].forEach((k) => u.searchParams.delete(k));
-  u.searchParams.set("tag", tag);
-  if (subtag) u.searchParams.set("ascsubtag", subtag);
-  return u.toString();
-}
-
-function appendQuery(urlStr: string, key: string, val: string | null) {
-  if (!val) return urlStr;
-  const u = new URL(urlStr);
-  u.searchParams.set(key, val);
-  return u.toString();
-}
-
-// --- iolo base click link (NO deep-linking) ---
-function getIoloBase(): string | null {
-  try {
-    const first = (ioloConfig as any)?.links?.[0];
-    const url = first?.url;
-    return typeof url === "string" && url.length > 0 ? url : null;
-  } catch {
-    return null;
-  }
+function normalizeUrl(raw?: string): string {
+  const s = (raw ?? "").trim();
+  if (!s) return "";
+  if (/^https?:\/\//i.test(s)) return s;
+  return `https://${s}`;
 }
 
 export async function POST(req: Request) {
-  try {
-    const session = (await getServerSession(authOptions)) as any;
-    const userId: string | null = session?.user?.id ?? null;
-    if (!userId) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = (await req.json()) as Body;
-    const rawUrl = (body?.url ?? "").trim();
-    if (!rawUrl) {
-      return NextResponse.json({ ok: false, error: "Missing url" }, { status: 400 });
-    }
-
-    const inputUrl = assertHttpUrl(rawUrl);
-
-    // ensure user has a referralCode
-    const me = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, referralCode: true },
-    });
-    if (!me) return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
-
-    let referralCode = me.referralCode ?? null;
-    if (!referralCode) {
-      referralCode = `lm_${me.id.slice(0, 8)}`;
-      await prisma.user.update({ where: { id: me.id }, data: { referralCode } });
-    }
-
-    const AMAZON_TAG = (process.env.AMAZON_ASSOC_TAG || process.env.AMAZON_TAG) as string | undefined;
-    const program: "amazon" | "cj" | "iolo" =
-      body?.program ?? (isAmazon(inputUrl) ? "amazon" : "iolo");
-
-    let networkLink: string;
-
-    if (program === "amazon") {
-      if (!AMAZON_TAG) {
-        return NextResponse.json({ ok: false, error: "Missing AMAZON_ASSOC_TAG env" }, { status: 500 });
-      }
-      if (inputUrl.hostname.toLowerCase() === "amzn.to") {
-        return NextResponse.json(
-          { ok: false, error: "Please paste the full Amazon product URL (not amzn.to)." },
-          { status: 400 }
-        );
-      }
-      networkLink = buildAmazonLink(inputUrl, AMAZON_TAG, referralCode);
-    } else {
-      // CJ: iolo (NO ?url= deep-linking)
-      const host = inputUrl.hostname.toLowerCase();
-      if (host.endsWith("iolo.com")) {
-        const base = getIoloBase();
-        if (!base) {
-          return NextResponse.json({ ok: false, error: "iolo config missing or invalid" }, { status: 500 });
-        }
-        networkLink = appendQuery(base, "sid", referralCode);
-      } else {
-        // not-yet-supported CJ merchant — pass through
-        networkLink = inputUrl.toString();
-      }
-    }
-
-    // wrap with our redirect logger
-    const origin = (process.env.NEXT_PUBLIC_SITE_URL as string | undefined) ?? new URL(req.url).origin;
-    const smart = `${origin}/r?to=${encodeURIComponent(networkLink)}&sid=${encodeURIComponent(referralCode ?? "")}`;
-
-    return NextResponse.json({ ok: true, link: smart, smartLink: smart });
-  } catch (err: any) {
-    console.error("POST /api/smartlink error:", err);
-    return NextResponse.json(
-      { ok: false, error: "Server error", detail: String(err?.message ?? err) },
-      { status: 500 }
-    );
+  // 1) Auth
+  const raw = await getServerSession(authOptions);
+  const session = raw as Session | null;
+  const userId = (session?.user as any)?.id as string | undefined;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // 2) Parse & validate
+  let body: InBody;
+  try {
+    body = (await req.json()) as InBody;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const originalUrl = normalizeUrl(body.url);
+  if (!originalUrl) {
+    return NextResponse.json({ error: "Missing URL" }, { status: 400 });
+  }
+
+  // Basic URL sanity
+  try {
+    const u = new URL(originalUrl);
+    if (!u.hostname || !u.hostname.includes(".")) throw new Error("bad host");
+  } catch {
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  }
+
+  const merchantRuleId = body.merchantRuleId ?? null;
+  const merchantName = (body.merchantName ?? "").trim() || "Merchant";
+  const merchantDomain = body.merchantDomain?.trim() || null;
+  const label = body.label?.trim() || null;
+
+  // 3) Produce a short link value
+  const slug = Math.random().toString(36).slice(2, 8);
+  const shortBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_BASE_URL || "";
+  const candidateShort =
+    shortBase && /^https?:\/\//i.test(shortBase)
+      ? `${shortBase.replace(/\/+$/, "")}/r/${slug}`
+      : originalUrl;
+
+  const shortUrl = candidateShort;
+
+  // 4) Persist SmartLink record
+  let record;
+  try {
+    record = await prisma.smartLink.create({
+      data: {
+        userId,
+        merchantRuleId,
+        merchantName,
+        merchantDomain,
+        originalUrl,
+        shortUrl,
+        label,
+      },
+      select: {
+        id: true,
+        shortUrl: true,
+      },
+    });
+  } catch (e) {
+    // Retry without merchantRuleId if relation fails
+    try {
+      record = await prisma.smartLink.create({
+        data: {
+          userId,
+          merchantName,
+          merchantDomain,
+          originalUrl,
+          shortUrl,
+          label,
+        },
+        select: {
+          id: true,
+          shortUrl: true,
+        },
+      });
+    } catch (e2) {
+      console.error("[/api/smartlink] create failed:", e2);
+      return NextResponse.json({ error: "Failed to save smart link" }, { status: 500 });
+    }
+  }
+
+  // 5) Respond for the UI
+  return NextResponse.json({ link: record.shortUrl });
 }
