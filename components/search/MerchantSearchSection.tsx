@@ -10,7 +10,7 @@ type MerchantItem = {
   categories: string[];
   brands: string[];
   keywords: string[];
-  apply?: string | null; // (unused here, but harmless if present)
+  apply?: string | null; // present in API but unused here
 };
 
 // Provisioned primary + near-future categories
@@ -31,7 +31,6 @@ function buildMerchantUrl(name: string, domain?: string | null) {
     if (d.startsWith("http://") || d.startsWith("https://")) return d;
     return `https://${d}`;
   }
-  // Fallback: search by name
   const q = encodeURIComponent(name);
   return `https://www.google.com/search?q=${q}`;
 }
@@ -42,6 +41,11 @@ export default function MerchantSearchSection() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<MerchantItem[]>([]);
   const debounce = useRef<any>(null);
+
+  // Drawer state (UI shell only)
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selected, setSelected] = useState<MerchantItem | null>(null);
+  const [productUrl, setProductUrl] = useState("");
 
   async function runSearch(params: { category?: string; q?: string }) {
     const sp = new URLSearchParams();
@@ -75,6 +79,17 @@ export default function MerchantSearchSection() {
     debounce.current = setTimeout(() => runSearch({ category, q }), 300);
     return () => clearTimeout(debounce.current);
   }, [q, category]);
+
+  function openDrawer(m: MerchantItem) {
+    setSelected(m);
+    setProductUrl("");
+    setDrawerOpen(true);
+  }
+  function closeDrawer() {
+    setDrawerOpen(false);
+    setSelected(null);
+    setProductUrl("");
+  }
 
   return (
     <section className="mt-8">
@@ -136,8 +151,8 @@ export default function MerchantSearchSection() {
                     <div className="mt-1 text-xs text-gray-600">Keywords: {m.keywords.join(", ")}</div>
                   ) : null}
 
-                  {/* Visit Merchant button */}
-                  <div className="mt-3">
+                  <div className="mt-3 flex gap-2">
+                    {/* Visit Merchant */}
                     <a
                       href={href}
                       target="_blank"
@@ -147,6 +162,15 @@ export default function MerchantSearchSection() {
                     >
                       Visit Merchant
                     </a>
+
+                    {/* Generate Smart Link (UI shell only) */}
+                    <button
+                      onClick={() => openDrawer(m)}
+                      className="inline-block rounded-lg bg-blue-600 px-3 py-1.5 text-white text-sm hover:bg-blue-700"
+                      aria-label={`Generate Smart Link for ${m.name}`}
+                    >
+                      Generate Smart Link
+                    </button>
                   </div>
                 </div>
               );
@@ -154,6 +178,72 @@ export default function MerchantSearchSection() {
           </div>
         )}
       </div>
+
+      {/* Right-side Drawer (UI shell only) */}
+      {drawerOpen ? (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/30 z-40"
+            aria-hidden="true"
+            onClick={closeDrawer}
+          />
+          {/* Panel */}
+          <aside
+            className="fixed right-0 top-0 h-full w-full max-w-md z-50 bg-white shadow-xl border-l"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <div className="text-sm text-gray-500">Smart Link Generator</div>
+                <div className="text-lg font-semibold">{selected?.name ?? "Merchant"}</div>
+                {selected?.domain ? (
+                  <div className="text-xs text-gray-500">{selected.domain}</div>
+                ) : null}
+              </div>
+              <button
+                onClick={closeDrawer}
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100"
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="text-sm text-gray-600">
+                Paste a product page URL from the merchant’s site. On the next step we’ll convert it
+                into a trackable Smart Link you can share.
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Product URL</label>
+                <input
+                  value={productUrl}
+                  onChange={(e) => setProductUrl(e.target.value)}
+                  placeholder={`e.g. ${selected?.domain ?? "https://example.com/product/123"}`}
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring"
+                />
+              </div>
+
+              {/* Placeholder action: disabled until backend is wired */}
+              <button
+                disabled
+                className="w-full rounded-lg bg-blue-600 px-3 py-2 text-white text-sm opacity-60 cursor-not-allowed"
+                title="Coming soon"
+              >
+                Create Smart Link (coming soon)
+              </button>
+
+              <div className="text-xs text-gray-500">
+                Tip: Navigate to a product on the merchant’s site, copy the URL from your browser,
+                then paste it here.
+              </div>
+            </div>
+          </aside>
+        </>
+      ) : null}
     </section>
   );
 }
