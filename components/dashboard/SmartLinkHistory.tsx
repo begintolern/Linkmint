@@ -1,3 +1,4 @@
+// components/dashboard/SmartLinkHistory.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -17,8 +18,9 @@ export default function SmartLinkHistory() {
 
   async function fetchLinks(cursor?: string) {
     setLoading(true);
-    const qs = cursor ? `?cursor=${cursor}` : "";
-    const res = await fetch(`/api/smartlink/history${qs}`);
+    const base = "/api/smartlink/history?limit=5"; // ↓ page size = 5 for easier testing
+    const qs = cursor ? `${base}&cursor=${cursor}` : base;
+    const res = await fetch(qs);
     const data = await res.json();
     if (cursor) {
       setLinks((prev) => [...prev, ...data.links]);
@@ -30,9 +32,10 @@ export default function SmartLinkHistory() {
   }
 
   useEffect(() => {
-    fetchLinks();
-    window.addEventListener("smartlink:created", () => fetchLinks());
-    return () => window.removeEventListener("smartlink:created", () => fetchLinks());
+    const refresh = () => fetchLinks();
+    refresh(); // initial
+    window.addEventListener("smartlink:created", refresh);
+    return () => window.removeEventListener("smartlink:created", refresh);
   }, []);
 
   if (!links.length) {
@@ -69,15 +72,20 @@ export default function SmartLinkHistory() {
           </div>
         </div>
       ))}
-      {nextCursor && (
-        <button
-          onClick={() => fetchLinks(nextCursor!)}
-          disabled={loading}
-          className="mt-3 rounded border px-3 py-1 text-sm"
-        >
-          {loading ? "Loading…" : "Load more"}
-        </button>
-      )}
+
+      <div className="flex items-center gap-3">
+        {nextCursor ? (
+          <button
+            onClick={() => fetchLinks(nextCursor!)}
+            disabled={loading}
+            className="mt-3 rounded border px-3 py-1 text-sm"
+          >
+            {loading ? "Loading…" : "Load more"}
+          </button>
+        ) : (
+          <div className="mt-3 text-xs text-gray-500">No more results.</div>
+        )}
+      </div>
     </div>
   );
 }
