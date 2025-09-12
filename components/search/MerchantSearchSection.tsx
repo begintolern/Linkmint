@@ -10,10 +10,9 @@ type MerchantItem = {
   categories: string[];
   brands: string[];
   keywords: string[];
-  apply?: string | null; // tolerated if present
+  apply?: string | null;
 };
 
-// Provisioned categories
 const PRIMARY = [
   "apparel",
   "shoes",
@@ -65,7 +64,6 @@ export default function MerchantSearchSection() {
   }
 
   useEffect(() => {
-    // default-empty: no chip & no query → do not fetch
     if (!category && !q.trim()) {
       setResults([]);
       return;
@@ -74,6 +72,28 @@ export default function MerchantSearchSection() {
     debounce.current = setTimeout(() => runSearch({ category, q }), 300);
     return () => clearTimeout(debounce.current);
   }, [q, category]);
+
+  // --- tiny analytics (non-blocking, survives navigation) ---
+  function logMerchantVisit(m: MerchantItem) {
+    try {
+      const body = JSON.stringify({
+        type: "merchant_visit",
+        merchantId: m.id,
+        merchantName: m.name,
+        merchantDomain: m.domain,
+        ts: Date.now(),
+      });
+      // Use keepalive so the request isn't dropped on navigation
+      fetch("/api/event-log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      /* no-op */
+    }
+  }
 
   return (
     <section className="mt-8">
@@ -111,7 +131,7 @@ export default function MerchantSearchSection() {
         ) : results.length === 0 ? (
           <div className="rounded-xl border bg-white p-4 text-sm text-gray-600">
             {category
-              ? `No merchants tagged for ${category}.`
+              ? `No merchants tagged for ${category} yet. We’re adding more soon.`
               : q.trim()
               ? "No matching merchants."
               : "Pick a category or type a brand/item."}
@@ -140,6 +160,7 @@ export default function MerchantSearchSection() {
                       href={href}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => logMerchantVisit(m)}
                       className="inline-block rounded-lg bg-gray-900 px-3 py-1.5 text-white text-sm hover:bg-black"
                       aria-label={`Visit ${m.name}`}
                     >
