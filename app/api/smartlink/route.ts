@@ -58,15 +58,9 @@ export async function POST(req: Request) {
   const merchantDomain = body.merchantDomain?.trim() || null;
   const label = body.label?.trim() || null;
 
-  // 3) Produce a short link value
-  const slug = Math.random().toString(36).slice(2, 8);
-  const shortBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_BASE_URL || "";
-  const candidateShort =
-    shortBase && /^https?:\/\//i.test(shortBase)
-      ? `${shortBase.replace(/\/+$/, "")}/r/${slug}`
-      : originalUrl;
-
-  const shortUrl = candidateShort;
+  // 3) For now, use the original URL as the "smart" link
+  // (We will add a real shortener + redirect route later.)
+  const shortUrl = originalUrl;
 
   // 4) Persist SmartLink record
   let record;
@@ -86,27 +80,22 @@ export async function POST(req: Request) {
         shortUrl: true,
       },
     });
-  } catch (e) {
+  } catch {
     // Retry without merchantRuleId if relation fails
-    try {
-      record = await prisma.smartLink.create({
-        data: {
-          userId,
-          merchantName,
-          merchantDomain,
-          originalUrl,
-          shortUrl,
-          label,
-        },
-        select: {
-          id: true,
-          shortUrl: true,
-        },
-      });
-    } catch (e2) {
-      console.error("[/api/smartlink] create failed:", e2);
-      return NextResponse.json({ error: "Failed to save smart link" }, { status: 500 });
-    }
+    record = await prisma.smartLink.create({
+      data: {
+        userId,
+        merchantName,
+        merchantDomain,
+        originalUrl,
+        shortUrl,
+        label,
+      },
+      select: {
+        id: true,
+        shortUrl: true,
+      },
+    });
   }
 
   // 5) Respond for the UI
