@@ -13,8 +13,6 @@ import PayoutMiniCard from "@/components/dashboard/PayoutMiniCard";
 import FallbackAttach from "@/components/dashboard/FallbackAttach";
 
 // ⬇️ add this import
-import MerchantSearchSection from "@/components/search/MerchantSearchSection";
-
 export default async function DashboardOverviewPage() {
   const raw = await getServerSession(authOptions);
   const session = raw as Session | null;
@@ -87,7 +85,6 @@ export default async function DashboardOverviewPage() {
       </div>
 
       {/* Merchants + Smart Link drawer */}
-      <MerchantSearchSection />
-    </main>
+      </main>
   );
 }
