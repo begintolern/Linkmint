@@ -11,8 +11,9 @@ import LogoutButton from "@/components/dashboard/LogoutButton";
 // Keep merchant search on this page
 import MerchantSearchSection from "@/components/search/MerchantSearchSection";
 
-// Your existing one-button generator + history
+// One-button generator + history
 import SmartLinkGenerator from "@/components/dashboard/SmartLinkGenerator";
+import SmartLinkHistory from "@/components/dashboard/SmartLinkHistory";
 
 export default async function SmartLinksPage() {
   const raw = await getServerSession(authOptions);
@@ -38,13 +39,16 @@ export default async function SmartLinksPage() {
         </div>
       </div>
 
-      {/* Find merchants (with Visit Merchant only) */}
+      {/* Find merchants (Visit Merchant only) */}
       <MerchantSearchSection />
 
-      {/* Single-button Smart Link generator + history */}
+      {/* Create Smart Link + Recent history */}
       <section className="mt-8">
         <h2 className="text-lg font-semibold mb-2">Create Smart Link</h2>
         <SmartLinkGenerator />
+
+        {/* Recent Smart Links list */}
+        <SmartLinkHistory />
       </section>
     </main>
   );

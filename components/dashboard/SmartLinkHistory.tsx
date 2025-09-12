@@ -17,44 +17,31 @@ export default function SmartLinkHistory() {
   const [links, setLinks] = useState<SmartLink[]>([]);
 
   useEffect(() => {
-  function refresh() {
-    fetch("/api/smartlink/history")
-      .then((res) => res.json())
-      .then((data) => setLinks(data.links || []))
-      .catch(() => setLinks([]));
-  }
-  refresh(); // initial
-  window.addEventListener("smartlink:created", refresh);
-  return () => window.removeEventListener("smartlink:created", refresh);
-}, []);
+    function refresh() {
+      fetch("/api/smartlink/history")
+        .then((res) => res.json())
+        .then((data) => setLinks(data.links || []))
+        .catch(() => setLinks([]));
+    }
+    refresh(); // initial load
+    window.addEventListener("smartlink:created", refresh);
+    return () => window.removeEventListener("smartlink:created", refresh);
+  }, []);
 
   if (!links.length) {
-    return (
-      <div className="text-sm text-gray-500 mt-3">
-        No smart links yet. Create one above to get started.
-      </div>
-    );
+    return <div className="text-sm text-gray-500 mt-3">No smart links yet.</div>;
   }
 
   return (
     <div className="mt-6 space-y-3">
       <h3 className="font-semibold">Recent Smart Links</h3>
       {links.map((l) => (
-        <div
-          key={l.id}
-          className="rounded border p-3 flex items-center justify-between"
-        >
+        <div key={l.id} className="rounded border p-3 flex items-center justify-between">
           <div className="min-w-0">
             <div className="font-medium truncate">{l.merchantName}</div>
-            {l.label ? (
-              <div className="text-xs text-gray-600 truncate">{l.label}</div>
-            ) : null}
-            <div className="text-xs text-gray-500">
-              {new Date(l.createdAt).toLocaleString()}
-            </div>
-            <div className="text-xs text-gray-600 truncate">
-              {l.originalUrl}
-            </div>
+            {l.label ? <div className="text-xs text-gray-600 truncate">{l.label}</div> : null}
+            <div className="text-xs text-gray-500">{new Date(l.createdAt).toLocaleString()}</div>
+            <div className="text-xs text-gray-600 truncate">{l.originalUrl}</div>
           </div>
           <div className="flex gap-2 shrink-0">
             <button
@@ -63,12 +50,7 @@ export default function SmartLinkHistory() {
             >
               Copy
             </button>
-            <a
-              href={l.shortUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded border text-xs px-2 py-1"
-            >
+            <a href={l.shortUrl} target="_blank" rel="noopener noreferrer" className="rounded border text-xs px-2 py-1">
               Open
             </a>
           </div>
