@@ -1,7 +1,8 @@
 // app/api/smartlink/history/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
+import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
@@ -9,10 +10,18 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 // GET /api/smartlink/history?merchantId=<id>&limit=20
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  // Try session first
   const raw = await getServerSession(authOptions);
   const session = raw as Session | null;
-  const userId = (session?.user as any)?.id as string | undefined;
+  let userId = (session?.user as any)?.id as string | undefined;
+
+  // Fallback to JWT if session not present
+  if (!userId) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    userId = (token as any)?.sub || (token as any)?.id;
+  }
+
   if (!userId) {
     return NextResponse.json({ links: [] }, { status: 200 });
   }
@@ -41,12 +50,7 @@ export async function GET(req: Request) {
       },
     });
 
-    // serialize dates for JSON
-    const out = links.map((l) => ({
-      ...l,
-      createdAt: l.createdAt.toISOString(),
-    }));
-
+    const out = links.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() }));
     return NextResponse.json({ links: out });
   } catch (e) {
     console.error("[/api/smartlink/history] error:", e);
