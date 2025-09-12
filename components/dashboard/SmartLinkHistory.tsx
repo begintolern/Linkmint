@@ -17,11 +17,16 @@ export default function SmartLinkHistory() {
   const [links, setLinks] = useState<SmartLink[]>([]);
 
   useEffect(() => {
+  function refresh() {
     fetch("/api/smartlink/history")
       .then((res) => res.json())
       .then((data) => setLinks(data.links || []))
       .catch(() => setLinks([]));
-  }, []);
+  }
+  refresh(); // initial
+  window.addEventListener("smartlink:created", refresh);
+  return () => window.removeEventListener("smartlink:created", refresh);
+}, []);
 
   if (!links.length) {
     return (
