@@ -1,4 +1,5 @@
 // lib/partners/rakutenClient.ts
+// Use LinkShare domain to avoid TLS hostname mismatch
 const BASE = "https://api.linksynergy.com";
 const TOKEN_URL = `${BASE}/token`;
 
@@ -7,19 +8,19 @@ type OAuthToken = { access_token: string; token_type: "Bearer"; expires_in: numb
 let cachedToken: { token?: string; expiresAt?: number } = {};
 
 /**
- * Fetch OAuth token. Supports manual override with RAKUTEN_BEARER
+ * Fetch OAuth token via Client Credentials flow.
+ * Requires: RAKUTEN_CLIENT_ID, RAKUTEN_CLIENT_SECRET, RAKUTEN_SCOPE (publisher SID)
  */
 async function fetchToken(): Promise<string> {
-  // ---- TEMP OVERRIDE: use a pre-generated token from the portal if provided ----
-  const manual = process.env.RAKUTEN_BEARER;
-  if (manual && manual.trim().length > 0) {
-    return manual.trim();
-  }
-  // -----------------------------------------------------------------------------
+  const id = process.env.RAKUTEN_CLIENT_ID;
+  const secret = process.env.RAKUTEN_CLIENT_SECRET;
+  const scope = process.env.RAKUTEN_SCOPE; // your Publisher SID
 
-  const id = process.env.RAKUTEN_CLIENT_ID!;
-  const secret = process.env.RAKUTEN_CLIENT_SECRET!;
-  const scope = process.env.RAKUTEN_SCOPE!; // your Publisher SID
+  if (!id || !secret || !scope) {
+    throw new Error(
+      "Missing Rakuten env vars: RAKUTEN_CLIENT_ID / RAKUTEN_CLIENT_SECRET / RAKUTEN_SCOPE"
+    );
+  }
 
   const now = Date.now();
   if (cachedToken.token && cachedToken.expiresAt && now < cachedToken.expiresAt - 30_000) {
@@ -35,14 +36,20 @@ async function fetchToken(): Promise<string> {
     body: new URLSearchParams({ grant_type: "client_credentials", scope }),
   });
 
-  if (!res.ok) throw new Error(`Rakuten token ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Rakuten token ${res.status}: ${body}`);
+  }
 
   const json = (await res.json()) as OAuthToken;
   cachedToken = { token: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 };
   return json.access_token;
 }
 
-async function rakutenGET<T>(path: string, query?: Record<string, string | number | undefined>): Promise<T> {
+async function rakutenGET<T>(
+  path: string,
+  query?: Record<string, string | number | undefined>
+): Promise<T> {
   const token = await fetchToken();
   const qs =
     query && Object.keys(query).length
@@ -68,7 +75,7 @@ async function rakutenPOST<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-/** ------- Types (based on your portal schemas) ------- */
+/** ------- Types (loosely based on your portal schemas) ------- */
 
 // advertiserSearchResponse { midlist: {...} }
 export type AdvertiserSearchResponse = {
@@ -94,7 +101,7 @@ export type PartnershipsResponse = {
 
 /** ------- Client helpers ------- */
 
-// v2 advertisers catalog
+// v2 advertisers catalog (broad search/filter)
 export async function listAdvertisers(params: { page?: number; pageSize?: number; q?: string } = {}) {
   return rakutenGET<{ data?: unknown[]; total?: number }>(`/v2/advertisers`, {
     page: params.page ?? 1,
@@ -103,7 +110,7 @@ export async function listAdvertisers(params: { page?: number; pageSize?: number
   });
 }
 
-// advertiserSearch (older schema)
+// advertiserSearch (older schema returning midlist)
 export async function advertiserSearch(params: { keyword?: string; categoryId?: number; page?: number } = {}) {
   return rakutenGET<AdvertiserSearchResponse>(`/advertiserssearch/1.0`, {
     keyword: params.keyword,
@@ -112,7 +119,7 @@ export async function advertiserSearch(params: { keyword?: string; categoryId?: 
   });
 }
 
-// your partnerships
+// your partnerships (approved/pending/declined)
 export async function listPartnerships(params: { page?: number; pageSize?: number; status?: string } = {}) {
   return rakutenGET<PartnershipsResponse>(`/v1/partnerships`, {
     page: params.page ?? 1,
@@ -121,8 +128,12 @@ export async function listPartnerships(params: { page?: number; pageSize?: numbe
   });
 }
 
-// product search
-export async function productSearch(params: { keyword?: string; advertiserId?: string | number; page?: number }) {
+// product search (for SKUs like apparel)
+export async function productSearch(params: {
+  keyword?: string;
+  advertiserId?: string | number;
+  page?: number;
+}) {
   return rakutenGET<any>(`/productsearch/1.0`, {
     keyword: params.keyword,
     advertiserId: params.advertiserId,
@@ -130,7 +141,7 @@ export async function productSearch(params: { keyword?: string; advertiserId?: s
   });
 }
 
-// deep-link generation
+// deep-link generation (smart links)
 export async function createDeepLink(productUrl: string) {
   return rakutenPOST<any>(`/v1/links/deep_links`, { url: productUrl });
 }
