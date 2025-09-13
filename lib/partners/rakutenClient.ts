@@ -1,7 +1,7 @@
 // lib/partners/rakutenClient.ts
 // Use LinkShare domain to avoid TLS hostname mismatch
 const BASE = "https://api.linksynergy.com";
-const TOKEN_URL = "https://api.rakutenadvertising.com/token";
+const TOKEN_URL = "https://api.linksynergy.com/token";
 
 type OAuthToken = { access_token: string; token_type: "Bearer"; expires_in: number };
 
