@@ -1,3 +1,4 @@
+// app/admin/rakuten/advertisers/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -8,16 +9,17 @@ type Advertiser = {
   status?: string;
   network?: number;
   categories?: string[];
-  details?: string; // API link like /v2/advertisers/:id
+  details?: string;
 };
 
 type ApiResp = {
-  _metadata?: { page?: number; limit?: number; total?: number; _links?: { next?: string | null } };
+  _metadata?: { page?: number; limit?: number; total?: number; _links?: { next?: string | null }; status?: string };
   advertisers?: Advertiser[];
 };
 
 export default function AdvertisersAdminPage() {
   const [q, setQ] = useState("");
+  const [status, setStatus] = useState<"pending" | "approved" | "declined">("pending");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -25,13 +27,18 @@ export default function AdvertisersAdminPage() {
   const [data, setData] = useState<ApiResp | null>(null);
 
   const url = useMemo(() => {
-    const u = new URL(typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    const origin =
+      typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : "http://localhost:3000";
+    const u = new URL(origin);
     u.pathname = "/api/admin/rakuten/advertisers";
     if (q) u.searchParams.set("q", q);
+    u.searchParams.set("status", status);
     u.searchParams.set("page", String(page));
     u.searchParams.set("pageSize", String(pageSize));
     return u.toString();
-  }, [q, page, pageSize]);
+  }, [q, status, page, pageSize]);
 
   async function fetchData() {
     setLoading(true);
@@ -56,17 +63,35 @@ export default function AdvertisersAdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url]);
 
+  const total = data?._metadata?.total ?? 0;
+  const shown = data?.advertisers?.length ?? 0;
+
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Rakuten — Advertisers</h1>
-        <div className="flex gap-2">
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold">Rakuten — Advertisers (from partnerships)</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value as any);
+              setPage(1);
+            }}
+            className="border rounded-lg px-3 py-2 text-sm"
+            aria-label="Status filter"
+          >
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="declined">Declined</option>
+          </select>
+
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search (e.g. noah, apparel)"
-            className="border rounded-lg px-3 py-2 text-sm w-64"
+            placeholder="Search name (e.g. noah)"
+            className="border rounded-lg px-3 py-2 text-sm w-56"
           />
+
           <button
             onClick={() => {
               setPage(1);
@@ -123,8 +148,8 @@ export default function AdvertisersAdminPage() {
 
       <footer className="flex items-center justify-between">
         <div className="text-sm text-gray-600">
-          Page {data?._metadata?.page ?? page} · Showing {data?.advertisers?.length ?? 0} of{" "}
-          {data?._metadata?.total ?? 0}
+          Page {data?._metadata?.page ?? page} · Showing {shown} of {total} · Status:{" "}
+          {(data?._metadata?.status ?? status).toUpperCase()}
         </div>
         <div className="flex gap-2">
           <button
