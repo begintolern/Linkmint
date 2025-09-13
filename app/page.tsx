@@ -9,70 +9,77 @@ export const revalidate = 0;
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
-      {/* Header (kept) — logo made larger for mobile */}
-      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur border-b">
+      {/* Header with logo + nav */}
+      <header className="border-b">
         <nav className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            {/* ✅ Larger, responsive logo (no hero/body logo elsewhere) */}
             <Image
-              src="/logo.svg"            // <-- ensure this exists in /public
-              alt="linkmint.co"
-              width={64}
-              height={64}
-              className="h-10 w-10 md:h-12 md:w-12"
+              src="/logo.svg"
+              alt="Linkmint"
+              width={32}
+              height={32}
               priority
             />
-            <span className="font-semibold text-lg md:text-xl tracking-tight">
-              linkmint.co
-            </span>
+            <span className="font-semibold text-lg">linkmint.co</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/trust" className="text-sm hover:text-gray-700">Trust Center</Link>
-            <Link href="/login" className="text-sm hover:text-gray-700">Log in</Link>
+          <div className="flex items-center gap-6">
+            <Link href="/login" className="text-sm hover:text-gray-700">
+              Log in
+            </Link>
             <Link
               href="/signup"
-              className="inline-flex items-center rounded-xl border border-gray-900 px-4 py-2 text-sm font-medium hover:bg-gray-900 hover:text-white transition"
+              className="inline-flex items-center rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
             >
-              Sign up
+              Get started — it’s free
             </Link>
           </div>
         </nav>
       </header>
 
-      {/* Hero — no logo here anymore */}
+      {/* Hero */}
       <main className="flex-1">
-        <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <div className="max-w-3xl">
-            <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">
-              Turn any link into a payout.
-            </h1>
-            <p className="mt-4 text-base sm:text-lg text-gray-600">
-              Share links you already love. Earn automatically when they drive
-              purchases. No followers required. Built for trust and transparency.
-            </p>
+        <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+          <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">
+            Turn any link into a payout.
+          </h1>
+          <p className="mt-4 text-base sm:text-lg text-gray-600">
+            Share links you already love. Earn automatically when they drive
+            purchases. No followers required. Built for trust and transparency.
+          </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/signup"
-                className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-black transition"
-              >
-                Get started — it’s free
-              </Link>
-              <Link
-                href="#how-it-works"
-                className="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-3 font-medium hover:bg-gray-50 transition"
-              >
-                How it works
-              </Link>
-            </div>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/signup"
+              className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-black transition"
+            >
+              Get started — it’s free
+            </Link>
+            <Link
+              href="#how-it-works"
+              className="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-3 font-medium hover:bg-gray-50 transition"
+            >
+              How it works
+            </Link>
           </div>
+
+          <p className="mt-3 text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link href="/login" className="text-black font-medium">
+              Log in
+            </Link>
+          </p>
         </section>
 
-        {/* Tutorial video block (kept). No inline logo above it. */}
-        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
+        {/* Tutorial video */}
+        <section
+          id="how-it-works"
+          className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pb-16"
+        >
           <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 90 seconds</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold">
+              Watch: Linkmint in 30 seconds
+            </h2>
             <p className="mt-2 text-gray-600">
               See how to create a smart link, share it, and get paid after approvals.
             </p>
@@ -82,9 +89,16 @@ export default function HomePage() {
                 className="h-full w-full"
                 controls
                 preload="metadata"
-                poster="/video/tutorial-poster.jpg" // <-- ensure this exists in /public/video
+                poster="/video/tutorial-poster.jpg"
               >
-                <source src="/video/linkmint-tutorial.mp4" type="video/mp4" />
+                <source src="/video/tutorial.mp4" type="video/mp4" />
+                <track
+                  src="/video/tutorial.vtt"
+                  kind="subtitles"
+                  srcLang="en"
+                  label="English"
+                  default
+                />
                 Your browser does not support the video tag.
               </video>
             </div>
@@ -110,14 +124,23 @@ export default function HomePage() {
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="border-t">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} linkmint.co — All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="/trust" className="hover:text-gray-700">Trust Center</Link>
-            <Link href="/terms" className="hover:text-gray-700">Terms</Link>
-            <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
-            <Link href="mailto:admin@linkmint.co" className="hover:text-gray-700">Contact</Link>
+            <Link href="/referral" className="hover:text-gray-700">
+              Referral Program
+            </Link>
+            <Link href="/trust" className="hover:text-gray-700">
+              Trust Center
+            </Link>
+            <Link href="/terms" className="hover:text-gray-700">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-gray-700">
+              Privacy
+            </Link>
           </div>
         </div>
       </footer>
@@ -125,7 +148,15 @@ export default function HomePage() {
   );
 }
 
-function Step({ num, title, desc }: { num: string; title: string; desc: string }) {
+function Step({
+  num,
+  title,
+  desc,
+}: {
+  num: string;
+  title: string;
+  desc: string;
+}) {
   return (
     <div className="rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-3">
