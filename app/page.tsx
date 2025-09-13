@@ -1,5 +1,4 @@
 // app/page.tsx
-import Image from "next/image";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -9,88 +8,52 @@ export const revalidate = 0;
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-gray-900">
-      {/* Header with logo + nav */}
-      <header className="border-b">
-        <nav className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logo.svg"
-              alt="Linkmint"
-              width={32}
-              height={32}
-              priority
-            />
-            <span className="font-semibold text-lg">linkmint.co</span>
-          </Link>
+      {/* No header here — we rely on the global header in app/layout.tsx */}
 
-          <div className="flex items-center gap-6">
-            <Link href="/login" className="text-sm hover:text-gray-700">
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className="inline-flex items-center rounded-xl bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition"
-            >
-              Get started — it’s free
-            </Link>
-          </div>
-        </nav>
-      </header>
-
-      {/* Hero */}
       <main className="flex-1">
-        <section className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">
-            Turn any link into a payout.
-          </h1>
-          <p className="mt-4 text-base sm:text-lg text-gray-600">
-            Share links you already love. Earn automatically when they drive
-            purchases. No followers required. Built for trust and transparency.
-          </p>
+        {/* Hero */}
+        <section className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+          <div className="max-w-3xl">
+            <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">
+              Turn any link into a payout.
+            </h1>
+            <p className="mt-4 text-base sm:text-lg text-gray-600">
+              Share links you already love. Earn automatically when they drive purchases.
+              No followers required. Built for trust and transparency.
+            </p>
 
-          <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/signup"
-              className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-black transition"
-            >
-              Get started — it’s free
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-3 font-medium hover:bg-gray-50 transition"
-            >
-              How it works
-            </Link>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <Link
+                href="/signup"
+                className="inline-flex items-center justify-center rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-black transition"
+              >
+                Get started — it’s free
+              </Link>
+              <Link
+                href="#how-it-works"
+                className="inline-flex items-center justify-center rounded-xl border border-gray-300 px-5 py-3 font-medium hover:bg-gray-50 transition"
+              >
+                How it works
+              </Link>
+            </div>
+
+            {/* Optional: sign-in hint line under CTAs to match your screenshot */}
+            <p className="mt-3 text-sm text-gray-500">
+              Already have an account? <Link className="underline" href="/login">Log in</Link>
+            </p>
           </div>
-
-          <p className="mt-3 text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link href="/login" className="text-black font-medium">
-              Log in
-            </Link>
-          </p>
         </section>
 
         {/* Tutorial video */}
-        <section
-          id="how-it-works"
-          className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 pb-16"
-        >
+        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
           <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-semibold">
-              Watch: Linkmint in 30 seconds
-            </h2>
+            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 30 seconds</h2>
             <p className="mt-2 text-gray-600">
               See how to create a smart link, share it, and get paid after approvals.
             </p>
 
             <div className="mt-4 aspect-video w-full overflow-hidden rounded-xl border">
-              <video
-                className="h-full w-full"
-                controls
-                preload="metadata"
-                poster="/video/tutorial-poster.jpg"
-              >
+              <video className="h-full w-full" controls preload="metadata" poster="/video/tutorial-poster.jpg">
                 <source src="/video/tutorial.mp4" type="video/mp4" />
                 <track
                   src="/video/tutorial.vtt"
@@ -124,23 +87,14 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="border-t">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} linkmint.co — All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="/referral" className="hover:text-gray-700">
-              Referral Program
-            </Link>
-            <Link href="/trust" className="hover:text-gray-700">
-              Trust Center
-            </Link>
-            <Link href="/terms" className="hover:text-gray-700">
-              Terms
-            </Link>
-            <Link href="/privacy" className="hover:text-gray-700">
-              Privacy
-            </Link>
+            <Link href="/trust" className="hover:text-gray-700">Trust Center</Link>
+            <Link href="/terms" className="hover:text-gray-700">Terms</Link>
+            <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
+            <Link href="mailto:admin@linkmint.co" className="hover:text-gray-700">Contact</Link>
           </div>
         </div>
       </footer>
@@ -148,15 +102,7 @@ export default function HomePage() {
   );
 }
 
-function Step({
-  num,
-  title,
-  desc,
-}: {
-  num: string;
-  title: string;
-  desc: string;
-}) {
+function Step({ num, title, desc }: { num: string; title: string; desc: string }) {
   return (
     <div className="rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-3">
