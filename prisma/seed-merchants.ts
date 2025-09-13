@@ -1,6 +1,5 @@
 // @ts-nocheck
 import { PrismaClient, CommissionCalc } from "@prisma/client";
-
 const prisma = new PrismaClient();
 
 async function main() {
@@ -12,7 +11,7 @@ async function main() {
         network: "CJ",
         domainPattern: "peoplefinders.com",
         commissionType: CommissionCalc.PERCENT,
-        commissionRate: "0.65",
+        commissionRate: "0.65",           // Decimal as string
         cookieWindowDays: 45,
         notes: "65% revenue share per sale; 45-day cookie.",
         allowedSources: [

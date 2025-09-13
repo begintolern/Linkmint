@@ -1,103 +1,61 @@
-// app/api/smartlink/route.ts
+// app/api/smartlink/history/route.ts
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
+import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type InBody = {
-  url?: string;
-  merchantRuleId?: string | null;
-  merchantName?: string;
-  merchantDomain?: string | null;
-  label?: string | null;
-};
-
-function normalizeUrl(raw?: string): string {
-  const s = (raw ?? "").trim();
-  if (!s) return "";
-  if (/^https?:\/\//i.test(s)) return s;
-  return `https://${s}`;
-}
-
-export async function POST(req: Request) {
-  // 1) Auth
+// GET /api/smartlink/history?merchantId=<id>&limit=20
+export async function GET(req: NextRequest) {
+  // Try normal session first
   const raw = await getServerSession(authOptions);
   const session = raw as Session | null;
-  const userId = (session?.user as any)?.id as string | undefined;
+  let userId = (session?.user as any)?.id as string | undefined;
+
+  // Fallback: read JWT directly (handles edge cases where session isn't hydrated in route)
   if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    userId = (token as any)?.sub || (token as any)?.id;
   }
 
-  // 2) Parse & validate
-  let body: InBody;
+  if (!userId) {
+    // No user → empty list (don’t 401; keep UI simple)
+    return NextResponse.json({ links: [] }, { status: 200 });
+  }
+
+  const url = new URL(req.url);
+  const merchantId = url.searchParams.get("merchantId");
+  const limit = Math.max(1, Math.min(50, Number(url.searchParams.get("limit") ?? 20)));
+
   try {
-    body = (await req.json()) as InBody;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const originalUrl = normalizeUrl(body.url);
-  if (!originalUrl) {
-    return NextResponse.json({ error: "Missing URL" }, { status: 400 });
-  }
-
-  // Basic URL sanity
-  try {
-    const u = new URL(originalUrl);
-    if (!u.hostname || !u.hostname.includes(".")) throw new Error("bad host");
-  } catch {
-    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
-  }
-
-  const merchantRuleId = body.merchantRuleId ?? null;
-  const merchantName = (body.merchantName ?? "").trim() || "Merchant";
-  const merchantDomain = body.merchantDomain?.trim() || null;
-  const label = body.label?.trim() || null;
-
-  // 3) For now, use the original URL as the "smart" link
-  // (We will add a real shortener + redirect route later.)
-  const shortUrl = originalUrl;
-
-  // 4) Persist SmartLink record
-  let record;
-  try {
-    record = await prisma.smartLink.create({
-      data: {
+    const links = await prisma.smartLink.findMany({
+      where: {
         userId,
-        merchantRuleId,
-        merchantName,
-        merchantDomain,
-        originalUrl,
-        shortUrl,
-        label,
+        ...(merchantId ? { merchantRuleId: merchantId } : {}),
       },
+      orderBy: { createdAt: "desc" },
+      take: limit,
       select: {
         id: true,
+        merchantName: true,
+        merchantDomain: true,
+        merchantRuleId: true,
+        originalUrl: true,
         shortUrl: true,
+        label: true,
+        createdAt: true,
       },
     });
-  } catch {
-    // Retry without merchantRuleId if relation fails
-    record = await prisma.smartLink.create({
-      data: {
-        userId,
-        merchantName,
-        merchantDomain,
-        originalUrl,
-        shortUrl,
-        label,
-      },
-      select: {
-        id: true,
-        shortUrl: true,
-      },
-    });
-  }
 
-  // 5) Respond for the UI
-  return NextResponse.json({ link: record.shortUrl });
+    const out = links.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() }));
+    return NextResponse.json({ links: out });
+  } catch (e) {
+    console.error("[/api/smartlink/history] error:", e);
+    return NextResponse.json({ links: [], error: "Failed to load history" }, { status: 500 });
+  }
 }
