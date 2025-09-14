@@ -49,10 +49,10 @@ export async function POST(req: Request) {
     // Update commission status to PROCESSING = "approved/cleared" in our flow
     // Your enum (from earlier) for status is PayoutStatus: PENDING | PROCESSING | PAID | FAILED
     const updated = await prisma.commission.update({
-      where: { id: commissionId },
-      data: { status: "PROCESSING" as any },
-      select: { id: true, status: true, amount: true, userId: true, type: true },
-    });
+  where: { id: commissionId },
+  data: { status: "APPROVED" },
+  select: { id: true, status: true, amount: true, userId: true, type: true },
+});
 
     return NextResponse.json({
       success: true,
