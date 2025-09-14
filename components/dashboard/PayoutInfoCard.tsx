@@ -99,14 +99,13 @@ export default function PayoutInfoCard({
             {submitting ? "Submitting..." : canRequest ? "Request payout" : "Threshold not met"}
           </button>
 
-          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-            <Link className="underline" href="/dashboard/payouts">
-              View payout history
-            </Link>
+          <p className="mt-3 text-xs text-gray-500">
+            Questions? See our{" "}
             <Link className="underline" href="/trust">
               Trust Center
             </Link>
-          </div>
+            .
+          </p>
         </div>
       </div>
     </section>
