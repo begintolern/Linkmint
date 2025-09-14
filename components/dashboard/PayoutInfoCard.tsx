@@ -39,14 +39,11 @@ export default function PayoutInfoCard({
       const res = await fetch("/api/payouts/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // include a simple body if your API expects it; otherwise omit
         body: JSON.stringify({ source: "dashboard_overview" }),
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.message || "Request failed");
-      }
+      if (!res.ok) throw new Error(data?.message || "Request failed");
 
       setMsg(
         data?.message ||
@@ -88,16 +85,8 @@ export default function PayoutInfoCard({
             <p className="mt-1 text-sm text-gray-700">
               You can request a payout once your Approved earnings reach the threshold.
             </p>
-            {msg && (
-              <p className="mt-2 text-xs text-green-600">
-                {msg}
-              </p>
-            )}
-            {err && (
-              <p className="mt-2 text-xs text-red-600">
-                {err}
-              </p>
-            )}
+            {msg && <p className="mt-2 text-xs text-green-600">{msg}</p>}
+            {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
           </div>
 
           <button
@@ -110,13 +99,14 @@ export default function PayoutInfoCard({
             {submitting ? "Submitting..." : canRequest ? "Request payout" : "Threshold not met"}
           </button>
 
-          <p className="mt-2 text-xs text-gray-500">
-            Questions? See our{" "}
+          <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+            <Link className="underline" href="/dashboard/payouts">
+              View payout history
+            </Link>
             <Link className="underline" href="/trust">
               Trust Center
             </Link>
-            .
-          </p>
+          </div>
         </div>
       </div>
     </section>
