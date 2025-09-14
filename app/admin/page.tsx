@@ -6,6 +6,7 @@ import Link from "next/link";
 import { assertAdmin } from "@/lib/utils/adminGuard";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
+import AdminHeader from "@/components/AdminHeader";  // Make sure you have the AdminHeader component
 
 const tabs = [
   { key: "users",     label: "Users",     href: "/admin/users",     desc: "All users, verification & flags" },
@@ -25,6 +26,9 @@ export default async function AdminHomePage() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
+      {/* Admin Header with role-based display */}
+      <AdminHeader />
+
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Admin</h1>
