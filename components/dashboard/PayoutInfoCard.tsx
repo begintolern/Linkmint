@@ -1,15 +1,14 @@
 // components/dashboard/PayoutInfoCard.tsx
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 
 type Props = {
-  approvedTotal: number;      // total approved amount
-  threshold?: number;         // default 5
-  currency?: string;          // default USD
-  nextPayoutEtaText?: string; // e.g. "Typically 30–60 days"
-  onRequestPayout?: () => void; // optional handler to wire later
+  approvedTotal: number;
+  threshold?: number;
+  currency?: string;
+  nextPayoutEtaText?: string;
 };
 
 export default function PayoutInfoCard({
@@ -17,8 +16,11 @@ export default function PayoutInfoCard({
   threshold = 5,
   currency = "USD",
   nextPayoutEtaText = "Typically 30–60 days",
-  onRequestPayout,
 }: Props) {
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
   const fmt = (v: number) =>
     new Intl.NumberFormat(undefined, {
       style: "currency",
@@ -26,15 +28,37 @@ export default function PayoutInfoCard({
       maximumFractionDigits: 2,
     }).format(v);
 
-  const canRequest = approvedTotal >= threshold;
+  const canRequest = approvedTotal >= threshold && !submitting;
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (!canRequest) return;
-    if (onRequestPayout) {
-      onRequestPayout();
-    } else {
-      // Placeholder until wired to a real API
-      alert("Payout request submitted (placeholder).");
+    setSubmitting(true);
+    setMsg(null);
+    setErr(null);
+    try {
+      const res = await fetch("/api/payouts/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // include a simple body if your API expects it; otherwise omit
+        body: JSON.stringify({ source: "dashboard_overview" }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || "Request failed");
+      }
+
+      setMsg(
+        data?.message ||
+          "Payout request submitted! You’ll see it in your payout history shortly."
+      );
+    } catch (e: any) {
+      setErr(
+        e?.message ||
+          "Something went wrong submitting your payout request. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -64,6 +88,16 @@ export default function PayoutInfoCard({
             <p className="mt-1 text-sm text-gray-700">
               You can request a payout once your Approved earnings reach the threshold.
             </p>
+            {msg && (
+              <p className="mt-2 text-xs text-green-600">
+                {msg}
+              </p>
+            )}
+            {err && (
+              <p className="mt-2 text-xs text-red-600">
+                {err}
+              </p>
+            )}
           </div>
 
           <button
@@ -73,7 +107,7 @@ export default function PayoutInfoCard({
               canRequest ? "bg-gray-900 hover:bg-black" : "bg-gray-300 cursor-not-allowed"
             }`}
           >
-            {canRequest ? "Request payout" : "Threshold not met"}
+            {submitting ? "Submitting..." : canRequest ? "Request payout" : "Threshold not met"}
           </button>
 
           <p className="mt-2 text-xs text-gray-500">
