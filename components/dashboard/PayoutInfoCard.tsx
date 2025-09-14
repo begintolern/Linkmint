@@ -1,7 +1,7 @@
 // components/dashboard/PayoutInfoCard.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Props = {
@@ -20,6 +20,7 @@ export default function PayoutInfoCard({
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [justSubmitted, setJustSubmitted] = useState(false); // for green success state
 
   const fmt = (v: number) =>
     new Intl.NumberFormat(undefined, {
@@ -29,7 +30,16 @@ export default function PayoutInfoCard({
     }).format(v);
 
   const approved = approvedTotal || 0;
-  const canRequest = approved >= threshold && !submitting;
+  const meetsThreshold = approved >= threshold;
+  const canRequest = meetsThreshold && !submitting;
+
+  // Reset the green success state after a short delay
+  useEffect(() => {
+    if (justSubmitted) {
+      const t = setTimeout(() => setJustSubmitted(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [justSubmitted]);
 
   const handleClick = async () => {
     if (!canRequest) return;
@@ -49,6 +59,7 @@ export default function PayoutInfoCard({
         data?.message ||
           "Payout request submitted! You’ll see it in your payout history shortly."
       );
+      setJustSubmitted(true);
     } catch (e: any) {
       setErr(
         e?.message ||
@@ -58,6 +69,24 @@ export default function PayoutInfoCard({
       setSubmitting(false);
     }
   };
+
+  const buttonLabel = submitting
+    ? "Submitting…"
+    : justSubmitted
+    ? "Request submitted!"
+    : meetsThreshold
+    ? "Request payout"
+    : `Need at least ${fmt(threshold)}`;
+
+  const buttonBase =
+    "mt-4 inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-white transition";
+  const buttonStateClass = submitting
+    ? "bg-gray-400 cursor-wait"
+    : justSubmitted
+    ? "bg-green-600 hover:bg-green-700"
+    : meetsThreshold
+    ? "bg-gray-900 hover:bg-black"
+    : "bg-gray-300 cursor-not-allowed";
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6">
@@ -95,13 +124,33 @@ export default function PayoutInfoCard({
           </div>
 
           <button
-            disabled={!canRequest}
+            disabled={!meetsThreshold || submitting}
             onClick={handleClick}
-            className={`mt-4 inline-flex items-center justify-center rounded-md px-4 py-2 text-white transition ${
-              canRequest ? "bg-gray-900 hover:bg-black" : "bg-gray-300 cursor-not-allowed"
-            }`}
+            className={`${buttonBase} ${buttonStateClass}`}
           >
-            {submitting ? "Submitting..." : canRequest ? "Request payout" : "Threshold not met"}
+            {submitting && (
+              <svg
+                className="h-4 w-4 animate-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden="true"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            )}
+            <span>{buttonLabel}</span>
           </button>
 
           <p className="mt-3 text-xs text-gray-500">
