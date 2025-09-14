@@ -11,14 +11,20 @@ import EarningsCard from "@/components/dashboard/EarningsCard";
 import CommissionCard from "@/components/dashboard/CommissionCard";
 import PayoutMiniCard from "@/components/dashboard/PayoutMiniCard";
 import FallbackAttach from "@/components/dashboard/FallbackAttach";
+import EarningsSummary from "@/components/dashboard/EarningsSummary";
+import PayoutInfoCard from "@/components/dashboard/PayoutInfoCard"; // ⬅️ new import
 
-// ⬇️ add this import
 export default async function DashboardOverviewPage() {
   const raw = await getServerSession(authOptions);
   const session = raw as Session | null;
 
   const name = session?.user?.name ?? "";
   const userId = (session?.user as any)?.id ?? null;
+
+  // For now these are placeholders until wired to DB
+  const pending = 12.34;
+  const approved = 56.78;
+  const paid = 90.12;
 
   return (
     <main className="mx-auto max-w-6xl p-6 space-y-6">
@@ -79,12 +85,16 @@ export default async function DashboardOverviewPage() {
         <CommissionCard />
       </div>
 
+      {/* New: Polished Earnings Summary */}
+      <EarningsSummary pending={pending} approved={approved} paid={paid} />
+
+      {/* New: Payout Info */}
+      <PayoutInfoCard approvedTotal={approved} threshold={5} />
+
       {/* Snapshot: default payout + last request */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <PayoutMiniCard />
       </div>
-
-      {/* Merchants + Smart Link drawer */}
-      </main>
+    </main>
   );
 }
