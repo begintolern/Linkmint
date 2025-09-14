@@ -1,6 +1,5 @@
-// app/api/smartlink/history/route.ts
-import { NextResponse } from "next/server";
-import { NextRequest } from "next/server";
+// app/api/smartlink/route.ts
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { getToken } from "next-auth/jwt";
@@ -8,54 +7,170 @@ import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
-// GET /api/smartlink/history?merchantId=<id>&limit=20
-export async function GET(req: NextRequest) {
-  // Try normal session first
+// ---- Helpers ---------------------------------------------------------------
+
+function normalizeUrl(input: string): URL | null {
+  try {
+    const hasProto = /^https?:\/\//i.test(input.trim());
+    const test = hasProto ? input.trim() : `https://${input.trim()}`;
+    const u = new URL(test);
+    if (!u.hostname.includes(".")) return null;
+    return u;
+  } catch {
+    return null;
+  }
+}
+
+type RuleLite = {
+  id: string;
+  merchantName: string;
+  network: string | null;
+  domainPattern: string | null;
+  active: boolean;
+  status: string | null;
+  inactiveReason: string | null;
+  allowedRegions: string[] | null;
+};
+
+async function findMerchantRuleByHost(hostname: string): Promise<RuleLite | null> {
+  // pull all rules; for large tables, consider indexing and filtering by domain
+  const rules: RuleLite[] = await prisma.merchantRule.findMany({
+    select: {
+      id: true,
+      merchantName: true,
+      network: true,
+      domainPattern: true,
+      active: true,
+      status: true,
+      inactiveReason: true,
+      allowedRegions: true,
+    },
+  });
+
+  const host = hostname.toLowerCase().replace(/^www\./, "");
+  const match = rules.find((r) => {
+    const dp = (r.domainPattern ?? "").toLowerCase().replace(/^www\./, "");
+    return dp && (host === dp || host.endsWith("." + dp) || host.includes(dp));
+  });
+
+  return match ?? null;
+}
+
+// ---- Types -----------------------------------------------------------------
+
+type PostBody = { url?: string; label?: string };
+
+// ---- Handler ---------------------------------------------------------------
+
+export async function POST(req: NextRequest) {
+  // 1) Auth: session first, then JWT fallback
   const raw = await getServerSession(authOptions);
   const session = raw as Session | null;
   let userId = (session?.user as any)?.id as string | undefined;
 
-  // Fallback: read JWT directly (handles edge cases where session isn't hydrated in route)
   if (!userId) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     userId = (token as any)?.sub || (token as any)?.id;
   }
-
   if (!userId) {
-    // No user → empty list (don’t 401; keep UI simple)
-    return NextResponse.json({ links: [] }, { status: 200 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const url = new URL(req.url);
-  const merchantId = url.searchParams.get("merchantId");
-  const limit = Math.max(1, Math.min(50, Number(url.searchParams.get("limit") ?? 20)));
+  // 2) Parse input
+  const body = (await req.json().catch(() => ({}))) as PostBody;
+  const rawUrl = body?.url?.trim();
+  const label = body?.label?.trim() || null;
 
-  try {
-    const links = await prisma.smartLink.findMany({
-      where: {
+  if (!rawUrl) {
+    return NextResponse.json({ error: "Missing url" }, { status: 400 });
+  }
+  const parsed = normalizeUrl(rawUrl);
+  if (!parsed) {
+    return NextResponse.json(
+      { error: "Invalid URL. Please include a full product URL." },
+      { status: 400 }
+    );
+  }
+
+  // 3) Resolve merchant rule by hostname
+  const hostname = parsed.hostname;
+  const rule = await findMerchantRuleByHost(hostname);
+
+  if (!rule) {
+    // Create generic link (no commission rule matched)
+    const generic = await prisma.smartLink.create({
+      data: {
         userId,
-        ...(merchantId ? { merchantRuleId: merchantId } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        merchantName: true,
-        merchantDomain: true,
-        merchantRuleId: true,
-        originalUrl: true,
-        shortUrl: true,
-        label: true,
-        createdAt: true,
+        merchantRuleId: null,
+        merchantName: hostname,
+        merchantDomain: hostname,
+        originalUrl: parsed.toString(),
+        shortUrl: parsed.toString(), // TODO: integrate shortener
+        label,
       },
     });
 
-    const out = links.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() }));
-    return NextResponse.json({ links: out });
-  } catch (e) {
-    console.error("[/api/smartlink/history] error:", e);
-    return NextResponse.json({ links: [], error: "Failed to load history" }, { status: 500 });
+    return NextResponse.json({
+      ok: true,
+      link: generic.shortUrl,
+      smartUrl: generic.shortUrl,
+      shortUrl: generic.shortUrl,
+      warning: "No merchant rule matched; this link may not earn commissions.",
+    });
   }
+
+  // 4) Guard inactive/greyed merchants OR merchants still pending
+if (!rule.active || rule.status === "PENDING") {
+  const reason =
+    rule.inactiveReason ||
+    (rule.status === "PENDING"
+      ? "This merchant is not yet approved for commissions."
+      : "This merchant is currently unavailable.");
+  return NextResponse.json(
+    {
+      ok: false,
+      error: reason,
+      merchant: { name: rule.merchantName, status: rule.status ?? "INACTIVE" },
+    },
+    { status: 422 }
+  );
+}
+  // 5) Region note if not Global
+  const regions = Array.isArray(rule.allowedRegions) ? rule.allowedRegions : [];
+  const regionsNote =
+    regions.length && !regions.includes("Global")
+      ? `Commissions valid only in: ${regions.join(", ")}`
+      : null;
+
+  // 6) Create SmartLink
+  const created = await prisma.smartLink.create({
+    data: {
+      userId,
+      merchantRuleId: rule.id,
+      merchantName: rule.merchantName,
+      merchantDomain: rule.domainPattern ?? hostname,
+      originalUrl: parsed.toString(),
+      shortUrl: parsed.toString(), // TODO: integrate shortener
+      label,
+    },
+  });
+
+  return NextResponse.json(
+    {
+      ok: true,
+      link: created.shortUrl,
+      smartUrl: created.shortUrl,
+      shortUrl: created.shortUrl,
+      merchant: {
+        id: rule.id,
+        name: rule.merchantName,
+        status: rule.status ?? "ACTIVE",
+        allowedRegions: regions,
+      },
+      ...(regionsNote ? { regionsNote } : {}),
+    },
+    { status: 200 }
+  );
 }

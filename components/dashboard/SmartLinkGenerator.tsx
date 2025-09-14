@@ -7,6 +7,8 @@ export default function SmartLinkGenerator() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>("");
   const [lastLink, setLastLink] = useState<string>("");
+  const [regionsNote, setRegionsNote] = useState<string>("");
+  const [warning, setWarning] = useState<string>("");
 
   function looksLikeUrl(u: string) {
     try {
@@ -27,6 +29,8 @@ export default function SmartLinkGenerator() {
 
     setCreating(true);
     setError("");
+    setWarning("");
+    setRegionsNote("");
     setLastLink("");
 
     try {
@@ -35,14 +39,18 @@ export default function SmartLinkGenerator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const data = await res.json();
+
+      const data = await res.json().catch(() => ({} as any));
 
       if (!res.ok) {
+        // Show exact server error (e.g., merchant unavailable / pending / inactive)
         setError(data?.error || "Failed to create smart link.");
+        if (data?.regionsNote) setRegionsNote(String(data.regionsNote));
         return;
       }
 
-      const out = data?.link || data?.url || data?.shortUrl || data?.smartUrl || "";
+      const out =
+        data?.link || data?.url || data?.shortUrl || data?.smartUrl || "";
       if (!out) {
         setError("Smart link created but no URL returned.");
         return;
@@ -50,6 +58,9 @@ export default function SmartLinkGenerator() {
 
       setLastLink(out);
       setUrl("");
+
+      if (data?.regionsNote) setRegionsNote(String(data.regionsNote));
+      if (data?.warning) setWarning(String(data.warning));
 
       // Tell history to refresh
       window.dispatchEvent(new CustomEvent("smartlink:created"));
@@ -62,7 +73,7 @@ export default function SmartLinkGenerator() {
 
   useEffect(() => {
     if (!error) return;
-    const t = setTimeout(() => setError(""), 4000);
+    const t = setTimeout(() => setError(""), 5000);
     return () => clearTimeout(t);
   }, [error]);
 
@@ -71,6 +82,7 @@ export default function SmartLinkGenerator() {
       <div className="text-sm text-gray-600">
         Paste a product URL from a merchant site and create a trackable Smart Link.
       </div>
+
       <div className="flex gap-2">
         <input
           value={url}
@@ -91,9 +103,24 @@ export default function SmartLinkGenerator() {
         </button>
       </div>
 
+      {/* Error from API (e.g., merchant inactive/pending) */}
       {error ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">
           {error}
+        </div>
+      ) : null}
+
+      {/* Regions note (e.g., “Commissions valid only in: US”) */}
+      {regionsNote ? (
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-800">
+          {regionsNote}
+        </div>
+      ) : null}
+
+      {/* Generic warning (e.g., no matching merchant rule) */}
+      {warning ? (
+        <div className="rounded-md border border-yellow-200 bg-yellow-50 p-2 text-xs text-yellow-800">
+          {warning}
         </div>
       ) : null}
 
