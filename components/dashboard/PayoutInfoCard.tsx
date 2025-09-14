@@ -6,9 +6,9 @@ import Link from "next/link";
 
 type Props = {
   approvedTotal: number;
-  threshold?: number;
-  currency?: string;
-  nextPayoutEtaText?: string;
+  threshold?: number;         // default 5
+  currency?: string;          // default USD
+  nextPayoutEtaText?: string; // e.g. "Typically 30–60 days"
 };
 
 export default function PayoutInfoCard({
@@ -28,7 +28,8 @@ export default function PayoutInfoCard({
       maximumFractionDigits: 2,
     }).format(v);
 
-  const canRequest = approvedTotal >= threshold && !submitting;
+  const approved = approvedTotal || 0;
+  const canRequest = approved >= threshold && !submitting;
 
   const handleClick = async () => {
     if (!canRequest) return;
@@ -41,8 +42,7 @@ export default function PayoutInfoCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source: "dashboard_overview" }),
       });
-
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({} as any));
       if (!res.ok) throw new Error(data?.message || "Request failed");
 
       setMsg(
@@ -66,7 +66,7 @@ export default function PayoutInfoCard({
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-gray-200 p-4">
           <div className="text-sm text-gray-600">Approved balance</div>
-          <div className="mt-1 text-2xl font-bold">{fmt(approvedTotal)}</div>
+          <div className="mt-1 text-2xl font-bold">{fmt(approved)}</div>
           <p className="mt-1 text-xs text-gray-500">
             Payouts are only made after Linkmint receives funds from the merchant.{" "}
             {nextPayoutEtaText}.
@@ -77,6 +77,11 @@ export default function PayoutInfoCard({
           <p className="mt-2 text-xs text-gray-500">
             Minimum payout threshold: <strong>{fmt(threshold)}</strong>.
           </p>
+          {approved === 0 && (
+            <p className="mt-2 text-xs text-gray-500">
+              Once your Approved balance grows past the threshold, you’ll be able to request a payout here.
+            </p>
+          )}
         </div>
 
         <div className="rounded-lg border border-gray-200 p-4 flex flex-col justify-between">
