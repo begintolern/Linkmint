@@ -35,17 +35,35 @@ export default async function Page() {
             r.commissionRate?.toString?.() ??
             (typeof r.rate === "number" ? String(r.rate) : "");
 
+          const regions: string[] = Array.isArray(r.allowedRegions)
+            ? r.allowedRegions
+            : [];
+
+          const cardMuted = !r.active; // grey out inactive entries
+
           return (
-            <div key={r.id} className="rounded-xl border p-4 space-y-2">
+            <div
+              key={r.id}
+              className={`rounded-xl border p-4 space-y-2 ${
+                cardMuted ? "opacity-70" : ""
+              }`}
+            >
               <div className="flex items-center justify-between">
                 <div className="font-medium">
                   {r.merchantName}{" "}
                   <span className="opacity-60">({r.network ?? "—"})</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {/* Status chip */}
+                  {r.status && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100">
+                      {r.status}
+                    </span>
+                  )}
+                  {/* Active/Inactive chip */}
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
-                      r.active ? "bg-green-100" : "bg-gray-100"
+                      r.active ? "bg-green-100" : "bg-gray-200"
                     }`}
                   >
                     {r.active ? "Active" : "Inactive"}
@@ -68,6 +86,12 @@ export default async function Page() {
                   Commission: {r.commissionType ?? "—"}{" "}
                   {rateStr ? `@ ${rateStr}` : ""}
                 </div>
+                <div>
+                  Regions:{" "}
+                  {regions.length
+                    ? regions.join(", ")
+                    : "—"}
+                </div>
               </div>
 
               {!!allowed.length && (
@@ -81,6 +105,13 @@ export default async function Page() {
                 <div className="text-sm">
                   <div className="font-semibold">Disallowed</div>
                   <div className="opacity-80">{disallowed.join(", ")}</div>
+                </div>
+              )}
+
+              {r.inactiveReason && !r.active && (
+                <div className="text-sm">
+                  <div className="font-semibold">Inactive reason</div>
+                  <div className="opacity-80">{r.inactiveReason}</div>
                 </div>
               )}
 

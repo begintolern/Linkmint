@@ -216,6 +216,10 @@ model MerchantRule {
   status           String         @default("PENDING")
   commissions      Commission[]
   smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
+
+  // NEW: Region controls and optional inactivation reason
+  allowedRegions   String[]       // e.g. ["US"], ["Global"], or ["US","CA","UK"]
+  inactiveReason   String?
 }
 
 model VerificationToken {
@@ -328,6 +332,7 @@ enum CommissionCalc {
   PERCENT
   FIXED
 }
+
 model AdvertiserApplication {
   id           String   @id @default(cuid())
   advertiserId String
