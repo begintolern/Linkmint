@@ -1,77 +1,46 @@
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = searchParams.get("token");
-
+    const token = req.nextUrl.searchParams.get("token");
     if (!token) {
-      return NextResponse.json(
-        { ok: false, error: "Missing token" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, message: "Missing token." }, { status: 400 });
     }
 
-    // DEBUG: peek recent tokens
-    const peek = await prisma.verificationToken.findMany({
-      take: 3,
-      orderBy: { expires: "desc" },
-      select: { token: true, userId: true, expires: true },
-    });
-    console.log("[VERIFY DEBUG] recent tokens:", peek);
-
-    // 1) Find token row
-    const row = await prisma.verificationToken.findUnique({
-      where: { token }, // token is unique in your model
-      select: { userId: true, token: true, expires: true },
+    // Look up user by verifyToken and ensure not expired
+    const user = await prisma.user.findFirst({
+      where: {
+        verifyToken: token,
+        verifyTokenExpiry: { gt: new Date() },
+      },
+      select: { id: true, email: true },
     });
 
-    if (!row) {
+    if (!user) {
       return NextResponse.json(
-        { ok: false, error: "Invalid token" },
-        { status: 400 }
-      );
-    }
-    if (row.expires < new Date()) {
-      await prisma.verificationToken
-        .delete({ where: { token: row.token } })
-        .catch(() => {});
-      return NextResponse.json(
-        { ok: false, error: "Token expired" },
+        { ok: false, message: "Invalid or expired token." },
         { status: 400 }
       );
     }
 
-    // 2) Mark user as verified
     await prisma.user.update({
-      where: { id: row.userId },
-      data: { emailVerifiedAt: new Date() },
+      where: { id: user.id },
+      data: {
+        emailVerifiedAt: new Date(),
+        verifyToken: null,
+        verifyTokenExpiry: null,
+      },
     });
 
-    // 3) Consume token
-    await prisma.verificationToken
-      .delete({ where: { token: row.token } })
-      .catch(() => {});
+    // Optional: redirect to a pretty success page instead of JSON
+    // return NextResponse.redirect(new URL("/login?verified=1", req.url));
 
-    // 4) Redirect to login with success flag
-    const base =
-      process.env.EMAIL_VERIFY_REDIRECT_URL ||
-      process.env.NEXTAUTH_URL ||
-      "http://localhost:3000/login";
-
-    const redirectUrl = base.includes("?")
-      ? `${base}&verified=1`
-      : `${base}?verified=1`;
-
-    return NextResponse.redirect(redirectUrl);
-  } catch (e) {
-    console.error("GET /api/auth/verify error:", e);
+    return NextResponse.json({ ok: true, message: "Email verified. You can log in now." });
+  } catch {
     return NextResponse.json(
-      { ok: false, error: "Server error" },
+      { ok: false, message: "Something went wrong. Please try again." },
       { status: 500 }
     );
   }

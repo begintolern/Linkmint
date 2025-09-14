@@ -1,36 +1,75 @@
 // app/verify/page.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function VerifyPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const didRun = useRef(false);
+  const params = useSearchParams();
+  const token = params.get("token");
+  const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
+  const [message, setMessage] = useState<string>("Verifying your email…");
 
   useEffect(() => {
-    if (didRun.current) return;
-    didRun.current = true;
-
-    const token = searchParams?.get("token") ?? "";
-    if (!token) {
-      // ✅ If user lands here without a token (right after signup), send them to the safe page
-      router.replace("/check-email");
-      return;
+    async function run() {
+      if (!token) {
+        setStatus("error");
+        setMessage("Missing verification token.");
+        return;
+      }
+      try {
+        const res = await fetch(`/api/auth/verify?token=${encodeURIComponent(token)}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        const data = await res.json();
+        if (res.ok && data?.ok) {
+          setStatus("ok");
+          setMessage("Your email has been verified. You can log in now.");
+        } else {
+          setStatus("error");
+          setMessage(data?.message || "Invalid or expired token.");
+        }
+      } catch {
+        setStatus("error");
+        setMessage("Something went wrong. Please try again.");
+      }
     }
-
-    // ✅ With token: hand off to server which verifies and redirects to /login?verified=1
-    window.location.assign(`/api/auth/verify?token=${encodeURIComponent(token)}`);
-  }, [router, searchParams]);
+    run();
+  }, [token]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="bg-white shadow rounded p-6 text-center max-w-md w-full">
-        <h1 className="text-2xl font-semibold mb-2">Email Verification</h1>
-        <p className="text-gray-600">Verifying your email…</p>
-        <div className="mt-4 inline-block h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
+    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
+      <h1 className="text-2xl font-semibold">Email verification</h1>
+      <p className={`mt-3 text-sm ${status === "error" ? "text-red-600" : "text-gray-700"}`}>
+        {message}
+      </p>
+
+      <div className="mt-6 flex items-center gap-3">
+        <Link
+          href="/login"
+          className="inline-flex items-center justify-center rounded-md bg-gray-900 px-4 py-2 text-white hover:bg-black transition"
+        >
+          Go to login
+        </Link>
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50 transition"
+        >
+          Back to home
+        </Link>
       </div>
-    </div>
+
+      {status === "error" && (
+        <p className="mt-4 text-xs text-gray-500">
+          Tip: If your link expired, you can{" "}
+          <Link href="/login" className="underline">
+            request a new verification email
+          </Link>
+          .
+        </p>
+      )}
+    </main>
   );
 }

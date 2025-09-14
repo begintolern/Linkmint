@@ -37,23 +37,35 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Optional: sign-in hint line under CTAs to match your screenshot */}
             <p className="mt-3 text-sm text-gray-500">
-              Already have an account? <Link className="underline" href="/login">Log in</Link>
+              Already have an account?{" "}
+              <Link className="underline" href="/login">
+                Log in
+              </Link>
             </p>
           </div>
         </section>
 
         {/* Tutorial video */}
-        <section id="how-it-works" className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16">
+        <section
+          id="how-it-works"
+          className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-16"
+        >
           <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-xl sm:text-2xl font-semibold">Watch: Linkmint in 30 seconds</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold">
+              Watch: Linkmint in 30 seconds
+            </h2>
             <p className="mt-2 text-gray-600">
               See how to create a smart link, share it, and get paid after approvals.
             </p>
 
             <div className="mt-4 aspect-video w-full overflow-hidden rounded-xl border">
-              <video className="h-full w-full" controls preload="metadata" poster="/video/tutorial-poster.jpg">
+              <video
+                className="h-full w-full"
+                controls
+                preload="metadata"
+                poster="/video/tutorial-poster.jpg"
+              >
                 <source src="/video/tutorial.mp4" type="video/mp4" />
                 <track
                   src="/video/tutorial.vtt"
@@ -87,14 +99,28 @@ export default function HomePage() {
         </section>
       </main>
 
+      {/* Footer */}
       <footer className="border-t">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} linkmint.co — All rights reserved.</p>
+          <p>
+            © {new Date().getFullYear()} linkmint.co — All rights reserved.
+          </p>
           <div className="flex items-center gap-4">
-            <Link href="/trust" className="hover:text-gray-700">Trust Center</Link>
-            <Link href="/terms" className="hover:text-gray-700">Terms</Link>
-            <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
-            <Link href="mailto:admin@linkmint.co" className="hover:text-gray-700">Contact</Link>
+            <Link href="/trust" className="hover:text-gray-700">
+              Trust Center
+            </Link>
+            <Link href="/terms" className="hover:text-gray-700">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="hover:text-gray-700">
+              Privacy Policy
+            </Link>
+            <a
+              href="mailto:admin@linkmint.co"
+              className="hover:text-gray-700"
+            >
+              Contact
+            </a>
           </div>
         </div>
       </footer>
@@ -102,7 +128,15 @@ export default function HomePage() {
   );
 }
 
-function Step({ num, title, desc }: { num: string; title: string; desc: string }) {
+function Step({
+  num,
+  title,
+  desc,
+}: {
+  num: string;
+  title: string;
+  desc: string;
+}) {
   return (
     <div className="rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-3">

@@ -1,74 +1,76 @@
 // app/layout.tsx
 import "./globals.css";
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import Footer from "@/components/site/Footer";
-import SessionProviderWrapper from "@/app/providers/SessionProviderWrapper";
-import ToastProvider from "@/components/ui/ToastProvider";
-import StickyHeader from "@/app/components/StickyHeader"; // ✅ add header
-
-// Avoid stale caching during dev
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-inter",
-});
-
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { cookies } from "next/headers";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: "Linkmint — Earn From Every Link You Share",
-    template: "%s · Linkmint",
-  },
-  description: "Turn any link into a payout. No followers needed. Built for trust.",
-  keywords: ["link monetization", "affiliate", "payouts", "sharing"],
-  applicationName: "Linkmint",
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
-  openGraph: {
-    type: "website",
-    url: SITE_URL,
-    siteName: "Linkmint",
-    title: "Linkmint — Earn From Every Link You Share",
-    description: "Earn from every link you share. Built for trust.",
-    images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: "Linkmint preview" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@linkmint",
-    title: "Linkmint — Earn From Every Link You Share",
-    description: "Turn any link into a payout. No followers needed. Built for trust.",
-    images: ["/opengraph-image.png"],
-  },
+  title: "linkmint.co",
+  description:
+    "Turn any link into a payout. Share links you already love — earn automatically after approvals.",
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: "#111111",
-  colorScheme: "light",
-};
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Read cookies server-side (set by your login route)
+  const store = cookies();
+  const email = store.get("email")?.value || null; // presence means "logged in"
+  const role = store.get("role")?.value || "user"; // "admin" or "user"
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
-      <body className="min-h-screen bg-white text-gray-900 antialiased">
-        <SessionProviderWrapper>
-          {/* ✅ Global sticky header with centered large logo */}
-          <StickyHeader />
-          <div className="min-h-screen">{children}</div>
-        </SessionProviderWrapper>
-        <Footer />
-        <ToastProvider />
+    <html lang="en">
+      <body className="bg-white text-gray-900">
+        <Header isLoggedIn={!!email} isAdmin={role === "admin"} />
+        {children}
       </body>
     </html>
+  );
+}
+
+function Header({
+  isLoggedIn,
+  isAdmin,
+}: {
+  isLoggedIn: boolean;
+  isAdmin: boolean;
+}) {
+  return (
+    <header className="border-b bg-white">
+      <div className="mx-auto max-w-6xl px-4 py-3 flex justify-between items-center">
+        <Link href="/" className="font-bold text-xl">
+          linkmint.co
+        </Link>
+
+        <nav className="flex items-center gap-4 text-sm">
+          {isLoggedIn ? (
+            <>
+              <Link href="/dashboard" className="hover:underline">
+                Dashboard
+              </Link>
+              {isAdmin && (
+                <Link href="/admin" className="hover:underline">
+                  Admin
+                </Link>
+              )}
+              <Link href="/logout" className="hover:underline">
+                Logout
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="hover:underline">
+                Login
+              </Link>
+              <Link href="/signup" className="hover:underline">
+                Sign Up
+              </Link>
+            </>
+          )}
+        </nav>
+      </div>
+    </header>
   );
 }

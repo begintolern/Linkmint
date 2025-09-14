@@ -8,23 +8,28 @@ datasource db {
 }
 
 model User {
-  id                     String               @id @default(cuid())
-  email                  String               @unique
-  name                   String?
-  password               String?
-  createdAt              DateTime             @default(now())
-  referralGroupId        String?
-  referredById           String?
-  verifyToken            String?              @unique
-  verifyTokenExpiry      DateTime?
-  trustScore             Int?                 @default(0)
-  referralBadge          String?
-  referralCode           String?              @unique
-  role                   String?              @default("user")
-  emailVerifiedAt        DateTime?
-  updatedAt              DateTime             @updatedAt
-  ageConfirmed           Boolean              @default(false)
-  ageConfirmedAt         DateTime?
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  password          String?
+  createdAt         DateTime  @default(now())
+  referralGroupId   String?
+  referredById      String?
+  verifyToken       String?   @unique
+  verifyTokenExpiry DateTime?
+  trustScore        Int?      @default(0)
+  referralBadge     String?
+  referralCode      String?   @unique
+  role              String?   @default("user")
+  emailVerifiedAt   DateTime?
+  updatedAt         DateTime  @updatedAt
+  ageConfirmed      Boolean   @default(false)
+  ageConfirmedAt    DateTime?
+
+  // NEW: TOS acceptance audit
+  tosAcceptedAt DateTime?
+  tosAcceptedIp String?   @db.VarChar(64)
+
   deletedAt              DateTime?
   dob                    DateTime?
   commissions            Commission[]
@@ -218,8 +223,8 @@ model MerchantRule {
   smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
 
   // NEW: Region controls and optional inactivation reason
-  allowedRegions   String[]       // e.g. ["US"], ["Global"], or ["US","CA","UK"]
-  inactiveReason   String?
+  allowedRegions String[] // e.g. ["US"], ["Global"], or ["US","CA","UK"]
+  inactiveReason String?
 }
 
 model VerificationToken {
@@ -337,7 +342,7 @@ model AdvertiserApplication {
   id           String   @id @default(cuid())
   advertiserId String
   name         String
-  status       String   // pending | approved | declined
+  status       String // pending | approved | declined
   appliedAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   commission   String?
