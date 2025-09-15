@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PayoutInfoCard from "@/components/dashboard/PayoutInfoCard"; // ⬅️ new import
 
 type Payout = {
   id: string;
@@ -35,10 +36,15 @@ export default function DashboardPayoutsPage() {
       <header>
         <h1 className="text-2xl font-semibold">Payouts</h1>
         <p className="text-sm text-gray-600">
-          Your default payout method and recent payout requests.
+          Request payouts and view your payout history.
         </p>
       </header>
 
+      {/* Request payout + balance info */}
+      <PayoutInfoCard approvedTotal={56.78} threshold={5} /> 
+      {/* ⬆️ Replace 56.78 with a real approved balance from API later */}
+
+      {/* Payout history table */}
       <div className="rounded-lg border bg-white overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
@@ -52,19 +58,29 @@ export default function DashboardPayoutsPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="p-6 text-gray-500" colSpan={5}>Loading…</td></tr>
+              <tr>
+                <td className="p-6 text-gray-500" colSpan={5}>
+                  Loading…
+                </td>
+              </tr>
             ) : rows.length ? (
-              rows.map(p => (
+              rows.map((p) => (
                 <tr key={p.id} className="border-t">
-                  <td className="p-3">{new Date(p.createdAt).toLocaleString()}</td>
+                  <td className="p-3">
+                    {new Date(p.createdAt).toLocaleString()}
+                  </td>
                   <td className="p-3">{p.provider}</td>
                   <td className="p-3">{p.receiverEmail ?? "—"}</td>
-                  <td className="p-3">${(p.netCents/100).toFixed(2)}</td>
+                  <td className="p-3">${(p.netCents / 100).toFixed(2)}</td>
                   <td className="p-3">{p.statusEnum}</td>
                 </tr>
               ))
             ) : (
-              <tr><td className="p-6 text-gray-500" colSpan={5}>No payouts yet.</td></tr>
+              <tr>
+                <td className="p-6 text-gray-500" colSpan={5}>
+                  No payouts yet.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

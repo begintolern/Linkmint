@@ -8,30 +8,27 @@ datasource db {
 }
 
 model User {
-  id                String    @id @default(cuid())
-  email             String    @unique
-  name              String?
-  password          String?
-  createdAt         DateTime  @default(now())
-  referralGroupId   String?
-  referredById      String?
-  verifyToken       String?   @unique
-  verifyTokenExpiry DateTime?
-  trustScore        Int?      @default(0)
-  referralBadge     String?
-  referralCode      String?   @unique
-  role              String?   @default("user")
-  emailVerifiedAt   DateTime?
-  updatedAt         DateTime  @updatedAt
-  ageConfirmed      Boolean   @default(false)
-  ageConfirmedAt    DateTime?
-
-  // NEW: TOS acceptance audit
-  tosAcceptedAt DateTime?
-  tosAcceptedIp String?   @db.VarChar(64)
-
+  id                     String               @id @default(cuid())
+  email                  String               @unique
+  name                   String?
+  password               String?
+  createdAt              DateTime             @default(now())
+  referralGroupId        String?
+  referredById           String?
+  verifyToken            String?              @unique
+  verifyTokenExpiry      DateTime?
+  trustScore             Int?                 @default(0)
+  referralBadge          String?
+  referralCode           String?              @unique
+  role                   String?              @default("user")
+  emailVerifiedAt        DateTime?
+  updatedAt              DateTime             @updatedAt
+  ageConfirmed           Boolean              @default(false)
+  ageConfirmedAt         DateTime?
   deletedAt              DateTime?
   dob                    DateTime?
+  tosAcceptedAt          DateTime?
+  tosAcceptedIp          String?              @db.VarChar(64)
   commissions            Commission[]
   eventLogs              EventLog[]
   commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
@@ -48,6 +45,9 @@ model User {
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
   verificationTokens     VerificationToken[]
+  bonusCents          Int       @default(0)   // bonus balance in cents
+  bonusEligibleUntil  DateTime?               // when bonus window expires (e.g., 90-day override)
+  bonusTier           Int       @default(0)   // simple tier indicator (0=none, 1,2,...)
 
   @@index([deletedAt])
 }
@@ -219,12 +219,10 @@ model MerchantRule {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   status           String         @default("PENDING")
+  allowedRegions   String[]
+  inactiveReason   String?
   commissions      Commission[]
   smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
-
-  // NEW: Region controls and optional inactivation reason
-  allowedRegions String[] // e.g. ["US"], ["Global"], or ["US","CA","UK"]
-  inactiveReason String?
 }
 
 model VerificationToken {
@@ -293,6 +291,18 @@ model SmartLink {
   user           User          @relation("UserToSmartLink", fields: [userId], references: [id])
 }
 
+model AdvertiserApplication {
+  id           String   @id @default(cuid())
+  advertiserId String
+  name         String
+  status       String
+  appliedAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  commission   String?
+  cookieWindow Int?
+  notes        String?
+}
+
 enum PayoutProvider {
   PAYPAL
   PAYONEER
@@ -336,16 +346,4 @@ enum ImportMethod {
 enum CommissionCalc {
   PERCENT
   FIXED
-}
-
-model AdvertiserApplication {
-  id           String   @id @default(cuid())
-  advertiserId String
-  name         String
-  status       String // pending | approved | declined
-  appliedAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  commission   String?
-  cookieWindow Int?
-  notes        String?
 }
