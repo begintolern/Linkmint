@@ -4,17 +4,20 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const session = (await getServerSession(authOptions)) as Session | null;
+  if (!session?.user || !(session.user as any).id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = (session.user as any).id as string;
+
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: {
       bonusCents: true,
       bonusEligibleUntil: true,
