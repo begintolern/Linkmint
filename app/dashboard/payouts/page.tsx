@@ -2,7 +2,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PayoutInfoCard from "@/components/dashboard/PayoutInfoCard"; // ⬅️ new import
+import PayoutInfoCard from "@/components/dashboard/PayoutInfoCard";
+import StatusBadge from "@/components/StatusBadge"; // ⬅️ new import
 
 type Payout = {
   id: string;
@@ -41,7 +42,7 @@ export default function DashboardPayoutsPage() {
       </header>
 
       {/* Request payout + balance info */}
-      <PayoutInfoCard approvedTotal={56.78} threshold={5} /> 
+      <PayoutInfoCard approvedTotal={56.78} threshold={5} />
       {/* ⬆️ Replace 56.78 with a real approved balance from API later */}
 
       {/* Payout history table */}
@@ -72,7 +73,9 @@ export default function DashboardPayoutsPage() {
                   <td className="p-3">{p.provider}</td>
                   <td className="p-3">{p.receiverEmail ?? "—"}</td>
                   <td className="p-3">${(p.netCents / 100).toFixed(2)}</td>
-                  <td className="p-3">{p.statusEnum}</td>
+                  <td className="p-3">
+                    <StatusBadge status={p.statusEnum as any} />
+                  </td>
                 </tr>
               ))
             ) : (

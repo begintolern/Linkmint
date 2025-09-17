@@ -1,130 +1,146 @@
 // app/admin/merchant-rules/page.tsx
-export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { prisma } from "@/lib/db";
+import Link from "next/link";
 import AddRuleForm from "./AddRuleForm";
 import DeleteRuleButton from "./DeleteRuleButton";
+import StatusSelect from "./StatusSelect";
 
-function asStringArray(v: any): string[] {
-  return Array.isArray(v) ? v.map((x) => String(x)) : [];
+type Status = "PENDING" | "ACTIVE" | "REJECTED";
+
+function normalizeStatus(s: any): Status {
+  if (s === "ACTIVE" || s === "REJECTED" || s === "PENDING") return s;
+  return "PENDING";
 }
 
-export default async function Page() {
+function asPlainString(x: unknown): string {
+  if (x == null) return "—";
+  try {
+    // Handle Prisma Decimal or anything with toString()
+    // @ts-ignore
+    if (typeof x === "object" && typeof (x as any).toString === "function") {
+      return (x as any).toString();
+    }
+    return String(x);
+  } catch {
+    return "—";
+  }
+}
+
+function StatusBadge({ status }: { status: Status }) {
+  const theme =
+    status === "ACTIVE"
+      ? "bg-green-50 text-green-700 border-green-300"
+      : status === "PENDING"
+      ? "bg-yellow-50 text-yellow-700 border-yellow-300"
+      : "bg-red-50 text-red-700 border-red-300";
+  return (
+    <span className={`text-xs px-2 py-1 rounded-full border ${theme}`}>
+      {status}
+    </span>
+  );
+}
+
+export default async function MerchantRulesPage() {
   const rules = await prisma.merchantRule.findMany({
     orderBy: { merchantName: "asc" },
+    select: {
+      id: true,
+      active: true,
+      status: true, // may be null on old rows; we normalize below
+      merchantName: true,
+      network: true,
+      domainPattern: true,
+      commissionType: true,
+      commissionRate: true, // Decimal | number | null
+      notes: true,
+    },
   });
 
   return (
-    <div className="p-6 space-y-4">
+    <main className="mx-auto max-w-5xl p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Merchant Rules</h1>
+        <Link href="/admin" className="text-sm text-blue-600 hover:underline">
+          ← Back to Admin
+        </Link>
+      </div>
+
+      {!rules.length && <div className="text-sm opacity-70">No rules found.</div>}
+
+      {/* Add new */}
+      <div className="rounded-2xl border bg-white p-4 shadow-sm">
         <AddRuleForm />
       </div>
 
-      {!rules.length && (
-        <div className="text-sm opacity-70">No rules found.</div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {rules.map((r: any) => {
-          const allowed = asStringArray(r.allowedSources);
-          const disallowed = asStringArray(r.disallowed);
-          const rateStr =
-            r.commissionRate?.toString?.() ??
-            (typeof r.rate === "number" ? String(r.rate) : "");
-
-          const regions: string[] = Array.isArray(r.allowedRegions)
-            ? r.allowedRegions
-            : [];
-
-          const cardMuted = !r.active; // grey out inactive entries
+      {/* List */}
+      <div className="space-y-3">
+        {rules.map((r) => {
+          const status = normalizeStatus(r.status as any);
+          const commissionRateStr = asPlainString(r.commissionRate);
+          const networkStr = r.network ?? "—";
+          const domainStr = r.domainPattern ?? "—";
+          const notesStr = r.notes ?? "";
 
           return (
             <div
               key={r.id}
-              className={`rounded-xl border p-4 space-y-2 ${
-                cardMuted ? "opacity-70" : ""
+              className={`rounded-2xl border bg-white p-4 shadow-sm ${
+                status === "PENDING" ? "opacity-60" : ""
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="font-medium">
-                  {r.merchantName}{" "}
-                  <span className="opacity-60">({r.network ?? "—"})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* Status chip */}
-                  {r.status && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100">
-                      {r.status}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="text-lg font-semibold truncate">
+                      {r.merchantName}{" "}
+                      <span className="text-sm text-gray-400">({networkStr})</span>
+                    </div>
+
+                    {/* Read-only badge */}
+                    <StatusBadge status={status} />
+
+                    {/* Inline editor */}
+                    <StatusSelect id={r.id} initial={status} />
+
+                    {/* Active toggle indicator */}
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full border ${
+                        r.active
+                          ? "bg-blue-50 text-blue-700 border-blue-300"
+                          : "bg-gray-50 text-gray-600 border-gray-300"
+                      }`}
+                    >
+                      {r.active ? "Enabled" : "Disabled"}
                     </span>
-                  )}
-                  {/* Active/Inactive chip */}
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      r.active ? "bg-green-100" : "bg-gray-200"
-                    }`}
-                  >
-                    {r.active ? "Active" : "Inactive"}
-                  </span>
-                  <DeleteRuleButton
-                    id={r.id}
-                    name={`${r.merchantName} (${r.network ?? "—"})`}
-                  />
+                  </div>
+
+                  <div className="text-sm text-gray-600 mt-1">
+                    Domain: <span className="font-mono">{domainStr}</span>
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    Commission:{" "}
+                    <span className="font-mono">
+                      {r.commissionType ?? "—"} @ {commissionRateStr}
+                    </span>
+                  </div>
+
+                  {notesStr ? (
+                    <div className="text-sm text-gray-500 mt-1">{notesStr}</div>
+                  ) : null}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <DeleteRuleButton id={r.id} name={r.merchantName} />
                 </div>
               </div>
-
-              {r.domainPattern && (
-                <div className="text-sm">Domain: {r.domainPattern}</div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>Cookie: {r.cookieWindowDays ?? "—"} days</div>
-                <div>Payout delay: {r.payoutDelayDays ?? "—"} days</div>
-                <div>
-                  Commission: {r.commissionType ?? "—"}{" "}
-                  {rateStr ? `@ ${rateStr}` : ""}
-                </div>
-                <div>
-                  Regions:{" "}
-                  {regions.length
-                    ? regions.join(", ")
-                    : "—"}
-                </div>
-              </div>
-
-              {!!allowed.length && (
-                <div className="text-sm">
-                  <div className="font-semibold">Allowed</div>
-                  <div className="opacity-80">{allowed.join(", ")}</div>
-                </div>
-              )}
-
-              {!!disallowed.length && (
-                <div className="text-sm">
-                  <div className="font-semibold">Disallowed</div>
-                  <div className="opacity-80">{disallowed.join(", ")}</div>
-                </div>
-              )}
-
-              {r.inactiveReason && !r.active && (
-                <div className="text-sm">
-                  <div className="font-semibold">Inactive reason</div>
-                  <div className="opacity-80">{r.inactiveReason}</div>
-                </div>
-              )}
-
-              {r.notes && (
-                <div className="text-sm">
-                  <div className="font-semibold">Notes</div>
-                  <div className="opacity-80">{r.notes}</div>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
-    </div>
+    </main>
   );
 }

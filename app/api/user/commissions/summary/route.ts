@@ -15,7 +15,12 @@ export async function GET(req: NextRequest) {
   try {
     const user = await prisma.user.findUnique({
       where: { email: token.email },
-      select: { id: true },
+      select: {
+        id: true,
+        bonusCents: true,
+        bonusEligibleUntil: true,
+        bonusTier: true,
+      },
     });
 
     if (!user) {
@@ -58,7 +63,28 @@ export async function GET(req: NextRequest) {
       else if (s === "failed") failed += amt;
     }
 
-    return NextResponse.json({ pending, approved, processing, paid, failed });
+    // Bonus block
+    const now = new Date();
+    const eligibleUntil = user.bonusEligibleUntil ?? null;
+    const active =
+      eligibleUntil !== null ? eligibleUntil.getTime() > now.getTime() : false;
+
+    let remainingDays: number | null = null;
+    if (eligibleUntil) {
+      const ms = eligibleUntil.getTime() - now.getTime();
+      remainingDays = Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+    }
+
+    const bonus = {
+      cents: user.bonusCents ?? 0,
+      usd: Number(((user.bonusCents ?? 0) / 100).toFixed(2)),
+      tier: user.bonusTier ?? 0,
+      eligibleUntil,
+      remainingDays,
+      active,
+    };
+
+    return NextResponse.json({ pending, approved, processing, paid, failed, bonus });
   } catch (error) {
     console.error("Error fetching commission summary:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

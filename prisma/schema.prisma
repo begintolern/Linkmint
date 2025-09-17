@@ -314,7 +314,11 @@ enum PayoutStatus {
   PAID
   FAILED
 }
-
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
 enum CommissionStatus {
   UNVERIFIED
   PENDING

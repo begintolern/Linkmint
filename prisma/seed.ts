@@ -1,4 +1,3 @@
-// prisma/seed.ts
 import {
   PrismaClient,
   CommissionCalc,
@@ -20,7 +19,7 @@ function toCommissionCalc(value?: string | null): CommissionCalc {
 
 /** ---------- section 1: seed admin + sample commissions ---------- */
 async function seedAdminAndCommissions() {
-  const email = "testuser@example.com";
+  const email = "ertorig3@gmail.com"; // Updated email
 
   const user = await prisma.user.upsert({
     where: { email },
@@ -154,10 +153,36 @@ async function seedMerchantRulesFromJson() {
   return { upserted: count };
 }
 
+/** ---------- section 3: seed bonus ---------- */
+async function seedBonus(userEmail: string) {
+  // Find the user by email to ensure they're valid
+  const user = await prisma.user.findUnique({
+    where: { email: userEmail },
+  });
+
+  if (!user) {
+    console.log(`⚠️ No user found with email ${userEmail}`);
+    return;
+  }
+
+  // Set a bonus of $5.00 (500 bonusCents) for the user with a 30-day expiration
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      bonusCents: 500, // $5.00
+      bonusEligibleUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      bonusTier: 1,
+    },
+  });
+
+  console.log("✅ Bonus set for user:", user.email);
+}
+
 /** ---------- run ---------- */
 async function main() {
   const c = await seedAdminAndCommissions();
   const m = await seedMerchantRulesFromJson();
+  await seedBonus(c.userEmail); // Now use the correct email to seed bonus
 
   console.log("✅ Seeding complete!");
   console.log(`   User: ${c.userEmail}`);
