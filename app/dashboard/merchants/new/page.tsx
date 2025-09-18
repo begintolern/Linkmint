@@ -10,6 +10,8 @@ export default function NewMerchantPage() {
   const [network, setNetwork] = useState("CJ");
   const [domainPattern, setDomainPattern] = useState("");
   const [commissionRate, setCommissionRate] = useState("");
+  const [allowedRegions, setAllowedRegions] = useState("US"); // comma-separated
+  const [notes, setNotes] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +32,8 @@ export default function NewMerchantPage() {
           domainPattern,
           commissionType: "PERCENT",
           commissionRate: commissionRate ? Number(commissionRate) : null,
-          allowedRegions: ["US"],
+          allowedRegions, // API accepts comma-separated string or string[]
+          notes: notes || null,
         }),
       });
       const json = await res.json();
@@ -57,41 +60,69 @@ export default function NewMerchantPage() {
 
       <form onSubmit={onSubmit} className="space-y-4 max-w-lg">
         <div>
-          <label className="block text-sm font-medium mb-1">Merchant Name</label>
+          <label className="block text-sm font-medium mb-1">Merchant Name*</label>
           <input
             className="w-full border rounded px-3 py-2"
             value={merchantName}
             onChange={(e) => setMerchantName(e.target.value)}
+            placeholder="Groupe SEB"
+            required
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Network</label>
           <input
             className="w-full border rounded px-3 py-2"
             value={network}
             onChange={(e) => setNetwork(e.target.value)}
-            placeholder="CJ / Rakuten / Amazon / Impact / Awin"
+            placeholder="CJ / Rakuten / Impact / Awin"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Domain Pattern</label>
           <input
             className="w-full border rounded px-3 py-2"
             value={domainPattern}
             onChange={(e) => setDomainPattern(e.target.value)}
-            placeholder="example.com"
+            placeholder="homeandcooksales.com"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium mb-1">Commission Rate (%)</label>
           <input
             type="number"
+            step="0.01"
             className="w-full border rounded px-3 py-2"
             value={commissionRate}
             onChange={(e) => setCommissionRate(e.target.value)}
-            placeholder="e.g., 5"
+            placeholder="5"
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Allowed Regions</label>
+          <input
+            className="w-full border rounded px-3 py-2"
+            value={allowedRegions}
+            onChange={(e) => setAllowedRegions(e.target.value)}
+            placeholder="US, CA"
+          />
+          <p className="text-xs text-gray-500 mt-1">Comma-separated list, e.g., US, CA</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Notes</label>
+          <textarea
+            className="w-full border rounded px-3 py-2 min-h-[96px]"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Brands, promo cadence, AOV, special rules…"
+          />
+        </div>
+
         <button
           type="submit"
           disabled={loading}
