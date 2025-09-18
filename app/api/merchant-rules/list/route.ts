@@ -1,53 +1,63 @@
 // app/api/merchant-rules/list/route.ts
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/db";
 
-export const dynamic = "force-dynamic"; // no static cache for this route
-
-// Prisma singleton to avoid hot-reload issues in dev
-const prisma = (global as any).prisma ?? new PrismaClient();
-if (process.env.NODE_ENV !== "production") (global as any).prisma = prisma;
-
-type Raw = any;
-type Out = {
-  id: string;
-  name: string | null;
-  domain: string | null;
-  network: string | null;
-  commission: string | null;
-  status: string | boolean | null;
-  updatedAt: string | null;
-};
-
-function normalize(row: Raw): Out {
-  return {
-    id: row.id ?? row.uuid ?? "",
-    name: row.name ?? row.label ?? null,
-    domain: row.domain ?? row.host ?? null,
-    network: row.network ?? row.program ?? "CJ",
-    commission: row.commission ?? row.defaultCommission ?? null,
-    status:
-      typeof row.status !== "undefined"
-        ? row.status
-        : typeof row.isActive !== "undefined"
-        ? row.isActive
-        : null,
-    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
-  };
-}
-
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    // If your Prisma model is "MerchantRule", this works.
-    // If it's "Merchant" instead, change to prisma.merchant.findMany(...)
-    const rows: Raw[] = await (prisma as any).merchantRule.findMany({
-      orderBy: { name: "asc" },
+    const { searchParams } = new URL(req.url);
+
+    // Optional filters:
+    //  - /api/merchant-rules/list?active=true|false
+    //  - /api/merchant-rules/list?q=flower
+    const activeParam = searchParams.get("active");
+    const q = searchParams.get("q")?.trim();
+
+    const where: any = {};
+    if (activeParam === "true") where.active = true;
+    else if (activeParam === "false") where.active = false;
+
+    if (q) {
+      where.OR = [
+        { merchantName: { contains: q, mode: "insensitive" } },
+        { domainPattern: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
+    const rules = await prisma.merchantRule.findMany({
+      where,
+      orderBy: { merchantName: "asc" },
+      select: {
+        id: true,
+        active: true,
+        merchantName: true,
+        network: true,
+        domainPattern: true,
+        linkTemplate: true,
+        paramKey: true,
+        paramValue: true,
+        allowedSources: true,
+        disallowed: true,
+        cookieWindowDays: true,
+        payoutDelayDays: true,
+        commissionType: true,
+        commissionRate: true,
+        notes: true,
+        importMethod: true,
+        lastImportedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
-    const merchants = (rows ?? []).map(normalize);
-    return NextResponse.json({ ok: true, merchants });
-  } catch (e) {
-    console.error("[/api/merchant-rules/list] ERROR:", e);
-    return NextResponse.json({ ok: false, merchants: [] }, { status: 500 });
+    return NextResponse.json({ ok: true, count: rules.length, rules });
+  } catch (err) {
+    console.error("GET /api/merchant-rules/list error:", err);
+    return NextResponse.json(
+      { ok: false, error: "Failed to fetch merchant rules" },
+      { status: 500 },
+    );
   }
 }
