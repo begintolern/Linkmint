@@ -1,0 +1,16 @@
+name: Nightly Audit
+on:
+  schedule:
+    - cron: "0 10 * * *"   # 3:00 AM America/Los_Angeles (adjust if you want)
+  workflow_dispatch:
+
+jobs:
+  run-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call audit endpoint
+        run: |
+          curl -sS -X POST \
+            "https://linkmint.co/api/admin/compliance/audit/run?secret=${{ secrets.ADMIN_CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d "{}"
