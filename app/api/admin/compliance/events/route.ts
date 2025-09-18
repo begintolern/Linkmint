@@ -11,6 +11,8 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const token = url.searchParams.get("secret") || "";
   const type = url.searchParams.get("type") || "";
+  const limitRaw = url.searchParams.get("limit") || "";
+  const limit = Math.max(1, Math.min(500, Number(limitRaw) || 50)); // 1..500
 
   if (!SECRET || token !== SECRET) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
@@ -21,7 +23,7 @@ export async function GET(req: Request) {
   const items = await prisma.complianceEvent.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: limit,
   });
 
   return NextResponse.json({ ok: true, items });
