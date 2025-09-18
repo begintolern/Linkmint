@@ -2,6 +2,8 @@
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+import Link from 'next/link';
+
 type Merchant = {
   id: string;
   active: boolean;
@@ -33,13 +35,13 @@ type Merchant = {
 };
 
 async function getMerchants(): Promise<Merchant[]> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/merchant-rules/list`, {
-    cache: 'no-store',
-  }).catch(() => null);
+  // Prefer absolute if NEXT_PUBLIC_BASE_URL is set, otherwise relative works on server
+  const primary = process.env.NEXT_PUBLIC_BASE_URL
+    ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/merchant-rules/list`
+    : `/api/merchant-rules/list`;
 
-  // Fallback to relative fetch for server runtime
-  const ok = res?.ok;
-  const json = ok ? await res!.json() : await fetch('/api/merchant-rules/list', { cache: 'no-store' }).then(r => r.json());
+  const res = await fetch(primary, { cache: 'no-store' });
+  const json = await res.json();
   if (!json?.ok) throw new Error('Failed to load merchants');
   return json.merchants as Merchant[];
 }
@@ -64,8 +66,16 @@ export default async function MerchantsPage() {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Merchants</h1>
-        <div className="text-sm text-gray-500">{merchants.length} total</div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold">Merchants</h1>
+          <div className="text-sm text-gray-500">{merchants.length} total</div>
+        </div>
+        <Link
+          href="/dashboard/merchants/new"
+          className="rounded-md border px-3 py-2 text-sm shadow-sm hover:bg-gray-50"
+        >
+          + New Merchant
+        </Link>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
