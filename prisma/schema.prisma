@@ -396,3 +396,13 @@ model ClickEvent {
   merchantId String?
   source     String
 }
+model Conversion {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  orderId    String?
+  userId     String?
+  merchantId String?
+  amount     Decimal?
+  status     String   @default("PENDING") // PENDING | APPROVED | REVERSED | PAID
+  source     String?
+}
