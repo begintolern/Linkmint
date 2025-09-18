@@ -1,185 +1,169 @@
 // app/dashboard/merchants/page.tsx
-"use client";
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-
-type MerchantRule = {
+type Merchant = {
   id: string;
   active: boolean;
   merchantName: string;
   network: string | null;
   domainPattern: string | null;
-  allowedSources: string[] | null;
-  disallowed: string[] | null;
-  cookieWindowDays: number | null;
-  payoutDelayDays: number | null;
-  commissionType: "PERCENT" | "FLAT" | null;
-  commissionRate: string | null; // decimal string (e.g., "0.12")
-  notes: string | null;
+  paramKey?: string | null;
+  paramValue?: string | null;
+  linkTemplate?: string | null;
+  allowedSources?: unknown | null; // Prisma Json -> unknown
+  disallowed?: unknown | null;     // Prisma Json -> unknown
+  cookieWindowDays?: number | null;
+  payoutDelayDays?: number | null;
+  commissionType: string;          // e.g., "PERCENT"
+  commissionRate: number | null;   // serialized to number in API
+  calc?: string | null;
+  rate?: number | null;
+  notes?: string | null;
+  importMethod: string;            // e.g., "MANUAL"
+  apiBaseUrl?: string | null;
+  apiAuthType?: string | null;
+  apiKeyRef?: string | null;
+  lastImportedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  status: string;                  // e.g., "PENDING"
+  allowedRegions: string[];
+  inactiveReason?: string | null;
 };
 
-function pct(rate: string | null) {
-  if (!rate) return "—";
-  const n = Number(rate);
-  if (Number.isNaN(n)) return rate;
-  return `${(n * 100).toFixed(n >= 0.1 ? 0 : 2)}%`;
+async function getMerchants(): Promise<Merchant[]> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ''}/api/merchant-rules/list`, {
+    cache: 'no-store',
+  }).catch(() => null);
+
+  // Fallback to relative fetch for server runtime
+  const ok = res?.ok;
+  const json = ok ? await res!.json() : await fetch('/api/merchant-rules/list', { cache: 'no-store' }).then(r => r.json());
+  if (!json?.ok) throw new Error('Failed to load merchants');
+  return json.merchants as Merchant[];
 }
 
-export default function MerchantsPage() {
-  const [rules, setRules] = useState<MerchantRule[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+function Badge({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default'|'success'|'warn'|'danger' }) {
+  const tones: Record<string, string> = {
+    default: 'bg-gray-100 text-gray-800',
+    success: 'bg-green-100 text-green-800',
+    warn: 'bg-yellow-100 text-yellow-800',
+    danger: 'bg-red-100 text-red-800',
+  };
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tones[tone]}`}>{children}</span>;
+}
 
-  useEffect(() => {
-    let aborted = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/merchant-rules/list?active=true", {
-          method: "GET",
-          cache: "no-store",
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (!aborted) setRules((data?.rules ?? []) as MerchantRule[]);
-      } catch (e: any) {
-        if (!aborted) setErr(e?.message ?? "Failed to load merchants");
-      }
-    })();
-    return () => {
-      aborted = true;
-    };
-  }, []);
+function formatJson(value: unknown): string {
+  try { return JSON.stringify(value, null, 2); } catch { return String(value); }
+}
 
-  const active = (rules ?? []).filter((r) => r.active);
-  const pending = (rules ?? []).filter((r) => !r.active);
+export default async function MerchantsPage() {
+  const merchants = await getMerchants();
 
   return (
-    <main className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Merchants</h1>
-        <Link
-          href="/admin/merchant-rules"
-          className="px-3 py-2 rounded-xl border hover:bg-gray-50"
-        >
-          Admin: Manage Rules
-        </Link>
+        <div className="text-sm text-gray-500">{merchants.length} total</div>
       </div>
 
-      {err && (
-        <div className="rounded-2xl border p-4 bg-red-50 text-red-800 mb-6">
-          <div className="font-medium mb-1">Couldn’t load merchants</div>
-          <div className="text-sm">{err}</div>
-        </div>
-      )}
-
-      {!rules && !err && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="h-28 rounded-2xl border p-4 animate-pulse bg-gray-50"
-            />
-          ))}
-        </div>
-      )}
-
-      {!!rules && (
-        <>
-          <section className="mb-10">
-            <h2 className="text-lg font-semibold mb-3">Active</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {active.length === 0 && (
-                <div className="text-sm text-gray-500">
-                  No active merchants yet.
-                </div>
-              )}
-              {active.map((m) => (
-                <article
-                  key={m.id}
-                  className="rounded-2xl border p-4 shadow-sm"
-                  title={m.notes ?? ""}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium">{m.merchantName}</div>
-                    <div className="text-sm text-gray-500">
-                      {m.domainPattern ?? "—"}
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+              <th className="px-4 py-3">Merchant</th>
+              <th className="px-4 py-3">Network</th>
+              <th className="px-4 py-3">Domain</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Commission</th>
+              <th className="px-4 py-3">Cookie</th>
+              <th className="px-4 py-3">Payout Delay</th>
+              <th className="px-4 py-3">Regions</th>
+              <th className="px-4 py-3">Notes</th>
+              <th className="px-4 py-3">More</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {merchants.map((m) => (
+              <tr key={m.id} className="align-top">
+                <td className="px-4 py-3">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{m.merchantName}</span>
+                    <div className="mt-1 space-x-2">
+                      <Badge tone={m.active ? 'success' : 'danger'}>{m.active ? 'Active' : 'Inactive'}</Badge>
+                      {m.status && <Badge tone={m.status === 'PENDING' ? 'warn' : 'default'}>{m.status}</Badge>}
+                      {m.importMethod && <Badge>{m.importMethod}</Badge>}
                     </div>
                   </div>
-                  <div className="mt-2 text-sm text-gray-700">
-                    <div>
-                      Commission:{" "}
-                      <span className="font-medium">
-                        {m.commissionType ?? "—"}{" "}
-                        {m.commissionType === "PERCENT"
-                          ? pct(m.commissionRate)
-                          : m.commissionRate ?? ""}
-                      </span>
-                    </div>
-                    <div>
-                      Cookie:{" "}
-                      <span className="font-medium">
-                        {m.cookieWindowDays ?? "—"}
-                      </span>{" "}
-                      days
-                    </div>
+                </td>
+                <td className="px-4 py-3">{m.network ?? '—'}</td>
+                <td className="px-4 py-3">{m.domainPattern ?? '—'}</td>
+                <td className="px-4 py-3">{m.inactiveReason ? <Badge tone="danger">Blocked</Badge> : '—'}</td>
+                <td className="px-4 py-3">
+                  {m.commissionType || '—'}
+                  {typeof m.commissionRate === 'number' ? (
+                    <span className="ml-1 text-gray-600">
+                      {m.commissionType?.toUpperCase() === 'PERCENT' ? `${m.commissionRate}%` : m.commissionRate}
+                    </span>
+                  ) : null}
+                </td>
+                <td className="px-4 py-3">{m.cookieWindowDays ?? '—'}{m.cookieWindowDays ? ' days' : ''}</td>
+                <td className="px-4 py-3">{m.payoutDelayDays ?? '—'}{m.payoutDelayDays ? ' days' : ''}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap gap-1">
+                    {m.allowedRegions?.length
+                      ? m.allowedRegions.map((r) => <Badge key={r}>{r}</Badge>)
+                      : <span className="text-gray-500">—</span>}
                   </div>
-                  {m.allowedSources?.length ? (
-                    <div className="mt-2 text-xs text-gray-600">
-                      Allowed: {m.allowedSources.join(", ")}
-                    </div>
-                  ) : null}
-                  {m.disallowed?.length ? (
-                    <div className="mt-1 text-xs text-red-600">
-                      Disallowed: {m.disallowed.join(", ")}
-                    </div>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          </section>
-
-          {/* If you want to show pending too, just remove the active=true filter above */}
-          {pending.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold mb-3">Pending</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {pending.map((m) => (
-                  <article
-                    key={m.id}
-                    className="rounded-2xl border p-4 shadow-sm opacity-60"
-                    title={m.notes ?? ""}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">{m.merchantName}</div>
-                      <div className="text-sm text-gray-500">
-                        {m.domainPattern ?? "—"}
-                      </div>
-                    </div>
-                    <div className="mt-2 text-sm text-gray-700">
+                </td>
+                <td className="px-4 py-3">
+                  <div className="max-w-xs truncate text-gray-700">{m.notes ?? '—'}</div>
+                </td>
+                <td className="px-4 py-3">
+                  <details className="cursor-pointer">
+                    <summary className="text-sm text-blue-600 hover:underline">Details</summary>
+                    <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
-                        Commission:{" "}
-                        <span className="font-medium">
-                          {m.commissionType ?? "—"}{" "}
-                          {m.commissionType === "PERCENT"
-                            ? pct(m.commissionRate)
-                            : m.commissionRate ?? ""}
-                        </span>
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Allowed Sources (JSON)</div>
+                        <pre className="max-h-40 overflow-auto rounded bg-gray-50 p-2 text-xs">{formatJson(m.allowedSources)}</pre>
                       </div>
                       <div>
-                        Cookie:{" "}
-                        <span className="font-medium">
-                          {m.cookieWindowDays ?? "—"}
-                        </span>{" "}
-                        days
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Disallowed (JSON)</div>
+                        <pre className="max-h-40 overflow-auto rounded bg-gray-50 p-2 text-xs">{formatJson(m.disallowed)}</pre>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Template / Params</div>
+                        <div className="text-xs text-gray-700 break-words">
+                          <div><span className="font-medium">Template:</span> {m.linkTemplate ?? '—'}</div>
+                          <div><span className="font-medium">Param Key:</span> {m.paramKey ?? '—'}</div>
+                          <div><span className="font-medium">Param Value:</span> {m.paramValue ?? '—'}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-1">API</div>
+                        <div className="text-xs text-gray-700 break-words">
+                          <div><span className="font-medium">Base URL:</span> {m.apiBaseUrl ?? '—'}</div>
+                          <div><span className="font-medium">Auth Type:</span> {m.apiAuthType ?? '—'}</div>
+                          <div><span className="font-medium">Key Ref:</span> {m.apiKeyRef ?? '—'}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-gray-500 mb-1">Timestamps</div>
+                        <div className="text-xs text-gray-700">
+                          <div><span className="font-medium">Imported:</span> {m.lastImportedAt ?? '—'}</div>
+                          <div><span className="font-medium">Created:</span> {m.createdAt}</div>
+                          <div><span className="font-medium">Updated:</span> {m.updatedAt}</div>
+                        </div>
                       </div>
                     </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
-    </main>
+                  </details>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
