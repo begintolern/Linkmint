@@ -22,13 +22,8 @@ type MerchantRule = {
 };
 
 async function fetchMerchants(q?: string) {
-  const url = new URL(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/merchant-rules/list`, "http://localhost");
-  if (q) url.searchParams.set("q", q);
-  // Show both active and inactive; we’ll split in UI
-  const res = await fetch(url.toString().replace("http://localhost", ""), {
-    method: "GET",
-    cache: "no-store",
-  });
+  const url = `/api/merchant-rules/list${q ? `?q=${encodeURIComponent(q)}` : ""}`;
+  const res = await fetch(url, { method: "GET", cache: "no-store" });
   if (!res.ok) {
     throw new Error("Failed to load merchant rules");
   }
@@ -46,8 +41,8 @@ function pct(rate: string | null) {
 export default async function MerchantsPage() {
   const rules = await fetchMerchants();
 
-  const active = rules.filter(r => r.active);
-  const pending = rules.filter(r => !r.active);
+  const active = rules.filter((r) => r.active);
+  const pending = rules.filter((r) => !r.active);
 
   return (
     <main className="p-6 max-w-5xl mx-auto">
@@ -80,8 +75,22 @@ export default async function MerchantsPage() {
                 </div>
               </div>
               <div className="mt-2 text-sm text-gray-700">
-                <div>Commission: <span className="font-medium">{m.commissionType ?? "—"} {m.commissionType === "PERCENT" ? pct(m.commissionRate) : m.commissionRate ?? ""}</span></div>
-                <div>Cookie: <span className="font-medium">{m.cookieWindowDays ?? "—"}</span> days</div>
+                <div>
+                  Commission:{" "}
+                  <span className="font-medium">
+                    {m.commissionType ?? "—"}{" "}
+                    {m.commissionType === "PERCENT"
+                      ? pct(m.commissionRate)
+                      : m.commissionRate ?? ""}
+                  </span>
+                </div>
+                <div>
+                  Cookie:{" "}
+                  <span className="font-medium">
+                    {m.cookieWindowDays ?? "—"}
+                  </span>{" "}
+                  days
+                </div>
               </div>
               {m.allowedSources?.length ? (
                 <div className="mt-2 text-xs text-gray-600">
@@ -117,8 +126,22 @@ export default async function MerchantsPage() {
                 </div>
               </div>
               <div className="mt-2 text-sm text-gray-700">
-                <div>Commission: <span className="font-medium">{m.commissionType ?? "—"} {m.commissionType === "PERCENT" ? pct(m.commissionRate) : m.commissionRate ?? ""}</span></div>
-                <div>Cookie: <span className="font-medium">{m.cookieWindowDays ?? "—"}</span> days</div>
+                <div>
+                  Commission:{" "}
+                  <span className="font-medium">
+                    {m.commissionType ?? "—"}{" "}
+                    {m.commissionType === "PERCENT"
+                      ? pct(m.commissionRate)
+                      : m.commissionRate ?? ""}
+                  </span>
+                </div>
+                <div>
+                  Cookie:{" "}
+                  <span className="font-medium">
+                    {m.cookieWindowDays ?? "—"}
+                  </span>{" "}
+                  days
+                </div>
               </div>
             </article>
           ))}
