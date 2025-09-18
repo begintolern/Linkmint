@@ -1,27 +1,29 @@
-# ---------- Base (no NODE_ENV here)
+# ---------- Base
 FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends \
-    openssl ca-certificates git \
+    ca-certificates openssl git \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
-# ---------- Deps (install including devDeps)
+# ---------- Deps (install with dev deps for build)
 FROM base AS deps
-# Copy manifests + prisma schema first so postinstall can find it
+# Copy minimal files needed to install deps and generate Prisma client
 COPY package.json package-lock.json* pnpm-lock.yaml* .npmrc* ./
 COPY prisma ./prisma
-# Force include dev deps for build
+# Install deps (prefer pnpm if lock exists; otherwise npm)
 RUN if [ -f pnpm-lock.yaml ]; then corepack pnpm i --frozen-lockfile; \
     elif [ -f package-lock.json ]; then npm ci --include=dev; \
     else npm i --production=false; fi
 
-# ---------- Build (uses deps with dev deps present)
+# ---------- Build
 FROM deps AS build
+# Bring in the rest of the app
 COPY . .
+# Generate Prisma Client (ensures ClickEvent & others exist), then build Next
 RUN npx prisma generate && npm run build
 
-# ---------- Runtime (production-only)
+# ---------- Runtime
 FROM node:20-slim AS runner
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -38,4 +40,5 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 
 EXPOSE 3000
+# Generate Prisma Client at runtime too (safe/no-op if already generated), then start
 CMD ["sh", "-c", "npx prisma generate && npm start"]
