@@ -1,126 +1,129 @@
 // app/dashboard/merchants/page.tsx
-"use client";
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 
-type Merchant = {
+type MerchantRule = {
   id: string;
-  name: string | null;
-  domain: string | null;
+  active: boolean;
+  merchantName: string;
   network: string | null;
-  commission: string | null;
-  status: string | boolean | null;
-  updatedAt: string | null;
+  domainPattern: string | null;
+  allowedSources: string[] | null;
+  disallowed: string[] | null;
+  cookieWindowDays: number | null;
+  payoutDelayDays: number | null;
+  commissionType: "PERCENT" | "FLAT" | null;
+  commissionRate: string | null; // stored as decimal string (e.g., "0.12")
+  notes: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-export default function MerchantsPage() {
-  const [rows, setRows] = useState<Merchant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
+async function fetchMerchants(q?: string) {
+  const url = new URL(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/merchant-rules/list`, "http://localhost");
+  if (q) url.searchParams.set("q", q);
+  // Show both active and inactive; we’ll split in UI
+  const res = await fetch(url.toString().replace("http://localhost", ""), {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to load merchant rules");
+  }
+  const data = await res.json();
+  return data.rules as MerchantRule[];
+}
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/merchant-rules/list", { cache: "no-store" });
-        if (!res.ok) {
-          setErr(`API error: ${res.status} ${res.statusText}`);
-          setRows([]);
-          return;
-        }
-        const json = await res.json();
-        if (!json?.ok) {
-          setErr("API returned ok: false");
-          setRows([]);
-          return;
-        }
-        setRows(json.merchants ?? []);
-      } catch (e: any) {
-        setErr(e?.message || "Network error");
-        setRows([]);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+function pct(rate: string | null) {
+  if (!rate) return "—";
+  const n = Number(rate);
+  if (Number.isNaN(n)) return rate;
+  return `${(n * 100).toFixed(n >= 0.1 ? 0 : 2)}%`;
+}
+
+export default async function MerchantsPage() {
+  const rules = await fetchMerchants();
+
+  const active = rules.filter(r => r.active);
+  const pending = rules.filter(r => !r.active);
 
   return (
-    <main className="space-y-6">
-      <header className="flex items-baseline gap-3">
-        <h1 className="text-2xl font-semibold">Available Merchants</h1>
-        {!loading && !err && (
-          <span className="text-sm text-gray-600">({rows.length} live)</span>
-        )}
-      </header>
-
-      {err ? (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-          {err}. Check server logs for details.
-        </div>
-      ) : null}
-
-      <div className="rounded-lg border bg-white overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 text-left">
-              <th className="p-3">Name</th>
-              <th className="p-3">Domain</th>
-              <th className="p-3">Network</th>
-              <th className="p-3">Commission</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td className="p-6 text-gray-500" colSpan={6}>
-                  Loading…
-                </td>
-              </tr>
-            ) : rows.length ? (
-              rows.map((m) => (
-                <tr key={m.id} className="border-t">
-                  <td className="p-3">{m.name ?? "—"}</td>
-                  <td className="p-3">{m.domain ?? "—"}</td>
-                  <td className="p-3">{m.network ?? "CJ"}</td>
-                  <td className="p-3">{m.commission ?? "—"}</td>
-                  <td className="p-3">
-                    {typeof m.status === "boolean"
-                      ? m.status
-                        ? "Active"
-                        : "Inactive"
-                      : m.status ?? "—"}
-                  </td>
-                  <td className="p-3">
-                    <button
-                      className="text-teal-700 hover:underline"
-                      onClick={() => {
-                        const domain = m.domain ?? "";
-                        if (!domain) return;
-                        const url = domain.startsWith("http")
-                          ? domain
-                          : `https://${domain}`;
-                        window.open(url, "_blank");
-                      }}
-                      disabled={!m.domain}
-                      title={m.domain ? "Visit merchant site" : "No domain"}
-                    >
-                      Visit
-                    </button>
-                    {/* TODO: Add "Copy Share Link" when your user-specific share URL is ready */}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td className="p-6 text-gray-500" colSpan={6}>
-                  No merchants found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+    <main className="p-6 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Merchants</h1>
+        <Link
+          href="/admin/merchant-rules"
+          className="px-3 py-2 rounded-xl border hover:bg-gray-50"
+        >
+          Admin: Manage Rules
+        </Link>
       </div>
+
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold mb-3">Active</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {active.length === 0 && (
+            <div className="text-sm text-gray-500">No active merchants yet.</div>
+          )}
+          {active.map((m) => (
+            <article
+              key={m.id}
+              className="rounded-2xl border p-4 shadow-sm"
+              title={m.notes ?? ""}
+            >
+              <div className="flex items-center justify-between">
+                <div className="font-medium">{m.merchantName}</div>
+                <div className="text-sm text-gray-500">
+                  {m.domainPattern ?? "—"}
+                </div>
+              </div>
+              <div className="mt-2 text-sm text-gray-700">
+                <div>Commission: <span className="font-medium">{m.commissionType ?? "—"} {m.commissionType === "PERCENT" ? pct(m.commissionRate) : m.commissionRate ?? ""}</span></div>
+                <div>Cookie: <span className="font-medium">{m.cookieWindowDays ?? "—"}</span> days</div>
+              </div>
+              {m.allowedSources?.length ? (
+                <div className="mt-2 text-xs text-gray-600">
+                  Allowed: {m.allowedSources.join(", ")}
+                </div>
+              ) : null}
+              {m.disallowed?.length ? (
+                <div className="mt-1 text-xs text-red-600">
+                  Disallowed: {m.disallowed.join(", ")}
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold mb-3">Pending</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {pending.length === 0 && (
+            <div className="text-sm text-gray-500">No pending merchants.</div>
+          )}
+          {pending.map((m) => (
+            <article
+              key={m.id}
+              className="rounded-2xl border p-4 shadow-sm opacity-60"
+              title={m.notes ?? ""}
+            >
+              <div className="flex items-center justify-between">
+                <div className="font-medium">{m.merchantName}</div>
+                <div className="text-sm text-gray-500">
+                  {m.domainPattern ?? "—"}
+                </div>
+              </div>
+              <div className="mt-2 text-sm text-gray-700">
+                <div>Commission: <span className="font-medium">{m.commissionType ?? "—"} {m.commissionType === "PERCENT" ? pct(m.commissionRate) : m.commissionRate ?? ""}</span></div>
+                <div>Cookie: <span className="font-medium">{m.cookieWindowDays ?? "—"}</span> days</div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
