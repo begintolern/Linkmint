@@ -388,3 +388,11 @@ model SystemAuditRun {
   findings   Int       @default(0) // number of flags created
   meta       Json?
 }
+
+model ClickEvent {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  userId     String?
+  merchantId String?
+  source     String
+}
