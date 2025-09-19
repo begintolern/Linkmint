@@ -17,11 +17,13 @@ RUN if [ -f pnpm-lock.yaml ]; then corepack pnpm i --frozen-lockfile; \
     else npm i --production=false; fi
 
 # ---------- Build
+# ---------- Build (uses deps with dev deps present)
 FROM deps AS build
-# Bring in the rest of the app
 COPY . .
-# Generate Prisma Client (ensures ClickEvent & others exist), then build Next
-RUN npx prisma generate && npm run build
+# Force-regenerate Prisma Client so types (ip/userAgent) are fresh
+RUN rm -rf node_modules/.prisma node_modules/@prisma/client \
+  && npx prisma generate --schema=prisma/schema.prisma \
+  && npm run build
 
 # ---------- Runtime
 FROM node:20-slim AS runner
