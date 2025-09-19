@@ -20,9 +20,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "merchant_not_found" }, { status: 404 });
     }
 
-    const src = (source || "unknown").toString().toLowerCase();
+    // 🔒 Block clicks from auto-suspended users
+    if (userId) {
+      const suspended = await prisma.userFlag.findFirst({
+        where: { userId, reason: "AUTO_SUSPEND", status: "OPEN" },
+        select: { id: true },
+      });
+      if (suspended) {
+        await logEvent({
+          type: "USER_BLOCKED",
+          severity: 3,
+          message: "Click blocked: user is auto-suspended",
+          userId,
+          merchantId,
+        });
+        return NextResponse.json({ ok: false, error: "USER_SUSPENDED" }, { status: 403 });
+      }
+    }
 
-    // Self-check: is this source allowed?
+    // ✅ Self-check: is this source allowed for the merchant?
+    const src = (source || "unknown").toString().toLowerCase();
     if (!isSourceAllowed(merchant, src)) {
       await logEvent({
         type: "DISALLOWED_SOURCE",
@@ -35,7 +52,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "DISALLOWED_SOURCE" }, { status: 403 });
     }
 
-    // Record click
+    // 📝 Record click
     await prisma.clickEvent.create({
       data: {
         userId: userId ?? null,
