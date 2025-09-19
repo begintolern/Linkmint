@@ -25,7 +25,7 @@ RUN rm -rf node_modules/.prisma node_modules/@prisma/client \
   && npx prisma generate --schema=prisma/schema.prisma \
   && npm run build
 
-# ---------- Runtime
+# ---------- Runtime (production-only)
 FROM node:20-slim AS runner
 ENV NODE_ENV=production \
     PORT=3000 \
@@ -42,5 +42,6 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 
 EXPOSE 3000
-# Generate Prisma Client at runtime too (safe/no-op if already generated), then start
-CMD ["sh", "-c", "npx prisma generate && npm start"]
+# 🔧 Force-refresh Prisma Client in the running container
+CMD ["sh", "-c", "rm -rf node_modules/.prisma node_modules/@prisma/client && npx prisma generate --schema=prisma/schema.prisma && npm start"]
+
