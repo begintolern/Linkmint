@@ -2,86 +2,60 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { isSourceAllowed } from "@/lib/compliance/rules";
 import { logEvent } from "@/lib/compliance/log";
 
-export async function POST(req: Request) {
+function getIp(req: NextRequest): string {
+  const h = req.headers;
+  const cand =
+    h.get("x-real-ip") ||
+    h.get("x-forwarded-for")?.split(",")[0].trim() ||
+    h.get("cf-connecting-ip") ||
+    h.get("fly-client-ip") ||
+    "";
+  return cand || "unknown";
+}
+
+type Bucket = { secCount: number; secTs: number; hourCount: number; hourTs: number };
+const buckets = new Map<string, Bucket>();
+function rateLimit(ip: string): boolean {
+  const now = Date.now();
+  const b = buckets.get(ip) ?? { secCount: 0, secTs: now, hourCount: 0, hourTs: now };
+  if (now - b.secTs >= 1000) { b.secTs = now; b.secCount = 0; }
+  if (now - b.hourTs >= 3600_000) { b.hourTs = now; b.hourCount = 0; }
+  b.secCount += 1; b.hourCount += 1;
+  buckets.set(ip, b);
+  return b.secCount <= 5 && b.hourCount <= 200;
+}
+
+export async function POST(req: NextRequest) {
+  const ip = getIp(req);
+  const ua = req.headers.get("user-agent") ?? "unknown";
+
   try {
+    if (!rateLimit(ip)) {
+      await logEvent({ type: "RATE_LIMITED", severity: 2, message: "Click blocked by rate limiter", meta: { ip, ua }});
+      return NextResponse.json({ ok: false, error: "RATE_LIMITED" }, { status: 429 });
+    }
+
     const { userId, userEmail, merchantId, source } = await req.json();
-
-    if (!merchantId) {
-      return NextResponse.json({ ok: false, error: "merchantId_required" }, { status: 400 });
-    }
-
-    const merchant = await prisma.merchantRule.findUnique({ where: { id: merchantId } });
-    if (!merchant) {
-      return NextResponse.json({ ok: false, error: "merchant_not_found" }, { status: 404 });
-    }
-
-    // Resolve userId from email if needed
-    let resolvedUserId: string | null = userId ?? null;
-    if (!resolvedUserId && typeof userEmail === "string" && userEmail.includes("@")) {
-      const u = await prisma.user.findUnique({ where: { email: userEmail } }).catch(() => null);
-      resolvedUserId = u?.id ?? null;
-    }
-
-    // 🔒 Block clicks from auto-suspended users
-    if (resolvedUserId) {
-      const suspended = await prisma.userFlag.findFirst({
-        where: { userId: resolvedUserId, reason: "AUTO_SUSPEND", status: "OPEN" },
-        select: { id: true },
-      });
-      if (suspended) {
-        await logEvent({
-          type: "USER_BLOCKED",
-          severity: 3,
-          message: "Click blocked: user is auto-suspended",
-          userId: resolvedUserId,
-          merchantId,
-        });
-        return NextResponse.json({ ok: false, error: "USER_SUSPENDED" }, { status: 403 });
-      }
-    }
-
-    // ✅ Self-check: is this source allowed?
-    const src = (source || "unknown").toString().toLowerCase();
-    if (!isSourceAllowed(merchant, src)) {
-      await logEvent({
-        type: "DISALLOWED_SOURCE",
-        severity: 2,
-        message: `Blocked click: ${src} not allowed`,
-        userId: resolvedUserId,
-        merchantId,
-        meta: { source: src, merchant: merchant.merchantName },
-      });
-      return NextResponse.json({ ok: false, error: "DISALLOWED_SOURCE" }, { status: 403 });
-    }
-
-    // 📝 Record click
+    // … keep the rest of your handler the same …
+    // When creating the click, ensure ip/ua are written:
     await prisma.clickEvent.create({
-      data: { userId: resolvedUserId, merchantId, source: src },
-    });
-
-    await logEvent({
-      type: "CLICK_RECORDED",
-      severity: 1,
-      message: `Click recorded (${src})`,
-      userId: resolvedUserId,
-      merchantId,
-      meta: { source: src, via: userId ? "userId" : userEmail ? "userEmail" : "anon" },
+      data: {
+        userId: userId ?? null,
+        merchantId,
+        source: (source || "unknown").toString().toLowerCase(),
+        ip,
+        userAgent: ua,
+      },
     });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("track/click POST failed:", err);
-    await logEvent({
-      type: "CLICK_ERROR",
-      severity: 3,
-      message: "Track click failed",
-      meta: { error: String(err) },
-    });
+    await logEvent({ type: "CLICK_ERROR", severity: 3, message: "Track click failed", meta: { error: String(err), ip, ua }});
     return NextResponse.json({ ok: false, error: "CLICK_FAILED" }, { status: 500 });
   }
 }
