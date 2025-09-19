@@ -9,7 +9,7 @@ import { logEvent } from "@/lib/compliance/log";
 
 export async function POST(req: Request) {
   try {
-    const { userId, merchantId, source } = await req.json();
+    const { userId, userEmail, merchantId, source } = await req.json();
 
     if (!merchantId) {
       return NextResponse.json({ ok: false, error: "merchantId_required" }, { status: 400 });
@@ -20,10 +20,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "merchant_not_found" }, { status: 404 });
     }
 
+    // Resolve userId from email if needed
+    let resolvedUserId: string | null = userId ?? null;
+    if (!resolvedUserId && typeof userEmail === "string" && userEmail.includes("@")) {
+      const u = await prisma.user.findUnique({ where: { email: userEmail } }).catch(() => null);
+      resolvedUserId = u?.id ?? null;
+    }
+
     // 🔒 Block clicks from auto-suspended users
-    if (userId) {
+    if (resolvedUserId) {
       const suspended = await prisma.userFlag.findFirst({
-        where: { userId, reason: "AUTO_SUSPEND", status: "OPEN" },
+        where: { userId: resolvedUserId, reason: "AUTO_SUSPEND", status: "OPEN" },
         select: { id: true },
       });
       if (suspended) {
@@ -31,21 +38,21 @@ export async function POST(req: Request) {
           type: "USER_BLOCKED",
           severity: 3,
           message: "Click blocked: user is auto-suspended",
-          userId,
+          userId: resolvedUserId,
           merchantId,
         });
         return NextResponse.json({ ok: false, error: "USER_SUSPENDED" }, { status: 403 });
       }
     }
 
-    // ✅ Self-check: is this source allowed for the merchant?
+    // ✅ Self-check: is this source allowed?
     const src = (source || "unknown").toString().toLowerCase();
     if (!isSourceAllowed(merchant, src)) {
       await logEvent({
         type: "DISALLOWED_SOURCE",
         severity: 2,
         message: `Blocked click: ${src} not allowed`,
-        userId: userId ?? null,
+        userId: resolvedUserId,
         merchantId,
         meta: { source: src, merchant: merchant.merchantName },
       });
@@ -54,20 +61,16 @@ export async function POST(req: Request) {
 
     // 📝 Record click
     await prisma.clickEvent.create({
-      data: {
-        userId: userId ?? null,
-        merchantId,
-        source: src,
-      },
+      data: { userId: resolvedUserId, merchantId, source: src },
     });
 
     await logEvent({
       type: "CLICK_RECORDED",
       severity: 1,
       message: `Click recorded (${src})`,
-      userId: userId ?? null,
+      userId: resolvedUserId,
       merchantId,
-      meta: { source: src },
+      meta: { source: src, via: userId ? "userId" : userEmail ? "userEmail" : "anon" },
     });
 
     return NextResponse.json({ ok: true });
