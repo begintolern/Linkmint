@@ -117,15 +117,22 @@ export async function POST(req: NextRequest) {
     }
 
     // Record click (types in Docker may be stale; force-cast to any)
-await prisma.clickEvent.create({
+// 1) Create without ip/userAgent (old Prisma client accepts this)
+const created = await prisma.clickEvent.create({
   data: {
     userId: resolvedUserId,
     merchantId,
     source: src,
-    ip,
-    userAgent: ua,
-  } as any,
+  },
 });
+
+// 2) Then update ip/userAgent using SQL (bypasses stale client types)
+await prisma.$executeRaw`
+  UPDATE "ClickEvent"
+     SET "ip" = ${ip}, "userAgent" = ${ua}
+   WHERE "id" = ${created.id}
+`;
+
 
 
     await logEvent({
