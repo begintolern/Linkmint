@@ -4,45 +4,63 @@ import sgMail from "@sendgrid/mail";
 
 function buildLink(token: string) {
   const base =
+    process.env.BASE_URL ||
     process.env.EMAIL_VERIFY_BASE_URL ||
     process.env.NEXT_PUBLIC_BASE_URL ||
     process.env.NEXTAUTH_URL ||
-    "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}/api/verify-email?token=${encodeURIComponent(
-    token
-  )}`;
+    "https://linkmint.co";
+
+  const cleanBase = base.replace(/\/$/, "");
+  return `${cleanBase}/api/auth/verify?token=${encodeURIComponent(token)}`;
 }
 
 export async function sendVerificationEmail(to: string, tokenOrLink: string) {
   const link =
     tokenOrLink.startsWith("http") ? tokenOrLink : buildLink(tokenOrLink);
-  const from = process.env.EMAIL_FROM || "admin@linkmint.co";
 
-  console.log("[mail] Preparing to send verification email ->", to);
+  const fromEmail = process.env.EMAIL_FROM || "admin@linkmint.co";
+  const fromName = process.env.SENDGRID_FROM_NAME || "linkmint.co";
 
-  // Use SendGrid API if available (required on Railway)
+  console.log("[mail] prepare ->", { to, link });
+
+  // Prefer SendGrid on Railway/prod
   if (process.env.SENDGRID_API_KEY) {
     try {
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
       await sgMail.send({
         to,
-        from,
-        subject: "Verify your email",
+        from: { email: fromEmail, name: fromName },
+        subject: "Verify your email for linkmint.co",
         text: `Verify your email: ${link}`,
         html: `
-          <p>Welcome to <strong>Linkmint</strong>!</p>
-          <p><a href="${link}">Click here to verify your email</a></p>
-          <p>${link}</p>
+          <div style="font-family: Arial, sans-serif; line-height:1.5;">
+            <h2 style="margin:0 0 12px;">Verify your email</h2>
+            <p>Tap the button below to verify your email for <strong>linkmint.co</strong>.</p>
+            <p style="margin:24px 0;">
+              <a href="${link}" 
+                 style="display:inline-block;padding:12px 18px;text-decoration:none;border-radius:6px;background:#0f766e;color:#fff;">
+                Verify email
+              </a>
+            </p>
+            <p>If the button doesn’t work, copy and paste this URL:</p>
+            <p><a href="${link}">${link}</a></p>
+            <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
+            <p style="color:#6b7280;font-size:12px;">If you didn’t request this, you can ignore this email.</p>
+          </div>
         `,
       });
-      console.log("[mail][sg] Sent ->", to, "link:", link);
-    } catch (err) {
-      console.error("[mail][sg] Error sending to", to, err);
+      console.log("[mail][sendgrid] sent ->", to);
+    } catch (err: any) {
+      console.error(
+        "[mail][sendgrid] error ->",
+        to,
+        err?.response?.body || err
+      );
     }
     return;
   }
 
-  // Fallback SMTP (for local dev only)
+  // Fallback SMTP (local dev)
   try {
     const transport =
       process.env.EMAIL_SERVER
@@ -59,18 +77,27 @@ export async function sendVerificationEmail(to: string, tokenOrLink: string) {
 
     const info = await transport.sendMail({
       to,
-      from: `Linkmint <${from}>`,
-      subject: "Verify your email",
+      from: `linkmint.co <${fromEmail}>`,
+      subject: "Verify your email for linkmint.co",
       text: `Verify your email: ${link}`,
       html: `
-        <p>Welcome to <strong>Linkmint</strong>!</p>
-        <p><a href="${link}">Click here to verify your email</a></p>
-        <p>${link}</p>
+        <div style="font-family: Arial, sans-serif; line-height:1.5;">
+          <h2 style="margin:0 0 12px;">Verify your email</h2>
+          <p>Tap the button below to verify your email for <strong>linkmint.co</strong>.</p>
+          <p style="margin:24px 0;">
+            <a href="${link}" 
+               style="display:inline-block;padding:12px 18px;text-decoration:none;border-radius:6px;background:#0f766e;color:#fff;">
+              Verify email
+            </a>
+          </p>
+          <p>If the button doesn’t work, copy and paste this URL:</p>
+          <p><a href="${link}">${link}</a></p>
+        </div>
       `,
     });
-    console.log("[mail][smtp] Sent", info.messageId, "->", to, "link:", link);
+    console.log("[mail][smtp] sent", info.messageId, "->", to);
   } catch (err) {
-    console.error("[mail][smtp] Error sending to", to, err);
+    console.error("[mail][smtp] error ->", to, err);
   }
 }
 
