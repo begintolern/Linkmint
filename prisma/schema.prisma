@@ -9,27 +9,28 @@ datasource db {
 }
 
 model User {
-  id                     String               @id @default(cuid())
-  email                  String               @unique
-  name                   String?
-  password               String?
-  createdAt              DateTime             @default(now())
-  referralGroupId        String?
-  referredById           String?
-  verifyToken            String?              @unique
-  verifyTokenExpiry      DateTime?
-  trustScore             Int?                 @default(0)
-  referralBadge          String?
-  referralCode           String?              @unique
-  role                   String?              @default("user")
-  emailVerifiedAt        DateTime?
-  updatedAt              DateTime             @updatedAt
-  ageConfirmed           Boolean              @default(false)
-  ageConfirmedAt         DateTime?
-  deletedAt              DateTime?
-  dob                    DateTime?
-  tosAcceptedAt          DateTime?
-  tosAcceptedIp          String?              @db.VarChar(64)
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  password          String?
+  createdAt         DateTime  @default(now())
+  referralGroupId   String?
+  referredById      String?
+  verifyToken       String?   @unique
+  verifyTokenExpiry DateTime?
+  trustScore        Int?      @default(0)
+  referralBadge     String?
+  referralCode      String?   @unique
+  role              String?   @default("user")
+  emailVerifiedAt   DateTime?
+  updatedAt         DateTime  @updatedAt
+  ageConfirmed      Boolean   @default(false)
+  ageConfirmedAt    DateTime?
+  deletedAt         DateTime?
+  dob               DateTime?
+  tosAcceptedAt     DateTime?
+  tosAcceptedIp     String?   @db.VarChar(64)
+
   commissions            Commission[]
   eventLogs              EventLog[]
   commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
@@ -46,9 +47,14 @@ model User {
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
   verificationTokens     VerificationToken[]
-  bonusCents             Int                  @default(0) // bonus balance in cents
-  bonusEligibleUntil     DateTime? // when bonus window expires (e.g., 90-day override)
-  bonusTier              Int                  @default(0) // simple tier indicator (0=none, 1,2,...)
+
+  // Bonuses / founder program
+  bonusCents         Int       @default(0)
+  bonusEligibleUntil DateTime?
+  bonusTier          Int       @default(0)
+
+  // Click tracking back-relation
+  clickEvents ClickEvent[] @relation("UserClickEvents")
 
   @@index([deletedAt])
 }
@@ -59,8 +65,9 @@ model ReferralGroup {
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   startedAt  DateTime @default(now())
-  referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
-  users      User[]   @relation("UsersInGroup")
+
+  referrer User   @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
+  users    User[] @relation("UsersInGroup")
 }
 
 model ReferralBatch {
@@ -71,7 +78,8 @@ model ReferralBatch {
   expiresAt  DateTime?
   status     String    @default("pending")
   createdAt  DateTime  @default(now())
-  referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
+
+  referrer User @relation("UserReferralBatches", fields: [referrerId], references: [id])
 }
 
 model EventLog {
@@ -81,7 +89,8 @@ model EventLog {
   detail    String?
   message   String?
   createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+
+  user User? @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
 }
@@ -96,7 +105,8 @@ model PayoutAccount {
   status     String         @default("VERIFIED")
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
-  user       User           @relation(fields: [userId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, provider, externalId])
   @@index([userId, isDefault])
@@ -121,7 +131,8 @@ model Payout {
   receiverEmail    String?         @db.VarChar(191)
   statusEnum       PayoutStatus    @default(PENDING)
   transactionId    String?         @db.VarChar(191)
-  user             User            @relation(fields: [userId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId, status])
   @@index([userId, statusEnum])
@@ -158,8 +169,9 @@ model Commission {
   merchantRuleId String?
   updatedAt      DateTime         @updatedAt
   status         CommissionStatus @default(UNVERIFIED)
-  merchant       MerchantRule?    @relation(fields: [merchantRuleId], references: [id])
-  user           User             @relation(fields: [userId], references: [id])
+
+  merchant MerchantRule? @relation(fields: [merchantRuleId], references: [id])
+  user     User          @relation(fields: [userId], references: [id])
 
   @@index([merchantRuleId])
   @@index([userId, status])
@@ -174,8 +186,9 @@ model OverrideCommission {
   reason             String   @default("Referral bonus override")
   status             String   @default("pending")
   createdAt          DateTime @default(now())
-  invitee            User     @relation("InviteeOverride", fields: [inviteeId], references: [id])
-  referrer           User     @relation("ReferrerOverride", fields: [referrerId], references: [id])
+
+  invitee  User @relation("InviteeOverride", fields: [inviteeId], references: [id])
+  referrer User @relation("ReferrerOverride", fields: [referrerId], references: [id])
 }
 
 model SystemSetting {
@@ -222,8 +235,12 @@ model MerchantRule {
   status           String         @default("PENDING")
   allowedRegions   String[]
   inactiveReason   String?
-  commissions      Commission[]
-  smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
+
+  commissions Commission[]
+  smartLinks  SmartLink[]  @relation("MerchantRuleToSmartLink")
+
+  // Click tracking back-relation
+  clickEvents ClickEvent[] @relation("MerchantClickEvents")
 }
 
 model VerificationToken {
@@ -244,7 +261,8 @@ model PayoutLog {
   note          String?
   status        String?
   createdAt     DateTime @default(now())
-  user          User?    @relation(fields: [userId], references: [id])
+
+  user User? @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
 }
@@ -254,7 +272,8 @@ model PasswordResetToken {
   userId  String
   token   String   @unique
   expires DateTime
-  user    User     @relation(fields: [userId], references: [id])
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Waitlist {
@@ -273,13 +292,14 @@ model PinCredential {
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  user       User      @relation("UserPinCredentials", fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation("UserPinCredentials", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceId])
 }
 
 model SmartLink {
-  id             String        @id @default(cuid())
+  id             String   @id @default(cuid())
   userId         String
   merchantRuleId String?
   merchantName   String
@@ -287,9 +307,10 @@ model SmartLink {
   originalUrl    String
   shortUrl       String
   label          String?
-  createdAt      DateTime      @default(now())
-  merchantRule   MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
-  user           User          @relation("UserToSmartLink", fields: [userId], references: [id])
+  createdAt      DateTime @default(now())
+
+  merchantRule MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
+  user         User          @relation("UserToSmartLink", fields: [userId], references: [id])
 }
 
 model AdvertiserApplication {
@@ -359,24 +380,20 @@ model ComplianceEvent {
   id         String   @id @default(cuid())
   createdAt  DateTime @default(now())
   userId     String?
-  merchantId String? // MerchantRule.id when applicable
-  type       String // e.g. "DISALLOWED_SOURCE", "SUSPICIOUS_CLICKS", "AUTO_SUSPEND", "PAYOUT_BLOCK"
-  severity   Int // 1=info, 2=warn, 3=critical
+  merchantId String?
+  type       String
+  severity   Int
   message    String
-  meta       Json? // raw details: { source: "tiktok", clicks: 120, conversions: 0, ... }
-
-  // optional relations (not required to keep it simple)
-  // user       User?       @relation(fields: [userId], references: [id])
-  // merchant   MerchantRule? @relation(fields: [merchantId], references: [id])
+  meta       Json?
 }
 
 model UserFlag {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String // flagged user
-  reason    String // short code: "SPAM", "DISALLOWED_SOURCE", "GEO_BLOCK", etc.
-  status    String   @default("OPEN") // OPEN | RESOLVED | DISMISSED
+  userId    String
+  reason    String
+  status    String   @default("OPEN")
   notes     String?
 }
 
@@ -384,18 +401,11 @@ model SystemAuditRun {
   id         String    @id @default(cuid())
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
-  status     String    @default("RUNNING") // RUNNING | OK | WARN | FAIL
-  findings   Int       @default(0) // number of flags created
+  status     String    @default("RUNNING")
+  findings   Int       @default(0)
   meta       Json?
 }
 
-model ClickEvent {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
-  userId     String?
-  merchantId String?
-  source     String
-}
 model Conversion {
   id         String   @id @default(cuid())
   createdAt  DateTime @default(now())
@@ -403,6 +413,31 @@ model Conversion {
   userId     String?
   merchantId String?
   amount     Decimal?
-  status     String   @default("PENDING") // PENDING | APPROVED | REVERSED | PAID
+  status     String   @default("PENDING")
   source     String?
+}
+
+model ClickEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId     String?
+  merchantId String?
+  linkId     String?
+
+  source  String
+  url     String?
+  referer String?
+
+  ip        String? @db.VarChar(45)
+  userAgent String?
+  meta      Json?
+
+  user     User?         @relation(name: "UserClickEvents", fields: [userId], references: [id])
+  merchant MerchantRule? @relation(name: "MerchantClickEvents", fields: [merchantId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([source, createdAt])
 }

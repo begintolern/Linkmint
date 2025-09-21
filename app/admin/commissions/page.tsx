@@ -22,25 +22,55 @@ type Item = {
   hasReferrer: boolean;
 };
 
+type Filters = {
+  status: string;
+  type: string;
+  paid: string;
+  q: string;
+};
+
 export default function AdminCommissionsPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  async function load(next?: string | null) {
+  const [filters, setFilters] = useState<Filters>({
+    status: "ALL",
+    type: "ALL",
+    paid: "all",
+    q: "",
+  });
+
+  async function load(next?: string | null, replaceList: boolean = false) {
     try {
       setLoading(true);
       setErr(null);
+
       const url = new URL("/api/admin/commissions", window.location.origin);
       url.searchParams.set("limit", "50");
       if (next) url.searchParams.set("cursor", next);
+
+      // Server-side filters
+      if (filters.status !== "ALL") url.searchParams.set("status", filters.status);
+      if (filters.type !== "ALL") url.searchParams.set("type", filters.type);
+      if (filters.paid !== "all") url.searchParams.set("paid", filters.paid);
+
+      // Free-text search
+      const q = filters.q.trim();
+      if (q) {
+        url.searchParams.set("q", q);
+        url.searchParams.set("email", q);
+      }
+
       const res = await fetch(url.toString(), { cache: "no-store" });
       const json = await res.json();
       if (!res.ok || !json.success) {
         throw new Error(json.error || `HTTP ${res.status}`);
       }
-      setItems((prev) => (next ? [...prev, ...json.items] : json.items));
+
+      const incoming: Item[] = json.items || json.rows || [];
+      setItems((prev) => (replaceList || !next ? incoming : [...prev, ...incoming]));
       setCursor(json.nextCursor ?? null);
     } catch (e: any) {
       setErr(e.message || "Failed to load commissions");
@@ -50,9 +80,9 @@ export default function AdminCommissionsPage() {
   }
 
   useEffect(() => {
-    load(null);
+    load(null, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [filters.status, filters.type, filters.paid, filters.q]);
 
   const totals = useMemo(() => {
     const t = items.reduce(
@@ -66,7 +96,6 @@ export default function AdminCommissionsPage() {
       },
       { count: 0, gross: 0, user: 0, ref: 0, platform: 0 }
     );
-    // fix floating drift
     const round = (n: number) => Math.round(n * 100) / 100;
     return {
       ...t,
@@ -82,12 +111,55 @@ export default function AdminCommissionsPage() {
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin · Commissions</h1>
         <button
-          onClick={() => load(null)}
+          onClick={() => load(null, true)}
           className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 hover:bg-zinc-50"
         >
           Refresh
         </button>
       </header>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+          className="rounded-md border px-2 py-1 text-sm"
+        >
+          <option value="ALL">All Status</option>
+          <option value="PENDING">Pending</option>
+          <option value="APPROVED">Approved</option>
+          <option value="PAID">Paid</option>
+        </select>
+
+        <select
+          value={filters.type}
+          onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+          className="rounded-md border px-2 py-1 text-sm"
+        >
+          <option value="ALL">All Types</option>
+          <option value="referral_purchase">Referral Purchase</option>
+          <option value="override_bonus">Override Bonus</option>
+          <option value="payout">Payout</option>
+        </select>
+
+        <select
+          value={filters.paid}
+          onChange={(e) => setFilters({ ...filters, paid: e.target.value })}
+          className="rounded-md border px-2 py-1 text-sm"
+        >
+          <option value="all">Paid & Unpaid</option>
+          <option value="paid">Paid Only</option>
+          <option value="unpaid">Unpaid Only</option>
+        </select>
+
+        <input
+          type="text"
+          value={filters.q}
+          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+          placeholder="Search email or ID"
+          className="rounded-md border px-2 py-1 text-sm w-56"
+        />
+      </div>
 
       {err && (
         <div className="rounded-xl bg-red-50 text-red-800 ring-1 ring-red-200 p-3 text-sm">
@@ -181,7 +253,7 @@ export default function AdminCommissionsPage() {
 
       <div className="flex items-center gap-3">
         <button
-          onClick={() => load(cursor)}
+          onClick={() => load(cursor, false)}
           disabled={!cursor || loading}
           className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 disabled:opacity-50"
         >

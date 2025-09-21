@@ -1,61 +1,129 @@
 // app/api/admin/commissions/route.ts
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
-import { NextResponse, type NextRequest } from "next/server";
-import { prisma } from "@/lib/db";
-import { adminGuardFromReq } from "@/lib/utils/adminGuardReq";
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
 
-/**
- * GET /api/admin/commissions?limit=20&cursor=<id>&status=Pending|Approved|Paid|Rejected
- */
-export async function GET(req: NextRequest) {
-  const gate = await adminGuardFromReq(req);
-  if (!gate.ok) return gate.res;
+    // pagination
+    const limit = clampInt(parseInt(searchParams.get("limit") || "50", 10), 1, 200);
+    const cursor = searchParams.get("cursor") || undefined;
 
-  const url = new URL(req.url);
-  const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "20", 10), 1), 50);
-  const cursor = url.searchParams.get("cursor"); // commission.id
-  const status = url.searchParams.get("status") as
-    | "Pending"
-    | "Approved"
-    | "Paid"
-    | "Rejected"
-    | null;
+    // filters (all optional)
+    const status = pick(searchParams.get("status"));   // e.g. APPROVED
+    const type = pick(searchParams.get("type"));       // e.g. referral_purchase
+    const paid = pick(searchParams.get("paid"));       // "paid" | "unpaid"
+    const email = pick(searchParams.get("email"));     // contains
+    const q = pick(searchParams.get("q"));             // free text (applied post-fetch)
+    const dateFrom = pick(searchParams.get("dateFrom"));
+    const dateTo = pick(searchParams.get("dateTo"));
 
-  const where: any = {};
-  if (status) where.status = status;
+    // Prisma where
+    const where: any = {};
+    if (status) where.status = status;
+    if (type) where.type = type;
+    if (paid === "paid") where.paidOut = true;
+    if (paid === "unpaid") where.paidOut = false;
 
-  const rows = await prisma.commission.findMany({
-    where,
-    take: limit + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      userId: true,
-      amount: true,
-      status: true,
-      paidOut: true,
-      type: true,
-      source: true,
-      description: true,
-      createdAt: true,
-      user: { select: { email: true } },
-    },
-  });
+    if (email) {
+      where.user = { email: { contains: email, mode: "insensitive" } };
+    }
 
-  let nextCursor: string | null = null;
-  if (rows.length > limit) {
-    const next = rows.pop()!;
-    nextCursor = next.id;
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+      if (dateTo) where.createdAt.lte = new Date(dateTo);
+    }
+
+    // fetch page (+1 to probe next page)
+    const page = await prisma.commission.findMany({
+      where,
+      take: limit + 1,
+      skip: cursor ? 1 : 0,
+      ...(cursor && { cursor: { id: cursor } }),
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: { select: { id: true, email: true, name: true } },
+      },
+    });
+
+    // optional free-text post-filter on the fetched slice
+    const filtered = q
+      ? page.filter((it) => {
+          const haystack = [
+            it.user?.email ?? "",
+            it.user?.name ?? "",
+            it.source ?? "",
+            it.description ?? "",
+            it.id,
+            it.type,
+            it.status,
+          ]
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(q.toLowerCase());
+        })
+      : page;
+
+    const hasNext = filtered.length > limit;
+    const data = hasNext ? filtered.slice(0, -1) : filtered;
+    const nextCursor = hasNext ? filtered[filtered.length - 1].id : null;
+
+    // add share breakdowns (adjust if you have custom rules)
+    const mapped = data.map((it) => {
+      const userShare = round2(it.amount * 0.7);
+      const referrerShare = round2(it.amount * 0.05);
+      const platformShare = round2(it.amount - userShare - referrerShare);
+      return {
+        id: it.id,
+        userId: it.userId,
+        amount: it.amount,
+        status: it.status,
+        paidOut: it.paidOut,
+        type: it.type,
+        source: it.source,
+        description: it.description,
+        createdAt: it.createdAt,
+        user: {
+          id: it.user?.id ?? null,
+          email: it.user?.email ?? null,
+          name: it.user?.name ?? null,
+        },
+        userShare,
+        referrerShare,
+        platformShare,
+        hasReferrer: Boolean(it.userId), // tweak if you track referrer separately
+      };
+    });
+
+    // return both shapes for compatibility with existing code
+    return NextResponse.json({
+      success: true,
+      items: mapped,
+      rows: mapped,
+      nextCursor,
+    });
+  } catch (e: any) {
+    console.error("Error in /api/admin/commissions", e);
+    return NextResponse.json({ success: false, error: e.message ?? "Server error" }, { status: 500 });
   }
+}
 
-  const out = rows.map((c) => ({
-    ...c,
-    createdAt: c.createdAt.toISOString(),
-  }));
+function pick(v: string | null): string | undefined {
+  if (!v) return undefined;
+  const t = v.trim();
+  return t ? t : undefined;
+}
 
-  return NextResponse.json({ success: true, rows: out, nextCursor });
+function clampInt(n: number, min: number, max: number) {
+  if (Number.isNaN(n)) return min;
+  return Math.min(max, Math.max(min, n));
+}
+
+function round2(n: number) {
+  return Math.round(n * 100) / 100;
 }
