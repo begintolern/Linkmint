@@ -1,3 +1,4 @@
+// app/api/auth/signup/route.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -70,12 +71,14 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const ip = getClientIp(req) ?? "unknown";
 
-    // Create user
+    // Create user (✅ force NOT verified on creation)
     await prisma.user.create({
       data: {
         name,
         email: normalizedEmail,
         password: hashed,
+
+        emailVerifiedAt: null, // <-- ensure unverified at signup
 
         // Age policy
         ageConfirmed: true,
@@ -96,7 +99,6 @@ export async function POST(req: NextRequest) {
     try {
       await sendVerificationEmail(normalizedEmail, verifyToken);
     } catch {
-      // Optional: silent log if you have EventLog; ignore if not present
       try {
         await prisma.eventLog.create({
           data: {
