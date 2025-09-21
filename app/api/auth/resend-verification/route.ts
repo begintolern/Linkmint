@@ -43,7 +43,13 @@ export async function POST(req: Request) {
     // Find user; do not leak existence via status codes
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, email: true, emailVerifiedAt: true },
+      select: {
+        id: true,
+        email: true,
+        emailVerifiedAt: true,
+        verifyToken: true,
+        verifyTokenExpiry: true,
+      },
     });
 
     // If user not found, return generic success (avoid enumeration).
@@ -52,12 +58,17 @@ export async function POST(req: Request) {
         ok: true,
         message:
           "If an account exists for that email, we’ve sent a new verification link.",
-        // no verifyUrl included when account is unknown
       });
     }
 
-    // Already verified → tell them to log in
-    if (user.emailVerifiedAt) {
+    const now = new Date();
+    const hasActiveToken =
+      !!user.verifyToken &&
+      !!user.verifyTokenExpiry &&
+      user.verifyTokenExpiry > now;
+
+    // Only block if verified AND no active token
+    if (user.emailVerifiedAt && !hasActiveToken) {
       return NextResponse.json({
         ok: true,
         message: "Your email is already verified. You can log in.",
@@ -89,7 +100,7 @@ export async function POST(req: Request) {
       console.error("resend-verification: email send failed", err);
     }
 
-    // IMPORTANT: also return verifyUrl so the frontend can offer "Verify now"
+    // Also return verifyUrl so the frontend can offer "Verify now"
     return NextResponse.json({
       ok: true,
       message:
