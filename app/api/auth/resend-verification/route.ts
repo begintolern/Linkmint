@@ -10,6 +10,13 @@ import crypto from "crypto";
 /** 24 hours */
 const EXPIRY_MINUTES = 60 * 24;
 
+/** Check if caller is allowed to see debug info */
+function isAdmin(req: Request) {
+  const secret = process.env.ADMIN_SELFTEST_SECRET || "";
+  const header = req.headers.get("x-admin-secret") || "";
+  return !!secret && header === secret;
+}
+
 /** Resolve absolute origin safely (env first, then proxy headers) */
 function getOrigin(req: Request) {
   const envOrigin = process.env.BASE_URL || process.env.NEXTAUTH_URL;
@@ -29,6 +36,8 @@ function getOrigin(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const adminView = isAdmin(req);
+
     const body = await req.json().catch(() => ({} as any));
     const emailRaw = typeof body?.email === "string" ? body.email : "";
     const email = emailRaw.trim().toLowerCase();
@@ -52,12 +61,14 @@ export async function POST(req: Request) {
       },
     });
 
-    // If user not found, return generic success (avoid enumeration).
     if (!user) {
       return NextResponse.json({
         ok: true,
         message:
           "If an account exists for that email, we’ve sent a new verification link.",
+        ...(adminView
+          ? { debug: { found: false, email } }
+          : {}),
       });
     }
 
@@ -72,6 +83,18 @@ export async function POST(req: Request) {
       return NextResponse.json({
         ok: true,
         message: "Your email is already verified. You can log in.",
+        ...(adminView
+          ? {
+              debug: {
+                found: true,
+                email: user.email,
+                emailVerifiedAt: user.emailVerifiedAt,
+                hasActiveToken,
+                verifyToken: !!user.verifyToken,
+                verifyTokenExpiry: user.verifyTokenExpiry,
+              },
+            }
+          : {}),
       });
     }
 
@@ -87,7 +110,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // Build canonical verify URL (same one used in the email)
     const origin = getOrigin(req);
     const verifyUrl = `${origin}/api/auth/verify?token=${encodeURIComponent(
       token
@@ -100,12 +122,24 @@ export async function POST(req: Request) {
       console.error("resend-verification: email send failed", err);
     }
 
-    // Also return verifyUrl so the frontend can offer "Verify now"
     return NextResponse.json({
       ok: true,
       message:
         "Verification email sent. You can also verify now using the button below.",
       verifyUrl,
+      ...(adminView
+        ? {
+            debug: {
+              found: true,
+              email: user.email,
+              emailVerifiedAt: user.emailVerifiedAt,
+              hasActiveToken,
+              verifyToken: true,
+              verifyTokenExpiry: expires,
+              returnedVerifyUrl: verifyUrl,
+            },
+          }
+        : {}),
     });
   } catch (err) {
     console.error("resend-verification POST error:", err);
