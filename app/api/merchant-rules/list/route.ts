@@ -12,15 +12,17 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const market = (url.searchParams.get("market") || "US").toUpperCase();
 
-    // Build the where object without tripping Prisma's stale TS types in CI
-    const where: any = { active: true };
-    // @ts-ignore – CI may have a stale Prisma Client without `market` yet
-    where.market = market;
-
-    const merchants = await prisma.merchantRule.findMany({
-      where,
-      orderBy: [{ merchantName: "asc" }],
-    });
+    // Use raw SQL to avoid Prisma model type drift during rollout
+    const merchants = await prisma.$queryRawUnsafe<any[]>(
+      `
+      SELECT *
+      FROM "MerchantRule"
+      WHERE "active" = true
+        AND UPPER(COALESCE("market", 'US')) = $1
+      ORDER BY "merchantName" ASC
+      `,
+      market
+    );
 
     return NextResponse.json({ ok: true, market, merchants });
   } catch (err) {
