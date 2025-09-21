@@ -82,16 +82,18 @@ export async function POST(req: Request) {
       token
     )}`;
 
-    // Send email (non-blocking UX; we still return verifyUrl below)
-    const sent = await sendVerificationEmail(user.email, token);
-    if (sent && (sent as any).ok === false) {
-      console.error("resend-verification: SENDGRID_ERROR", sent);
+    // Send email (ignore return value, just log errors if thrown)
+    try {
+      await sendVerificationEmail(user.email, token);
+    } catch (err) {
+      console.error("resend-verification: email send failed", err);
     }
 
     // IMPORTANT: also return verifyUrl so the frontend can offer "Verify now"
     return NextResponse.json({
       ok: true,
-      message: "Verification email sent. You can also verify now using the button below.",
+      message:
+        "Verification email sent. You can also verify now using the button below.",
       verifyUrl,
     });
   } catch (err) {
