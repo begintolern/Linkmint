@@ -1,9 +1,9 @@
 // app/dashboard/merchants/page.tsx
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
-import Link from 'next/link';
-import { MerchantHover } from '@/app/components/MerchantHover';
+import Link from "next/link";
+import { MerchantHover } from "@/app/components/MerchantHover";
 
 type Merchant = {
   id: string;
@@ -35,29 +35,34 @@ type Merchant = {
   inactiveReason?: string | null;
 };
 
-async function getMerchants(): Promise<Merchant[]> {
-  const primary = process.env.NEXT_PUBLIC_BASE_URL
-    ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/merchant-rules/list`
-    : `/api/merchant-rules/list`;
+async function getMerchants(market: string): Promise<Merchant[]> {
+  const base = process.env.NEXT_PUBLIC_BASE_URL
+    ? `${process.env.NEXT_PUBLIC_BASE_URL}`
+    : ``;
 
-  const res = await fetch(primary, { cache: 'no-store' });
+  const res = await fetch(
+    `${base}/api/merchant-rules/list?market=${encodeURIComponent(
+      market.toUpperCase()
+    )}`,
+    { cache: "no-store" }
+  );
   const json = await res.json();
-  if (!json?.ok) throw new Error('Failed to load merchants');
+  if (!json?.ok) throw new Error("Failed to load merchants");
   return json.merchants as Merchant[];
 }
 
 function Badge({
   children,
-  tone = 'default',
+  tone = "default",
 }: {
   children: React.ReactNode;
-  tone?: 'default' | 'success' | 'warn' | 'danger';
+  tone?: "default" | "success" | "warn" | "danger";
 }) {
   const tones: Record<string, string> = {
-    default: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-100 text-green-800',
-    warn: 'bg-yellow-100 text-yellow-800',
-    danger: 'bg-red-100 text-red-800',
+    default: "bg-gray-100 text-gray-800",
+    success: "bg-green-100 text-green-800",
+    warn: "bg-yellow-100 text-yellow-800",
+    danger: "bg-red-100 text-red-800",
   };
   return (
     <span
@@ -68,8 +73,20 @@ function Badge({
   );
 }
 
-export default async function MerchantsPage() {
-  const merchants = await getMerchants();
+export default async function MerchantsPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
+  const market =
+    (typeof searchParams?.market === "string"
+      ? searchParams.market
+      : Array.isArray(searchParams?.market)
+      ? searchParams.market[0]
+      : "US"
+    ).toUpperCase();
+
+  const merchants = await getMerchants(market);
 
   return (
     <div className="p-6">
@@ -77,13 +94,31 @@ export default async function MerchantsPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-semibold">Merchants</h1>
           <div className="text-sm text-gray-500">{merchants.length} total</div>
+          <Badge>{market}</Badge>
         </div>
-        <Link
-          href="/dashboard/merchants/new"
-          className="rounded-md border px-3 py-2 text-sm shadow-sm hover:bg-gray-50"
-        >
-          + New Merchant
-        </Link>
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-600">
+            View:
+            <Link
+              href="/dashboard/merchants?market=US"
+              className={`ml-2 underline ${market === "US" ? "font-semibold" : ""}`}
+            >
+              US
+            </Link>
+            <Link
+              href="/dashboard/merchants?market=PH"
+              className={`ml-3 underline ${market === "PH" ? "font-semibold" : ""}`}
+            >
+              PH
+            </Link>
+          </div>
+          <Link
+            href="/dashboard/merchants/new"
+            className="rounded-md border px-3 py-2 text-sm shadow-sm hover:bg-gray-50"
+          >
+            + New Merchant
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
@@ -109,13 +144,11 @@ export default async function MerchantsPage() {
                   <div className="flex flex-col">
                     <span className="font-medium">{m.merchantName}</span>
                     <div className="mt-1 space-x-2">
-                      <Badge tone={m.active ? 'success' : 'danger'}>
-                        {m.active ? 'Active' : 'Inactive'}
+                      <Badge tone={m.active ? "success" : "danger"}>
+                        {m.active ? "Active" : "Inactive"}
                       </Badge>
                       {m.status && (
-                        <Badge
-                          tone={m.status === 'PENDING' ? 'warn' : 'default'}
-                        >
+                        <Badge tone={m.status === "PENDING" ? "warn" : "default"}>
                           {m.status}
                         </Badge>
                       )}
@@ -123,32 +156,28 @@ export default async function MerchantsPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3">{m.network ?? '—'}</td>
-                <td className="px-4 py-3">{m.domainPattern ?? '—'}</td>
+                <td className="px-4 py-3">{m.network ?? "—"}</td>
+                <td className="px-4 py-3">{m.domainPattern ?? "—"}</td>
                 <td className="px-4 py-3">
-                  {m.inactiveReason ? (
-                    <Badge tone="danger">Blocked</Badge>
-                  ) : (
-                    '—'
-                  )}
+                  {m.inactiveReason ? <Badge tone="danger">Blocked</Badge> : "—"}
                 </td>
                 <td className="px-4 py-3">
-                  {m.commissionType || '—'}
-                  {typeof m.commissionRate === 'number' ? (
+                  {m.commissionType || "—"}
+                  {typeof m.commissionRate === "number" ? (
                     <span className="ml-1 text-gray-600">
-                      {m.commissionType?.toUpperCase() === 'PERCENT'
+                      {m.commissionType?.toUpperCase() === "PERCENT"
                         ? `${m.commissionRate}%`
                         : m.commissionRate}
                     </span>
                   ) : null}
                 </td>
                 <td className="px-4 py-3">
-                  {m.cookieWindowDays ?? '—'}
-                  {m.cookieWindowDays ? ' days' : ''}
+                  {m.cookieWindowDays ?? "—"}
+                  {m.cookieWindowDays ? " days" : ""}
                 </td>
                 <td className="px-4 py-3">
-                  {m.payoutDelayDays ?? '—'}
-                  {m.payoutDelayDays ? ' days' : ''}
+                  {m.payoutDelayDays ?? "—"}
+                  {m.payoutDelayDays ? " days" : ""}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">
@@ -161,7 +190,7 @@ export default async function MerchantsPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="max-w-xs truncate text-gray-700">
-                    {m.notes ?? '—'}
+                    {m.notes ?? "—"}
                   </div>
                 </td>
                 <td className="px-4 py-3 align-top">
