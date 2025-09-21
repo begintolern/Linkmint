@@ -1,82 +1,103 @@
-import type { NextRequest } from "next/server";
+// app/api/auth/resend-verification/route.ts
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { sendVerificationEmail } from "@/lib/email/sendVerificationEmail";
 import crypto from "crypto";
-import sendVerificationEmail from "@/lib/email/sendVerificationEmail";
 
-// Simple in-memory rate limit (per email) for this server instance.
-// For multi-instance deploys, replace with Redis.
-const LAST_SENT: Record<string, number> = {};
-const WINDOW_MS = 1000 * 60; // 1 minute
+/** 24 hours */
+const EXPIRY_MINUTES = 60 * 24;
 
-const Schema = z.object({
-  email: z.string().trim().email({ message: "Invalid email address" }),
-});
+/** Resolve absolute origin safely (env first, then proxy headers) */
+function getOrigin(req: Request) {
+  const envOrigin = process.env.BASE_URL || process.env.NEXTAUTH_URL;
+  if (envOrigin) return envOrigin.replace(/\/$/, "");
+  const u = new URL(req.url);
+  const proto =
+    (req.headers.get("x-forwarded-proto") ||
+      req.headers.get("x-forwarded-protocol") ||
+      u.protocol.replace(":", "") ||
+      "https");
+  const host =
+    req.headers.get("x-forwarded-host") ||
+    req.headers.get("host") ||
+    u.host;
+  return `${proto}://${host}`.replace(/\/$/, "");
+}
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const parsed = Schema.safeParse(body);
-    if (!parsed.success) {
-      const msg = parsed.error.issues?.[0]?.message || "Invalid request.";
-      return NextResponse.json({ ok: false, message: msg }, { status: 400 });
-    }
+    const body = await req.json().catch(() => ({} as any));
+    const emailRaw = typeof body?.email === "string" ? body.email : "";
+    const email = emailRaw.trim().toLowerCase();
 
-    const email = parsed.data.email.toLowerCase();
-
-    // Rate limit
-    const last = LAST_SENT[email] || 0;
-    const now = Date.now();
-    if (now - last < WINDOW_MS) {
+    if (!email) {
       return NextResponse.json(
-        { ok: false, message: "Please wait a minute before trying again." },
-        { status: 429 }
+        { ok: false, message: "Email is required." },
+        { status: 400 }
       );
     }
 
-    // Check user exists and is not already verified
+    // Find user; do not leak existence via status codes
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, emailVerifiedAt: true },
+      select: { id: true, email: true, emailVerifiedAt: true },
     });
 
+    // If user not found, return generic success (avoid enumeration).
     if (!user) {
-      // Do not reveal account existence — return generic OK
       return NextResponse.json({
         ok: true,
-        message: "If an account exists, a new verification email will be sent.",
+        message:
+          "If an account exists for that email, we’ve sent a new verification link.",
+        // no verifyUrl included when account is unknown
       });
     }
 
+    // Already verified → tell them to log in
     if (user.emailVerifiedAt) {
       return NextResponse.json({
         ok: true,
-        message: "Email is already verified. You can log in.",
+        message: "Your email is already verified. You can log in.",
       });
     }
 
-    // Issue new token
-    const verifyToken = crypto.randomUUID();
-    const verifyTokenExpiry = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
+    // Issue fresh token (overwrites any previous). Only latest link will work.
+    const token = crypto.randomUUID();
+    const expires = new Date(Date.now() + EXPIRY_MINUTES * 60 * 1000);
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { verifyToken, verifyTokenExpiry },
+      data: {
+        verifyToken: token,
+        verifyTokenExpiry: expires,
+      },
     });
 
-    // Send email
-    await sendVerificationEmail(email, verifyToken);
+    // Build canonical verify URL (same one used in the email)
+    const origin = getOrigin(req);
+    const verifyUrl = `${origin}/api/auth/verify?token=${encodeURIComponent(
+      token
+    )}`;
 
-    LAST_SENT[email] = now;
+    // Send email (non-blocking UX; we still return verifyUrl below)
+    const sent = await sendVerificationEmail(user.email, token);
+    if (sent && (sent as any).ok === false) {
+      console.error("resend-verification: SENDGRID_ERROR", sent);
+    }
 
+    // IMPORTANT: also return verifyUrl so the frontend can offer "Verify now"
     return NextResponse.json({
       ok: true,
-      message: "Verification email sent. Please check your inbox.",
+      message: "Verification email sent. You can also verify now using the button below.",
+      verifyUrl,
     });
-  } catch {
+  } catch (err) {
+    console.error("resend-verification POST error:", err);
     return NextResponse.json(
-      { ok: false, message: "Something went wrong. Please try again." },
+      { ok: false, message: "Could not send verification email." },
       { status: 500 }
     );
   }
