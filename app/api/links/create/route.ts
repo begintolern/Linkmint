@@ -6,7 +6,6 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import {
-  isShopeePH,
   validateShopeeDistribution,
   normalizeShopeeUrl,
   getShopeeComplianceCard,
@@ -24,7 +23,7 @@ import {
  *
  * Behavior:
  * - Loads merchant from DB.
- * - If Shopee PH: runs compliance checks and normalizer.
+ * - If Shopee PH (inferred by domainPattern/name), runs compliance checks and normalizer.
  * - Returns {ok:false, errors} if blocked; otherwise returns normalized URL, warnings, acks to show in UI.
  * - DOES NOT persist anything yet (non-destructive). Wire your UI to call this before saving.
  */
@@ -49,13 +48,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Load the merchant minimally
+    // Load the merchant (omit 'market' to avoid Prisma type drift)
     const merchant = await prisma.merchantRule.findUnique({
       where: { id: merchantId },
       select: {
         id: true,
         merchantName: true,
-        market: true as any, // tolerate older Prisma clients
         domainPattern: true,
         allowedSources: true as any,
         disallowed: true as any,
@@ -72,14 +70,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Infer “Shopee PH” without reading 'market' (compile-safe):
+    const name = (merchant.merchantName || "").toLowerCase();
+    const host = (merchant.domainPattern || "").toLowerCase();
+    const looksShopeePH =
+      name.includes("shopee") || host.includes("shopee.ph");
+
     // Default pass-through results
     let normalizedUrl = destinationUrl;
     const warnings: string[] = [];
     const requiredAcknowledgements: string[] = [];
-    const errors: string[] = [];
 
-    // Shopee PH compliance
-    if (isShopeePH(merchant as any)) {
+    if (looksShopeePH) {
       // 1) Distribution validation (blocks disallowed practices)
       const v = validateShopeeDistribution({ source: source as any, plannedKeywords });
       if (!v.ok) {
@@ -102,20 +104,29 @@ export async function POST(req: NextRequest) {
       normalizedUrl = n.url;
 
       // 3) Provide a compliance card payload for UI
-      const card = getShopeeComplianceCard(merchant as any);
+      const card = getShopeeComplianceCard({
+        id: merchant.id,
+        merchantName: merchant.merchantName,
+        market: "PH", // inferred for UI purposes
+        domainPattern: merchant.domainPattern,
+        allowedSources: merchant.allowedSources as any,
+        disallowed: merchant.disallowed as any,
+        cookieWindowDays: merchant.cookieWindowDays as any,
+        payoutDelayDays: merchant.payoutDelayDays as any,
+        notes: merchant.notes,
+      });
 
       return NextResponse.json({
         ok: true,
         merchant: {
           id: merchant.id,
           name: merchant.merchantName,
-          market: (merchant as any).market ?? null,
+          market: "PH",
         },
         normalizedUrl,
         policy: card,
         warnings,
         requiredAcknowledgements,
-        // NOTE: Do NOT persist yet. Let the UI confirm acks, then call your real save endpoint.
       });
     }
 
@@ -125,7 +136,7 @@ export async function POST(req: NextRequest) {
       merchant: {
         id: merchant.id,
         name: merchant.merchantName,
-        market: (merchant as any).market ?? null,
+        market: null,
       },
       normalizedUrl,
       warnings,
