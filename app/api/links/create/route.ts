@@ -18,14 +18,16 @@ import {
  *   merchantId: string,
  *   destinationUrl: string,
  *   source: "TikTok" | "Instagram" | "Facebook" | "YouTube" | "Blog/Website" | "Email (opt-in)" | "Search Ads" | "Other",
- *   plannedKeywords?: string[]        // only if source === "Search Ads"
+ *   plannedKeywords?: string[],        // only if source === "Search Ads"
+ *   acksAccepted?: string[]            // user-checked acknowledgements (2nd call)
  * }
  *
  * Behavior:
  * - Loads merchant from DB.
  * - If Shopee PH (inferred by domainPattern/name), runs compliance checks and normalizer.
- * - Returns {ok:false, errors} if blocked; otherwise returns normalized URL, warnings, acks to show in UI.
- * - DOES NOT persist anything yet (non-destructive). Wire your UI to call this before saving.
+ * - First call (no acks): returns requiredAcknowledgements + warnings + normalizedUrl + policy card.
+ * - Second call (with acksAccepted that cover all requiredAcknowledgements): returns ok:true (ready to persist).
+ * - DOES NOT persist yet; this endpoint is a validator/gate.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -36,19 +38,18 @@ export async function POST(req: NextRequest) {
     const plannedKeywords: string[] = Array.isArray(body?.plannedKeywords)
       ? body.plannedKeywords
       : [];
+    const acksAccepted: string[] = Array.isArray(body?.acksAccepted)
+      ? body.acksAccepted
+      : [];
 
     if (!merchantId || !destinationUrl || !source) {
       return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Missing input. Required: merchantId, destinationUrl, source.",
-        },
+        { ok: false, message: "Missing input. Required: merchantId, destinationUrl, source." },
         { status: 400 }
       );
     }
 
-    // Load the merchant (omit 'market' to avoid Prisma type drift)
+    // Load the merchant (omit 'market' to avoid Prisma type drift in CI)
     const merchant = await prisma.merchantRule.findUnique({
       where: { id: merchantId },
       select: {
@@ -70,19 +71,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Infer “Shopee PH” without reading 'market' (compile-safe):
+    // Infer “Shopee PH” without reading 'market' (compile-safe)
     const name = (merchant.merchantName || "").toLowerCase();
     const host = (merchant.domainPattern || "").toLowerCase();
-    const looksShopeePH =
-      name.includes("shopee") || host.includes("shopee.ph");
+    const looksShopeePH = name.includes("shopee") || host.includes("shopee.ph");
 
-    // Default pass-through results
+    // Default pass-through
     let normalizedUrl = destinationUrl;
     const warnings: string[] = [];
     const requiredAcknowledgements: string[] = [];
 
     if (looksShopeePH) {
-      // 1) Distribution validation (blocks disallowed practices)
+      // 1) Distribution validation
       const v = validateShopeeDistribution({ source: source as any, plannedKeywords });
       if (!v.ok) {
         return NextResponse.json(
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       warnings.push(...v.warnings);
       requiredAcknowledgements.push(...v.requiredAcknowledgements);
 
-      // 2) URL normalization (ensure clean shopee.ph link format)
+      // 2) URL normalization
       const n = normalizeShopeeUrl(destinationUrl);
       if (!n.ok) {
         return NextResponse.json(
@@ -103,11 +103,11 @@ export async function POST(req: NextRequest) {
       }
       normalizedUrl = n.url;
 
-      // 3) Provide a compliance card payload for UI
+      // 3) Compliance card for UI
       const card = getShopeeComplianceCard({
         id: merchant.id,
         merchantName: merchant.merchantName,
-        market: "PH", // inferred for UI purposes
+        market: "PH",
         domainPattern: merchant.domainPattern,
         allowedSources: merchant.allowedSources as any,
         disallowed: merchant.disallowed as any,
@@ -116,13 +116,41 @@ export async function POST(req: NextRequest) {
         notes: merchant.notes,
       });
 
+      // 4) If client sent acknowledgements, enforce them here
+      if (acksAccepted.length > 0) {
+        const missing = requiredAcknowledgements.filter(
+          (req) => !acksAccepted.includes(req)
+        );
+        if (missing.length > 0) {
+          return NextResponse.json(
+            {
+              ok: false,
+              message: "Missing required acknowledgements.",
+              missing,
+              requiredAcknowledgements,
+              warnings,
+              normalizedUrl,
+              policy: card,
+            },
+            { status: 400 }
+          );
+        }
+        // All good → signal ready to persist (your real save endpoint should follow)
+        return NextResponse.json({
+          ok: true,
+          ready: true,
+          merchant: { id: merchant.id, name: merchant.merchantName, market: "PH" },
+          normalizedUrl,
+          policy: card,
+          warnings,
+        });
+      }
+
+      // First pass (no acks yet) → return the requirements
       return NextResponse.json({
         ok: true,
-        merchant: {
-          id: merchant.id,
-          name: merchant.merchantName,
-          market: "PH",
-        },
+        ready: false,
+        merchant: { id: merchant.id, name: merchant.merchantName, market: "PH" },
         normalizedUrl,
         policy: card,
         warnings,
@@ -130,14 +158,11 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Non-Shopee merchants: return pass-through for now (no-op)
+    // Non-Shopee merchants: no special gating (for now)
     return NextResponse.json({
       ok: true,
-      merchant: {
-        id: merchant.id,
-        name: merchant.merchantName,
-        market: null,
-      },
+      ready: true,
+      merchant: { id: merchant.id, name: merchant.merchantName, market: null },
       normalizedUrl,
       warnings,
       requiredAcknowledgements,
