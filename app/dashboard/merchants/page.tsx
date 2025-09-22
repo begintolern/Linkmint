@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { headers } from "next/headers";
+import Controls from "./Controls";
 
 type MerchantRuleDTO = {
   id: string;
@@ -21,23 +22,21 @@ type MerchantRuleDTO = {
   updatedAt?: string;
 };
 
+type PageProps = { searchParams?: { q?: string; activeOnly?: string } };
+
 function getBaseUrl() {
-  // Prefer runtime headers (works on Railway/Vercel behind proxies)
   const h = headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? "https";
   if (host) return `${proto}://${host}`;
 
-  // Fallback to envs if headers are unavailable
   const envUrl =
     process.env.NEXT_PUBLIC_APP_URL ??
     process.env.VERCEL_URL ??
     process.env.RAILWAY_PUBLIC_DOMAIN;
   if (envUrl) {
-    // Ensure protocol
     return envUrl.startsWith("http") ? envUrl : `https://${envUrl}`;
   }
-  // Last resort (won't work in prod if host is unknown)
   return "http://localhost:3000";
 }
 
@@ -67,12 +66,14 @@ function fmtCommission(m: MerchantRuleDTO) {
   return "TBD";
 }
 
-export default async function Page() {
+export default async function Page({ searchParams }: PageProps) {
+  const activeOnly = (searchParams?.activeOnly ?? "false") === "true";
+  const q = (searchParams?.q ?? "").toLowerCase().trim();
+
   let merchants: MerchantRuleDTO[] = [];
   try {
-    merchants = await fetchMerchants(false); // show all
+    merchants = await fetchMerchants(activeOnly);
   } catch (e: any) {
-    // Render a simple error block on the page instead of crashing the route
     return (
       <div className="p-6">
         <h1 className="text-2xl font-semibold mb-2">Merchant Rules</h1>
@@ -83,14 +84,32 @@ export default async function Page() {
     );
   }
 
+  const filtered = q
+    ? merchants.filter((m) =>
+        [
+          m.merchantName,
+          m.network ?? "",
+          m.domainPattern ?? "",
+          m.notes ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      )
+    : merchants;
+
   return (
     <div className="p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Merchant Rules</h1>
-        <span className="text-sm opacity-70">Total: {merchants.length}</span>
+        <span className="text-sm opacity-70">Total: {filtered.length}</span>
       </div>
 
-      {merchants.length === 0 ? (
+      <div className="mb-4">
+        <Controls />
+      </div>
+
+      {filtered.length === 0 ? (
         <div className="text-sm opacity-70">No merchants found.</div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border">
@@ -107,7 +126,7 @@ export default async function Page() {
               </tr>
             </thead>
             <tbody>
-              {merchants.map((m) => (
+              {filtered.map((m) => (
                 <tr key={m.id} className="border-t">
                   <td className="px-4 py-3">
                     <div className="font-medium">{m.merchantName}</div>
