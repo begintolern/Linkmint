@@ -1,206 +1,117 @@
-// app/dashboard/merchants/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import Link from "next/link";
-import { MerchantHover } from "@/app/components/MerchantHover";
-
-type Merchant = {
+type MerchantRuleDTO = {
   id: string;
-  active: boolean;
   merchantName: string;
+  active: boolean;
   network: string | null;
   domainPattern: string | null;
-  paramKey?: string | null;
-  paramValue?: string | null;
-  linkTemplate?: string | null;
-  allowedSources?: unknown | null;
-  disallowed?: unknown | null;
-  cookieWindowDays?: number | null;
-  payoutDelayDays?: number | null;
-  commissionType: string;
-  commissionRate: number | null;
-  calc?: string | null;
-  rate?: number | null;
+  allowedSources: string[] | null;
+  disallowedSources: string[] | null;
+  defaultCommissionRate: number | null;
+  commissionType: string | null;
+  cookieWindowDays: number | null;
+  payoutDelayDays: number | null;
+  isGreyListed?: boolean | null;
   notes?: string | null;
-  importMethod: string;
-  apiBaseUrl?: string | null;
-  apiAuthType?: string | null;
-  apiKeyRef?: string | null;
-  lastImportedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  status: string;
-  allowedRegions: string[];
-  inactiveReason?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-async function getMerchants(market: string): Promise<Merchant[]> {
-  const base = process.env.NEXT_PUBLIC_BASE_URL
-    ? `${process.env.NEXT_PUBLIC_BASE_URL}`
-    : ``;
-
-  const res = await fetch(
-    `${base}/api/merchant-rules/list?market=${encodeURIComponent(
-      market.toUpperCase()
-    )}`,
-    { cache: "no-store" }
-  );
-  const json = await res.json();
-  if (!json?.ok) throw new Error("Failed to load merchants");
-  return json.merchants as Merchant[];
+async function fetchMerchants(activeOnly = false): Promise<MerchantRuleDTO[]> {
+  // Relative URL works in App Router server components
+  const res = await fetch(`/api/merchant-rules/list?activeOnly=${activeOnly}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to load merchants: ${res.status}`);
+  }
+  const data = await res.json();
+  if (!data?.ok) throw new Error(data?.message ?? "API returned not ok");
+  return (data.merchants ?? []) as MerchantRuleDTO[];
 }
 
-function Badge({
-  children,
-  tone = "default",
-}: {
-  children: React.ReactNode;
-  tone?: "default" | "success" | "warn" | "danger";
-}) {
-  const tones: Record<string, string> = {
-    default: "bg-gray-100 text-gray-800",
-    success: "bg-green-100 text-green-800",
-    warn: "bg-yellow-100 text-yellow-800",
-    danger: "bg-red-100 text-red-800",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tones[tone]}`}
-    >
-      {children}
-    </span>
-  );
+function fmtList(list: string[] | null | undefined) {
+  if (!list || list.length === 0) return "—";
+  return list.join(", ");
 }
 
-export default async function MerchantsPage({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
-  const market =
-    (typeof searchParams?.market === "string"
-      ? searchParams.market
-      : Array.isArray(searchParams?.market)
-      ? searchParams.market[0]
-      : "US"
-    ).toUpperCase();
+function fmtCommission(m: MerchantRuleDTO) {
+  const rate = m.defaultCommissionRate;
+  if (rate != null && !Number.isNaN(rate)) {
+    // Show % for PERCENT, otherwise just the numeric value
+    if ((m.commissionType ?? "").toUpperCase() === "PERCENT") {
+      return `${rate}%`;
+    }
+    return `${rate}`;
+  }
+  // Fallback for schemas that only store commissionRate under a different field (defensive)
+  // This keeps UI from looking empty while we normalize DB over time.
+  return "TBD";
+}
 
-  const merchants = await getMerchants(market);
+export default async function Page() {
+  const merchants = await fetchMerchants(false); // show all (active + inactive)
 
   return (
     <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold">Merchants</h1>
-          <div className="text-sm text-gray-500">{merchants.length} total</div>
-          <Badge>{market}</Badge>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-600">
-            View:
-            <Link
-              href="/dashboard/merchants?market=US"
-              className={`ml-2 underline ${market === "US" ? "font-semibold" : ""}`}
-            >
-              US
-            </Link>
-            <Link
-              href="/dashboard/merchants?market=PH"
-              className={`ml-3 underline ${market === "PH" ? "font-semibold" : ""}`}
-            >
-              PH
-            </Link>
-          </div>
-          <Link
-            href="/dashboard/merchants/new"
-            className="rounded-md border px-3 py-2 text-sm shadow-sm hover:bg-gray-50"
-          >
-            + New Merchant
-          </Link>
-        </div>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Merchant Rules</h1>
+        <span className="text-sm opacity-70">
+          Total: {merchants.length}
+        </span>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr className="text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-              <th className="px-4 py-3">Merchant</th>
-              <th className="px-4 py-3">Network</th>
-              <th className="px-4 py-3">Domain</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Commission</th>
-              <th className="px-4 py-3">Cookie</th>
-              <th className="px-4 py-3">Payout Delay</th>
-              <th className="px-4 py-3">Regions</th>
-              <th className="px-4 py-3">Notes</th>
-              <th className="px-4 py-3">More</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
-            {merchants.map((m) => (
-              <tr key={m.id} className="align-top">
-                <td className="px-4 py-3">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{m.merchantName}</span>
-                    <div className="mt-1 space-x-2">
-                      <Badge tone={m.active ? "success" : "danger"}>
-                        {m.active ? "Active" : "Inactive"}
-                      </Badge>
-                      {m.status && (
-                        <Badge tone={m.status === "PENDING" ? "warn" : "default"}>
-                          {m.status}
-                        </Badge>
-                      )}
-                      {m.importMethod && <Badge>{m.importMethod}</Badge>}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">{m.network ?? "—"}</td>
-                <td className="px-4 py-3">{m.domainPattern ?? "—"}</td>
-                <td className="px-4 py-3">
-                  {m.inactiveReason ? <Badge tone="danger">Blocked</Badge> : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {m.commissionType || "—"}
-                  {typeof m.commissionRate === "number" ? (
-                    <span className="ml-1 text-gray-600">
-                      {m.commissionType?.toUpperCase() === "PERCENT"
-                        ? `${m.commissionRate}%`
-                        : m.commissionRate}
-                    </span>
-                  ) : null}
-                </td>
-                <td className="px-4 py-3">
-                  {m.cookieWindowDays ?? "—"}
-                  {m.cookieWindowDays ? " days" : ""}
-                </td>
-                <td className="px-4 py-3">
-                  {m.payoutDelayDays ?? "—"}
-                  {m.payoutDelayDays ? " days" : ""}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1">
-                    {m.allowedRegions?.length ? (
-                      m.allowedRegions.map((r) => <Badge key={r}>{r}</Badge>)
-                    ) : (
-                      <span className="text-gray-500">—</span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="max-w-xs truncate text-gray-700">
-                    {m.notes ?? "—"}
-                  </div>
-                </td>
-                <td className="px-4 py-3 align-top">
-                  <MerchantHover merchant={m} />
-                </td>
+      {merchants.length === 0 ? (
+        <div className="text-sm opacity-70">No merchants found.</div>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr className="text-left">
+                <th className="px-4 py-3">Merchant</th>
+                <th className="px-4 py-3">Network</th>
+                <th className="px-4 py-3">Domain</th>
+                <th className="px-4 py-3">Commission</th>
+                <th className="px-4 py-3">Cookie (days)</th>
+                <th className="px-4 py-3">Allowed Sources</th>
+                <th className="px-4 py-3">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {merchants.map((m) => (
+                <tr key={m.id} className="border-t">
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{m.merchantName}</div>
+                    {m.notes ? (
+                      <div className="text-xs opacity-70">{m.notes}</div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3">{m.network ?? "—"}</td>
+                  <td className="px-4 py-3">{m.domainPattern ?? "—"}</td>
+                  <td className="px-4 py-3">{fmtCommission(m)}</td>
+                  <td className="px-4 py-3">
+                    {m.cookieWindowDays != null ? m.cookieWindowDays : "—"}
+                  </td>
+                  <td className="px-4 py-3">{fmtList(m.allowedSources)}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs ${
+                        m.active
+                          ? "bg-green-100 text-green-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {m.active ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
