@@ -16,25 +16,41 @@ type ClickRow = {
 };
 
 async function getClicks(page = 1, pageSize = 50): Promise<ClickRow[]> {
-  const skip = (page - 1) * pageSize;
+  const offset = (page - 1) * pageSize;
 
-  // Cast the model call to any to avoid Prisma Client drift
-  const rows = await (prisma as any).clickEvent.findMany({
-    skip,
-    take: pageSize,
-    orderBy: { createdAt: "desc" },
-    include: {
-      user: { select: { id: true, email: true } },
-      merchant: { select: { id: true, merchantName: true } },
-    },
-  });
+  // Raw SQL to avoid Prisma type mismatches in CI/build
+  const rows: any[] = await prisma.$queryRawUnsafe(
+    `
+    SELECT
+      ce."id",
+      ce."createdAt",
+      ce."ip",
+      ce."userAgent",
+      ce."destinationUrl",
+      ce."referrer",
+      u."id"       AS "userId",
+      u."email"    AS "userEmail",
+      m."id"       AS "merchantId",
+      m."merchantName" AS "merchantName"
+    FROM "ClickEvent" ce
+    LEFT JOIN "User" u ON u."id" = ce."userId"
+    LEFT JOIN "MerchantRule" m ON m."id" = ce."merchantId"
+    ORDER BY ce."createdAt" DESC
+    LIMIT $1 OFFSET $2
+    `,
+    pageSize,
+    offset
+  );
 
-  return rows.map((r: any) => ({
-    id: r.id,
-    createdAt: r.createdAt?.toISOString?.() ?? String(r.createdAt),
-    user: r.user ? { id: r.user.id, email: r.user.email ?? null } : null,
-    merchant: r.merchant
-      ? { id: r.merchant.id, merchantName: r.merchant.merchantName ?? null }
+  return rows.map((r) => ({
+    id: String(r.id),
+    createdAt:
+      typeof r.createdAt === "string"
+        ? r.createdAt
+        : r.createdAt?.toISOString?.() ?? String(r.createdAt),
+    user: r.userId ? { id: String(r.userId), email: r.userEmail ?? null } : null,
+    merchant: r.merchantId
+      ? { id: String(r.merchantId), merchantName: r.merchantName ?? null }
       : null,
     ip: r.ip ?? null,
     userAgent: r.userAgent ?? null,
@@ -43,12 +59,48 @@ async function getClicks(page = 1, pageSize = 50): Promise<ClickRow[]> {
   }));
 }
 
+function Badge({
+  children,
+  tone = "default",
+}: {
+  children: React.ReactNode;
+  tone?: "default" | "success" | "warn" | "danger";
+}) {
+  const tones: Record<string, string> = {
+    default: "bg-gray-100 text-gray-800",
+    success: "bg-green-100 text-green-800",
+    warn: "bg-yellow-100 text-yellow-800",
+    danger: "bg-red-100 text-red-800",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tones[tone]}`}
+    >
+      {children}
+    </span>
+  );
+}
+
 export default async function AdminClicksPage() {
-  const clicks = await getClicks(1, 50);
+  let clicks: ClickRow[] = [];
+  let error: string | null = null;
+
+  try {
+    clicks = await getClicks(1, 50);
+  } catch (e) {
+    console.error("admin/clicks load error:", e);
+    error = "Failed to load clicks.";
+  }
 
   return (
     <div className="p-6">
       <h1 className="mb-4 text-2xl font-semibold">Recent Clicks</h1>
+
+      {error ? (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {error}
+        </div>
+      ) : null}
 
       <div className="overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
         <table className="min-w-full divide-y divide-gray-200">
@@ -87,6 +139,13 @@ export default async function AdminClicksPage() {
                 </td>
               </tr>
             ))}
+            {!clicks.length && !error ? (
+              <tr>
+                <td className="px-4 py-6 text-center text-sm text-gray-600" colSpan={7}>
+                  No clicks yet.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
