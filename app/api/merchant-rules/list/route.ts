@@ -81,9 +81,9 @@ export async function GET(req: Request) {
       domainPattern: m.domainPattern,
 
       allowedSources: asStringArray(m.allowedSources as unknown),
-      disallowedSources: asStringArray(m.disallowedSources as unknown),
+      disallowedSources: asStringArray((m as any)?.disallowedSources),
 
-      defaultCommissionRate: asNumber(m.defaultCommissionRate as unknown),
+      defaultCommissionRate: asNumber(((m as any).defaultCommissionRate ?? (m as any).commissionRate) as unknown),
       commissionType: (m.commissionType as unknown as string) ?? null,
       cookieWindowDays: asNumber(m.cookieWindowDays as unknown),
       payoutDelayDays: asNumber(m.payoutDelayDays as unknown),
