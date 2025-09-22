@@ -11,51 +11,59 @@ type ClickRow = {
   merchant?: { id: string; merchantName: string | null } | null;
   ip?: string | null;
   userAgent?: string | null;
-  destinationUrl?: string | null;
-  referrer?: string | null;
+  url?: string | null;        // <- renamed
+  referer?: string | null;    // <- renamed
 };
 
 async function getClicks(page = 1, pageSize = 50): Promise<ClickRow[]> {
-  const offset = (page - 1) * pageSize;
+  const skip = (page - 1) * pageSize;
 
-  // Raw SQL to avoid Prisma type mismatches in CI/build
-  const rows: any[] = await prisma.$queryRawUnsafe(
-    `
-    SELECT
-      ce."id",
-      ce."createdAt",
-      ce."ip",
-      ce."userAgent",
-      ce."destinationUrl",
-      ce."referrer",
-      u."id"       AS "userId",
-      u."email"    AS "userEmail",
-      m."id"       AS "merchantId",
-      m."merchantName" AS "merchantName"
-    FROM "ClickEvent" ce
-    LEFT JOIN "User" u ON u."id" = ce."userId"
-    LEFT JOIN "MerchantRule" m ON m."id" = ce."merchantId"
-    ORDER BY ce."createdAt" DESC
-    LIMIT $1 OFFSET $2
-    `,
-    pageSize,
-    offset
-  );
+  // 1) Fetch click rows with scalar fields only (no include)
+  const rows = await prisma.clickEvent.findMany({
+    skip,
+    take: pageSize,
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      createdAt: true,
+      userId: true,
+      merchantId: true,
+      ip: true,
+      userAgent: true,
+      url: true,       // <- correct field
+      referer: true,   // <- correct field
+    },
+  });
 
-  return rows.map((r) => ({
-    id: String(r.id),
+  // 2) Collect distinct IDs
+  const userIds = Array.from(new Set(rows.map(r => r.userId).filter(Boolean) as string[]));
+  const merchantIds = Array.from(new Set(rows.map(r => r.merchantId).filter(Boolean) as string[]));
+
+  // 3) Bulk fetch lookups
+  const [users, merchants] = await Promise.all([
+    userIds.length
+      ? prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true } })
+      : Promise.resolve([]),
+    merchantIds.length
+      ? prisma.merchantRule.findMany({ where: { id: { in: merchantIds } }, select: { id: true, merchantName: true } })
+      : Promise.resolve([]),
+  ]);
+
+  const userMap = new Map(users.map(u => [u.id, u.email ?? null]));
+  const merchantMap = new Map(merchants.map(m => [m.id, m.merchantName ?? null]));
+
+  // 4) Shape rows for UI
+  return rows.map(r => ({
+    id: r.id,
     createdAt:
-      typeof r.createdAt === "string"
-        ? r.createdAt
-        : r.createdAt?.toISOString?.() ?? String(r.createdAt),
-    user: r.userId ? { id: String(r.userId), email: r.userEmail ?? null } : null,
-    merchant: r.merchantId
-      ? { id: String(r.merchantId), merchantName: r.merchantName ?? null }
-      : null,
+      (r.createdAt as any)?.toISOString?.() ??
+      (typeof r.createdAt === "string" ? r.createdAt : String(r.createdAt)),
+    user: r.userId ? { id: r.userId, email: userMap.get(r.userId) ?? null } : null,
+    merchant: r.merchantId ? { id: r.merchantId, merchantName: merchantMap.get(r.merchantId) ?? null } : null,
     ip: r.ip ?? null,
     userAgent: r.userAgent ?? null,
-    destinationUrl: r.destinationUrl ?? null,
-    referrer: r.referrer ?? null,
+    url: r.url ?? null,           // <- correct
+    referer: r.referer ?? null,   // <- correct
   }));
 }
 
@@ -73,9 +81,7 @@ function Badge({
     danger: "bg-red-100 text-red-800",
   };
   return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tones[tone]}`}
-    >
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${tones[tone]}`}>
       {children}
     </span>
   );
@@ -128,10 +134,10 @@ export default async function AdminClicksPage() {
                   {c.merchant ? c.merchant.merchantName ?? c.merchant.id : "—"}
                 </td>
                 <td className="px-4 py-3 max-w-xs truncate">
-                  {c.destinationUrl ?? "—"}
+                  {c.url ?? "—"}
                 </td>
                 <td className="px-4 py-3 max-w-xs truncate">
-                  {c.referrer ?? "—"}
+                  {c.referer ?? "—"}
                 </td>
                 <td className="px-4 py-3">{c.ip ?? "—"}</td>
                 <td className="px-4 py-3 max-w-xs truncate">
