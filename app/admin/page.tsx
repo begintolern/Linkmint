@@ -1,12 +1,14 @@
 // app/admin/page.tsx
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 import type { Session } from "next-auth";
 import Link from "next/link";
 import { assertAdmin } from "@/lib/utils/adminGuard";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
-import AdminHeader from "@/components/AdminHeader";  // Make sure you have the AdminHeader component
+import AdminHeader from "@/components/AdminHeader"; // ensure this exists
+import AdminHealthStatusCard from "@/components/AdminHealthStatusCard"; // NEW
 
 const tabs = [
   { key: "users",     label: "Users",     href: "/admin/users",     desc: "All users, verification & flags" },
@@ -40,6 +42,11 @@ export default async function AdminHomePage() {
           Role: {String(role).toUpperCase()}
         </span>
       </header>
+
+      {/* System Health (Admin) */}
+      <section className="mt-6">
+        <AdminHealthStatusCard />
+      </section>
 
       {/* Tabs */}
       <nav className="mt-6 flex flex-wrap gap-2">

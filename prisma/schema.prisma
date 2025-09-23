@@ -24,6 +24,10 @@ model User {
   role                   String?              @default("user")
   emailVerifiedAt        DateTime?
   updatedAt              DateTime             @updatedAt
+
+  // 🌍 Market focus: default Philippines (ISO alpha-2)
+  countryCode            String               @default("PH") @db.VarChar(2)
+
   ageConfirmed           Boolean              @default(false)
   ageConfirmedAt         DateTime?
   deletedAt              DateTime?
@@ -33,6 +37,7 @@ model User {
   bonusCents             Int                  @default(0)
   bonusEligibleUntil     DateTime?
   bonusTier              Int                  @default(0)
+
   commissions            Commission[]
   eventLogs              EventLog[]
   commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
@@ -52,6 +57,7 @@ model User {
 
   @@index([deletedAt])
 }
+
 
 model ReferralGroup {
   id         String   @id @default(cuid())

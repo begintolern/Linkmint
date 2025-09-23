@@ -5,6 +5,7 @@ export const fetchCache = "force-no-store";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import HealthStatusCard from "@/components/HealthStatusCard";
 
 export default async function DashboardPage() {
   const store = cookies();
@@ -38,6 +39,11 @@ export default async function DashboardPage() {
             Not Eligible
           </span>
         </div>
+      </section>
+
+      {/* System Health */}
+      <section className="mb-8">
+        <HealthStatusCard />
       </section>
     </>
   );
