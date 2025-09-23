@@ -134,10 +134,7 @@ export async function GET(
       originalUrl: true,
       createdAt: true,
       merchantRule: {
-        select: {
-          network: true,
-          domainPattern: true,
-        },
+        select: { network: true, domainPattern: true },
       },
     },
   });
@@ -154,37 +151,36 @@ export async function GET(
       domain: link.merchantDomain ?? link.merchantRule?.domainPattern ?? null,
       name: link.merchantName ?? null,
     },
-    context: {
-      userId: link.userId,
-    },
+    context: { userId: link.userId },
   });
 
-  // Capture lightweight click telemetry into EventLog (fire-and-forget)
+  // --- Fixed logging: relation 'user' + JSON string in 'detail'
   const ip = getClientIp(req);
   const ua = req.headers.get("user-agent") || null;
   const referer = req.headers.get("referer") || null;
-  const country = req.headers.get("cf-ipcountry") || null; // if behind Cloudflare later
+  const country = req.headers.get("cf-ipcountry") || null;
+
+  const detailPayload = {
+    smartLinkId: link.id,
+    merchantRuleId: link.merchantRuleId,
+    merchantName: link.merchantName,
+    merchantDomain: link.merchantDomain,
+    network: link.merchantRule?.network ?? null,
+    outboundUrl,
+    ip,
+    ua,
+    referer,
+    country,
+    at: new Date().toISOString(),
+  };
 
   prisma.eventLog
     .create({
       data: {
-        userId: link.userId,
+        user: { connect: { id: link.userId } }, // relation (not userId scalar)
         type: "CLICK",
         message: "SmartLink click",
-        // @ts-ignore if metadata is Json
-        metadata: {
-          smartLinkId: link.id,
-          merchantRuleId: link.merchantRuleId,
-          merchantName: link.merchantName,
-          merchantDomain: link.merchantDomain,
-          network: link.merchantRule?.network ?? null,
-          ip,
-          ua,
-          referer,
-          country,
-          outboundUrl,
-          at: new Date().toISOString(),
-        },
+        detail: JSON.stringify(detailPayload),    // store JSON as string
       },
     })
     .catch(() => { /* do not block redirect on logging issues */ });
