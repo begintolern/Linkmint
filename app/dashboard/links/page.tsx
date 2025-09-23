@@ -5,6 +5,7 @@ export const fetchCache = "force-no-store";
 import Link from "next/link";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
 import { Suspense } from "react";
+import CreateSmartLinkForm from "./CreateSmartLinkForm"; // ⬅️ add this import
 
 export default async function LinksPage() {
   return (
@@ -54,48 +55,8 @@ export default async function LinksPage() {
       <section className="rounded-lg border p-4">
         <h2 className="text-lg font-medium mb-3">Create Smart Link</h2>
 
-        <form className="grid gap-3 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium">Merchant name</label>
-            <input
-              type="text"
-              placeholder="e.g., The Original Muck Boot Company"
-              className="w-full rounded-md border px-3 py-2 text-sm"
-              name="merchant"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Product / URL</label>
-            <input
-              type="url"
-              placeholder="Paste product URL (Amazon, CJ, etc.)"
-              className="w-full rounded-md border px-3 py-2 text-sm"
-              name="url"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Notes (optional)</label>
-            <input
-              type="text"
-              placeholder="Internal note"
-              className="w-full rounded-md border px-3 py-2 text-sm"
-              name="note"
-            />
-          </div>
-
-          <div className="md:col-span-2 mt-2">
-            <button
-              type="submit"
-              className="rounded-md bg-blue-600 px-4 py-2 text-white text-sm hover:bg-blue-700"
-            >
-              Create Smart Link
-            </button>
-          </div>
-        </form>
+        {/* Client-side form that calls /api/smartlink */}
+        <CreateSmartLinkForm defaultSource="" />
       </section>
     </main>
   );
