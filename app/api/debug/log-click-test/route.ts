@@ -24,10 +24,12 @@ export async function GET(req: NextRequest) {
   try {
     const row = await prisma.eventLog.create({
       data: {
-        userId,
-        type: "CLICK",                // <-- same type used in /l/[id]/route.ts
-        message: "SmartLink click",   // if your schema uses 'detail' instead, we'll see an error below
-        // @ts-ignore if metadata is Json in your schema
+        // IMPORTANT: your EventLog has a relation 'user' (not scalar userId)
+        user: { connect: { id: userId } },
+        type: "CLICK",
+        message: "SmartLink click (debug)",
+        // If your schema has Json 'metadata', this will work; if not, Prisma will tell us next
+        // @ts-ignore
         metadata: {
           smartLinkId,
           merchantRuleId: null,
@@ -44,7 +46,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ ok: true, row });
   } catch (e: any) {
-    // Surface exact prisma error so we know what's mismatched
     return NextResponse.json(
       { ok: false, error: "DB_WRITE_FAILED", message: e?.message, meta: e },
       { status: 500 }
