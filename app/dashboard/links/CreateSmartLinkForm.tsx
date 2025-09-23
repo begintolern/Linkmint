@@ -16,8 +16,11 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
 
   // toast
   const [toastOpen, setToastOpen] = useState(false);
-  const [toastKind, setToastKind] = useState<"success" | "error">("success");
+  const [toastKind, setToastKind] = useState<"success" | "error" | "info">("success");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // keep the last created short link so the toast can copy it
+  const [lastShortUrl, setLastShortUrl] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -25,6 +28,7 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
     if (!url.trim()) {
       setToastKind("error");
       setToastMsg("Please paste a product URL.");
+      setLastShortUrl(null);
       setToastOpen(true);
       return;
     }
@@ -46,11 +50,13 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
         const reason = data?.reason || data?.error || "Failed to create smart link.";
         setToastKind("error");
         setToastMsg(reason);
+        setLastShortUrl(null);
         setToastOpen(true);
       } else {
         const short = data?.shortUrl || data?.link || "Smart link created.";
         setToastKind("success");
         setToastMsg(short);
+        setLastShortUrl(typeof short === "string" ? short : null);
         setToastOpen(true);
 
         // Optional: clear some fields on success
@@ -59,9 +65,38 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
     } catch (err: any) {
       setToastKind("error");
       setToastMsg(err?.message || "Network error.");
+      setLastShortUrl(null);
       setToastOpen(true);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCopy() {
+    const text = lastShortUrl || "";
+    try {
+      if (!text) return;
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback: temp textarea
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setToastKind("success");
+      setToastMsg("Copied link to clipboard!");
+      setToastOpen(true);
+    } catch {
+      setToastKind("error");
+      setToastMsg("Could not copy. Please copy manually.");
+      setToastOpen(true);
     }
   }
 
@@ -136,6 +171,8 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
         kind={toastKind}
         message={toastMsg}
         onClose={() => setToastOpen(false)}
+        actionLabel={lastShortUrl ? "Copy link" : undefined}
+        onAction={lastShortUrl ? handleCopy : undefined}
       />
     </>
   );
