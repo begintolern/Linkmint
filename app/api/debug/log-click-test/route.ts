@@ -21,6 +21,18 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const smartLinkId = url.searchParams.get("smartLinkId") || "TEST123";
 
+  const detailPayload = {
+    smartLinkId,
+    merchantRuleId: null,
+    merchantName: "Debug Merchant",
+    merchantDomain: "debug.example",
+    outboundUrl: `https://debug.example/?lm_subid=${smartLinkId}`,
+    ip: "127.0.0.1",
+    ua: "debug",
+    referer: null,
+    at: new Date().toISOString(),
+  };
+
   try {
     const row = await prisma.eventLog.create({
       data: {
@@ -28,19 +40,7 @@ export async function GET(req: NextRequest) {
         user: { connect: { id: userId } },
         type: "CLICK",
         message: "SmartLink click (debug)",
-        // If your schema has Json 'metadata', this will work; if not, Prisma will tell us next
-        // @ts-ignore
-        metadata: {
-          smartLinkId,
-          merchantRuleId: null,
-          merchantName: "Debug Merchant",
-          merchantDomain: "debug.example",
-          outboundUrl: `https://debug.example/?lm_subid=${smartLinkId}`,
-          ip: "127.0.0.1",
-          ua: "debug",
-          referer: null,
-          at: new Date().toISOString(),
-        },
+        detail: JSON.stringify(detailPayload), // <-- store JSON as string
       },
     });
 
