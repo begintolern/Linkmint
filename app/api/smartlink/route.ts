@@ -5,7 +5,7 @@ import type { Session } from "next-auth";
 import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import { validateSource } from "../../../lib/merchants/validateSource"; // allow/deny guard
+import { validateSource } from "@/lib/merchants/validateSource";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
