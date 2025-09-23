@@ -24,10 +24,63 @@ function appendSubid(productUrl: string, subid: string): string {
   }
 }
 
+/** Involve Asia wrapper (configurable via env). Returns null if misconfigured. */
+function wrapWithInvolveAsia(productUrl: string, subid: string): string | null {
+  const base = (process.env.INVOLVEASIA_BASE_URL || "").trim(); // e.g. https://invol.co/aff_m
+  if (!base) return null;
+
+  const deeplinkParam = (process.env.INVOLVEASIA_DEEPLINK_PARAM || "url").trim();
+  const subidParam = (process.env.INVOLVEASIA_SUBID_PARAM || "aff_sub").trim();
+
+  const affIdParam = (process.env.INVOLVEASIA_AFF_ID_PARAM || "").trim();
+  const affIdValue = (process.env.INVOLVEASIA_AFF_ID_VALUE || "").trim();
+
+  try {
+    const out = new URL(base);
+    out.searchParams.set(deeplinkParam, productUrl);
+    out.searchParams.set(subidParam, subid);
+    if (affIdParam && affIdValue) out.searchParams.set(affIdParam, affIdValue);
+
+    // backup for reconciliation
+    out.searchParams.set("lm_subid", subid);
+    out.searchParams.set("utm_source", "linkmint");
+    return out.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Shopee Affiliate wrapper (configurable via env). Returns null if misconfigured. */
+function wrapWithShopee(productUrl: string, subid: string): string | null {
+  const base = (process.env.SHOPEE_BASE_URL || "").trim();
+  if (!base) return null;
+
+  const deeplinkParam = (process.env.SHOPEE_DEEPLINK_PARAM || "url").trim();
+  const subidParam = (process.env.SHOPEE_SUBID_PARAM || "subid").trim();
+
+  const affIdParam = (process.env.SHOPEE_AFF_ID_PARAM || "").trim();
+  const affIdValue = (process.env.SHOPEE_AFF_ID_VALUE || "").trim();
+
+  try {
+    const out = new URL(base);
+    out.searchParams.set(deeplinkParam, productUrl);
+    out.searchParams.set(subidParam, subid);
+    if (affIdParam && affIdValue) out.searchParams.set(affIdParam, affIdValue);
+
+    // backup for reconciliation
+    out.searchParams.set("lm_subid", subid);
+    out.searchParams.set("utm_source", "linkmint");
+    return out.toString();
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Central builder for outbound URLs.
- * Today it falls back to appendSubid() for all networks.
- * Next step we’ll add real deep-link wrappers per network (Involve Asia, Shopee, CJ).
+ * - Lazada PH via Involve Asia
+ * - Shopee PH via Shopee Affiliate
+ * - Fallback: ?lm_subid=...
  */
 function buildOutboundUrl(opts: {
   productUrl: string;
@@ -39,16 +92,25 @@ function buildOutboundUrl(opts: {
   const network = (merchant?.network || "").trim().toLowerCase();
   const domain  = (merchant?.domain  || "").trim().toLowerCase();
 
-  // ---- Network-specific branches (placeholders for next step) ----
-  // Example stubs (will be implemented next):
-  // if (network === "involve asia" && domain.endsWith("lazada.com.ph")) {
-  //   return wrapWithInvolveAsia(productUrl, { subid: smartLinkId, ... });
-  // }
-  // if (network === "shopee affiliate" && domain.endsWith("shopee.ph")) {
-  //   return wrapWithShopee(productUrl, { subid: smartLinkId, ... });
-  // }
+  // Involve Asia → Lazada PH
+  const isIA = network === "involve asia";
+  const isLazadaPH =
+    !!domain && (domain === "lazada.com.ph" || domain.endsWith(".lazada.com.ph"));
+  if (isIA && isLazadaPH) {
+    const wrapped = wrapWithInvolveAsia(productUrl, smartLinkId);
+    if (wrapped) return wrapped;
+  }
 
-  // Fallback for now: just append our universal subid
+  // Shopee Affiliate → Shopee PH
+  const isShopee = network === "shopee affiliate";
+  const isShopeePH =
+    !!domain && (domain === "shopee.ph" || domain.endsWith(".shopee.ph"));
+  if (isShopee && isShopeePH) {
+    const wrapped = wrapWithShopee(productUrl, smartLinkId);
+    if (wrapped) return wrapped;
+  }
+
+  // Fallback
   return appendSubid(productUrl, smartLinkId);
 }
 
@@ -71,9 +133,6 @@ export async function GET(
       merchantDomain: true,
       originalUrl: true,
       createdAt: true,
-      // If you later store source on SmartLink, you can select it here
-      // source: true,
-      // Pull network for routing if needed (join via merchantRule)
       merchantRule: {
         select: {
           network: true,
@@ -97,7 +156,6 @@ export async function GET(
     },
     context: {
       userId: link.userId,
-      // source: link.source ?? null, // if/when you add it
     },
   });
 
@@ -124,7 +182,7 @@ export async function GET(
           ua,
           referer,
           country,
-          outboundUrl, // keep for reconciliation
+          outboundUrl,
           at: new Date().toISOString(),
         },
       },
