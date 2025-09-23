@@ -57,16 +57,21 @@ function asNumber(v: unknown): number | null {
 }
 
 /**
- * GET /api/merchant-rules/list?activeOnly=true|false
- * Defaults to activeOnly=true.
+ * GET /api/merchant-rules/list?activeOnly=true|false&market=PH|SG|US
+ * Defaults: activeOnly=true, market="PH".
  */
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const activeOnlyParam = url.searchParams.get("activeOnly");
+    const marketParam = url.searchParams.get("market");
+
     const activeOnly = activeOnlyParam == null ? true : activeOnlyParam === "true";
 
-    const where = activeOnly ? { active: true } : {};
+    // Philippines-first default: market = "PH" unless caller sets ?market=SG or ?market=US
+    const market = (marketParam ?? "PH").toUpperCase();
+
+    const where: any = activeOnly ? { active: true, market } : { market };
 
     const rows = await prisma.merchantRule.findMany({
       where,
@@ -83,7 +88,9 @@ export async function GET(req: Request) {
       allowedSources: asStringArray(m.allowedSources as unknown),
       disallowedSources: asStringArray((m as any)?.disallowedSources),
 
-      defaultCommissionRate: asNumber(((m as any).defaultCommissionRate ?? (m as any).commissionRate) as unknown),
+      defaultCommissionRate: asNumber(
+        ((m as any).defaultCommissionRate ?? (m as any).commissionRate) as unknown
+      ),
       commissionType: (m.commissionType as unknown as string) ?? null,
       cookieWindowDays: asNumber(m.cookieWindowDays as unknown),
       payoutDelayDays: asNumber(m.payoutDelayDays as unknown),
@@ -97,7 +104,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ ok: true, merchants }, { status: 200 });
   } catch (err: any) {
-    // Surface the message while avoiding leaking internals
     return NextResponse.json(
       { ok: false, error: "API_ERROR", message: err?.message ?? "Unknown error" },
       { status: 500 }
