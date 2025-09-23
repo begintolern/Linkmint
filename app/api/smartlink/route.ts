@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-// ---- Inlined allow/deny helper (was: lib/merchants/validateSource.ts) ----
+// ---- Inlined allow/deny helper ----
 
 type SourceCheckResult = { ok: true } | { ok: false; reason: string };
 
@@ -89,15 +89,11 @@ type RuleLite = {
   status: string | null;
   inactiveReason: string | null;
   allowedRegions: string[] | null;
-
-  // Optional fields if present in your schema:
-  market?: string | null;      // e.g., "PH"
-  allowedSources?: unknown;    // JSON/array
-  // (disallowedSources may exist; we access via (rule as any).disallowedSources when validating)
+  market?: string | null;
+  allowedSources?: unknown;
 };
 
 async function findMerchantRuleByHost(hostname: string): Promise<RuleLite | null> {
-  // Select ONLY fields compatible with RuleLite to avoid TS widening to object-of-arrays
   const rows = await prisma.merchantRule.findMany({
     select: {
       id: true,
@@ -110,7 +106,7 @@ async function findMerchantRuleByHost(hostname: string): Promise<RuleLite | null
       allowedRegions: true,
       market: true,
       allowedSources: true,
-      // Do NOT select disallowedSources; Prisma types may not include it yet
+      // do not select disallowedSources to satisfy current Prisma types
     },
   });
 
@@ -130,9 +126,7 @@ async function findMerchantRuleByHost(hostname: string): Promise<RuleLite | null
 type PostBody = {
   url?: string;
   label?: string;
-  // Optional traffic source; enforced if merchant has allow/deny lists.
-  // e.g., "tiktok" | "instagram" | "facebook" | "youtube" | "email" | "paid search"
-  source?: string;
+  source?: string; // optional; validated if merchant defines allow/deny lists
 };
 
 // ---- Handler ---------------------------------------------------------------
@@ -181,7 +175,7 @@ export async function POST(req: NextRequest) {
         merchantName: hostname,
         merchantDomain: hostname,
         originalUrl: parsed.toString(),
-        shortUrl: parsed.toString(), // TODO: integrate shortener
+        shortUrl: parsed.toString(), // placeholder; we'll return /l/:id below if needed
         label,
       },
       select: {
@@ -195,11 +189,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+    const proto = req.headers.get("x-forwarded-proto") ?? "https";
+    const base = host ? `${proto}://${host}` : "";
+    const shortUrl = base ? `${base}/l/${generic.id}` : `/l/${generic.id}`;
+
     return NextResponse.json({
       ok: true,
-      link: generic.shortUrl,
-      smartUrl: generic.shortUrl,
-      shortUrl: generic.shortUrl,
+      link: shortUrl,
+      smartUrl: shortUrl,
+      shortUrl,
       warning: "No merchant rule matched; this link may not earn commissions.",
     });
   }
@@ -268,7 +267,7 @@ export async function POST(req: NextRequest) {
       ? `Commissions valid only in: ${regions.join(", ")}`
       : null;
 
-  // 8) Create SmartLink (no `source` persisted yet)
+  // 8) Create SmartLink (DB)
   const created = await prisma.smartLink.create({
     data: {
       userId,
@@ -276,7 +275,7 @@ export async function POST(req: NextRequest) {
       merchantName: rule.merchantName,
       merchantDomain: rule.domainPattern ?? hostname,
       originalUrl: parsed.toString(),
-      shortUrl: parsed.toString(), // TODO: integrate shortener
+      shortUrl: parsed.toString(), // placeholder; computed short returned below
       label,
     },
     select: {
@@ -290,12 +289,18 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // Compute /l/:id short URL for response
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  const proto = req.headers.get("x-forwarded-proto") ?? "https";
+  const base = host ? `${proto}://${host}` : "";
+  const shortUrl = base ? `${base}/l/${created.id}` : `/l/${created.id}`;
+
   return NextResponse.json(
     {
       ok: true,
-      link: created.shortUrl,
-      smartUrl: created.shortUrl,
-      shortUrl: created.shortUrl,
+      link: shortUrl,
+      smartUrl: shortUrl,
+      shortUrl,
       merchant: {
         id: (rule as any).id,
         name: rule.merchantName,
