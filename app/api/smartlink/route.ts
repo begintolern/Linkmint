@@ -5,10 +5,66 @@ import type { Session } from "next-auth";
 import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import { validateSource } from "@/lib/merchants/validateSource";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+// ---- Inlined allow/deny helper (was: lib/merchants/validateSource.ts) ----
+
+type SourceCheckResult = { ok: true } | { ok: false; reason: string };
+
+function normalizeSource(s: string | null | undefined): string {
+  return (s ?? "").trim().toLowerCase();
+}
+
+function validateSource(
+  merchant: {
+    merchantName: string;
+    allowedSources?: unknown;
+    disallowedSources?: unknown;
+  },
+  source: string
+): SourceCheckResult {
+  const src = normalizeSource(source);
+  if (!src) return { ok: false, reason: "Missing source" };
+
+  const toSet = (v: unknown): Set<string> => {
+    if (Array.isArray(v)) {
+      return new Set(
+        v
+          .map((x) => (typeof x === "string" ? x : String(x ?? "")))
+          .map((x) => x.trim().toLowerCase())
+          .filter(Boolean)
+      );
+    }
+    if (typeof v === "string") {
+      return new Set(
+        v
+          .split(",")
+          .map((x) => x.trim().toLowerCase())
+          .filter(Boolean)
+      );
+    }
+    return new Set();
+  };
+
+  const allowed = toSet((merchant as any).allowedSources);
+  const disallowed = toSet((merchant as any).disallowedSources);
+
+  if (disallowed.has(src)) {
+    return {
+      ok: false,
+      reason: `${merchant.merchantName}: the source "${source}" is not allowed by the merchant's program rules.`,
+    };
+  }
+  if (allowed.size > 0 && !allowed.has(src)) {
+    return {
+      ok: false,
+      reason: `${merchant.merchantName}: the source "${source}" is not in the allowed sources.`,
+    };
+  }
+  return { ok: true };
+}
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -52,12 +108,9 @@ async function findMerchantRuleByHost(hostname: string): Promise<RuleLite | null
       status: true,
       inactiveReason: true,
       allowedRegions: true,
-
-      // Optional fields (safe if your schema includes them)
       market: true,
       allowedSources: true,
       // Do NOT select disallowedSources; Prisma types may not include it yet
-      // disallowedSources: true,
     },
   });
 
