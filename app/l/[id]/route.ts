@@ -12,6 +12,23 @@ function getClientIp(req: Request): string | null {
   return req.headers.get("x-real-ip") || null;
 }
 
+/**
+ * Minimal, network-agnostic fallback:
+ * Append our click id as lm_subid to the destination URL.
+ * (We’ll swap to network-specific deep links later.)
+ */
+function appendSubid(productUrl: string, subid: string): string {
+  try {
+    const u = new URL(productUrl);
+    u.searchParams.set("lm_subid", subid);      // primary click id you’ll get back in webhook/reports
+    u.searchParams.set("utm_source", "linkmint"); // optional: helpful for analytics
+    return u.toString();
+  } catch {
+    // If parsing fails, just return the original URL
+    return productUrl;
+  }
+}
+
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
@@ -38,22 +55,23 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "LINK_NOT_FOUND" }, { status: 404 });
   }
 
-  // Capture lightweight click telemetry into your existing EventLog
-  // (avoids creating a new ClickEvent model/migration)
+  // Build outbound URL with our click id
+  const outboundUrl = appendSubid(link.originalUrl, link.id);
+
+  // Capture lightweight click telemetry into EventLog (fire-and-forget)
   const ip = getClientIp(req);
   const ua = req.headers.get("user-agent") || null;
   const referer = req.headers.get("referer") || null;
   const country = req.headers.get("cf-ipcountry") || null; // if behind Cloudflare later
 
-  // Fire-and-forget; don't block the redirect if logging fails
   prisma.eventLog
     .create({
       data: {
         userId: link.userId,
-        // adapt to your EventLog shape (type/level/message/metadata)
+        // Adapt to your EventLog schema
         type: "CLICK",
         message: "SmartLink click",
-        // @ts-ignore - if metadata is Json
+        // @ts-ignore if metadata is Json
         metadata: {
           smartLinkId: link.id,
           merchantRuleId: link.merchantRuleId,
@@ -63,12 +81,13 @@ export async function GET(
           ua,
           referer,
           country,
+          outboundUrl, // helpful for reconciliation/debugging
           at: new Date().toISOString(),
         },
       },
     })
-    .catch(() => { /* noop */ });
+    .catch(() => { /* do not block redirect on logging issues */ });
 
-  // 302 → merchant destination
-  return NextResponse.redirect(link.originalUrl, { status: 302 });
+  // Redirect to destination with lm_subid
+  return NextResponse.redirect(outboundUrl, { status: 302 });
 }
