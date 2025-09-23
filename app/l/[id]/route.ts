@@ -12,21 +12,44 @@ function getClientIp(req: Request): string | null {
   return req.headers.get("x-real-ip") || null;
 }
 
-/**
- * Minimal, network-agnostic fallback:
- * Append our click id as lm_subid to the destination URL.
- * (We’ll swap to network-specific deep links later.)
- */
+/** Append our click id to any URL (fallback) */
 function appendSubid(productUrl: string, subid: string): string {
   try {
     const u = new URL(productUrl);
-    u.searchParams.set("lm_subid", subid);      // primary click id you’ll get back in webhook/reports
-    u.searchParams.set("utm_source", "linkmint"); // optional: helpful for analytics
+    u.searchParams.set("lm_subid", subid);        // our universal subid
+    u.searchParams.set("utm_source", "linkmint"); // optional analytics
     return u.toString();
   } catch {
-    // If parsing fails, just return the original URL
     return productUrl;
   }
+}
+
+/**
+ * Central builder for outbound URLs.
+ * Today it falls back to appendSubid() for all networks.
+ * Next step we’ll add real deep-link wrappers per network (Involve Asia, Shopee, CJ).
+ */
+function buildOutboundUrl(opts: {
+  productUrl: string;
+  smartLinkId: string;
+  merchant?: { network?: string | null; domain?: string | null; name?: string | null };
+  context?: { userId?: string | null; source?: string | null };
+}): string {
+  const { productUrl, smartLinkId, merchant } = opts;
+  const network = (merchant?.network || "").trim().toLowerCase();
+  const domain  = (merchant?.domain  || "").trim().toLowerCase();
+
+  // ---- Network-specific branches (placeholders for next step) ----
+  // Example stubs (will be implemented next):
+  // if (network === "involve asia" && domain.endsWith("lazada.com.ph")) {
+  //   return wrapWithInvolveAsia(productUrl, { subid: smartLinkId, ... });
+  // }
+  // if (network === "shopee affiliate" && domain.endsWith("shopee.ph")) {
+  //   return wrapWithShopee(productUrl, { subid: smartLinkId, ... });
+  // }
+
+  // Fallback for now: just append our universal subid
+  return appendSubid(productUrl, smartLinkId);
 }
 
 export async function GET(
@@ -48,6 +71,15 @@ export async function GET(
       merchantDomain: true,
       originalUrl: true,
       createdAt: true,
+      // If you later store source on SmartLink, you can select it here
+      // source: true,
+      // Pull network for routing if needed (join via merchantRule)
+      merchantRule: {
+        select: {
+          network: true,
+          domainPattern: true,
+        },
+      },
     },
   });
 
@@ -55,8 +87,19 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "LINK_NOT_FOUND" }, { status: 404 });
   }
 
-  // Build outbound URL with our click id
-  const outboundUrl = appendSubid(link.originalUrl, link.id);
+  const outboundUrl = buildOutboundUrl({
+    productUrl: link.originalUrl,
+    smartLinkId: link.id,
+    merchant: {
+      network: link.merchantRule?.network ?? null,
+      domain: link.merchantDomain ?? link.merchantRule?.domainPattern ?? null,
+      name: link.merchantName ?? null,
+    },
+    context: {
+      userId: link.userId,
+      // source: link.source ?? null, // if/when you add it
+    },
+  });
 
   // Capture lightweight click telemetry into EventLog (fire-and-forget)
   const ip = getClientIp(req);
@@ -68,7 +111,6 @@ export async function GET(
     .create({
       data: {
         userId: link.userId,
-        // Adapt to your EventLog schema
         type: "CLICK",
         message: "SmartLink click",
         // @ts-ignore if metadata is Json
@@ -77,17 +119,17 @@ export async function GET(
           merchantRuleId: link.merchantRuleId,
           merchantName: link.merchantName,
           merchantDomain: link.merchantDomain,
+          network: link.merchantRule?.network ?? null,
           ip,
           ua,
           referer,
           country,
-          outboundUrl, // helpful for reconciliation/debugging
+          outboundUrl, // keep for reconciliation
           at: new Date().toISOString(),
         },
       },
     })
     .catch(() => { /* do not block redirect on logging issues */ });
 
-  // Redirect to destination with lm_subid
   return NextResponse.redirect(outboundUrl, { status: 302 });
 }
