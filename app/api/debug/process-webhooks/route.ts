@@ -3,195 +3,150 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 /**
- * GET /api/debug/process-webhooks?limit=20
- * - Scans recent WEBHOOK_INCOMING logs
- * - Parses detail JSON, extracts subid -> SmartLink -> user
- * - Creates Commission rows using discovered enum values from an existing row
- * - If no enum example is available, stage the event and return reason
+ * Debug-only webhook processor.
+ * Scans WEBHOOK_INCOMING logs, resolves SmartLink + user, and records commissions.
+ * Writes new money fields (amountMinor + currency) while keeping legacy `amount`.
  */
-export async function GET(req: NextRequest) {
+export async function POST() {
   try {
-    const url = new URL(req.url);
-    const take = clampInt(url.searchParams.get("limit"), 1, 100, 20);
-
-    // Discover enum values from any existing commission row
-    const enumSample = await prisma.commission.findFirst({
-      select: { type: true, status: true },
-    }).catch(() => null as any);
-
-    const discoveredType  = enumSample?.type  ?? null; // e.g., "SALE" | "STANDARD" | etc (from your schema)
-    const discoveredStatus = enumSample?.status ?? null; // e.g., "PENDING" | etc
-
-    // 1) Load recent incoming webhook logs
+    // 1) Load recent webhook logs (process oldest first for determinism)
     const logs = await prisma.eventLog.findMany({
       where: { type: "WEBHOOK_INCOMING" },
-      orderBy: { createdAt: "desc" },
-      take,
-      select: { id: true, message: true, detail: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+      take: 20,
     });
 
     const results: Array<{
-      eventId: string;
+      eventId: string | null;
       ok: boolean;
       reason?: string;
       commissionId?: string;
-      typeUsed?: string | null;
-      statusUsed?: string | null;
+      typeUsed?: string;
+      statusUsed?: string;
     }> = [];
 
     for (const log of logs) {
-      const eventId = log.message || "";
-
+      // Parse payload
+      let parsed: any;
       try {
-        // 2) Skip if already processed
-        const processed = await prisma.eventLog.findFirst({
-          where: { type: "WEBHOOK_PROCESSED", message: eventId },
-          select: { id: true },
-        });
-        if (processed) {
-          results.push({ eventId, ok: true, reason: "already_processed" });
-          continue;
-        }
+        parsed = JSON.parse(log.detail ?? "{}");
+      } catch {
+        results.push({ eventId: log.message ?? null, ok: false, reason: "invalid_json" });
+        continue;
+      }
 
-        // 3) Parse detail
-        let payload: any = null;
-        try {
-          payload = JSON.parse(log.detail || "{}");
-        } catch {
-          results.push({ eventId, ok: false, reason: "invalid_json_detail" });
-          continue;
-        }
+      const eventId: string | null = parsed?.event_id ?? log.message ?? null;
+      const subid: string | undefined = parsed?.subid ?? parsed?.lm_subid;
+      const rawAmount = parsed?.amount;
+      const rawCurrency = parsed?.currency;
+      const merchant = parsed?.merchant ?? "Unknown Merchant";
+      const network = parsed?.network ?? "Involve Asia";
+      const txnId = parsed?.transaction_id ?? null;
 
-        const subid: string | undefined = payload?.subid || payload?.lm_subid;
-        if (!subid || typeof subid !== "string") {
-          results.push({ eventId, ok: false, reason: "missing_subid" });
-          continue;
-        }
+      if (!subid) {
+        results.push({ eventId, ok: false, reason: "missing_subid" });
+        continue;
+      }
 
-        // 4) Resolve SmartLink → user/merchant
-        const smart = await prisma.smartLink.findUnique({
-          where: { id: subid },
-          select: {
-            id: true,
-            userId: true,
-            merchantRuleId: true,
-            merchantName: true,
-            merchantDomain: true,
-          },
-        });
+      // Resolve SmartLink
+      const smart = await prisma.smartLink.findUnique({
+        where: { id: subid },
+        select: { id: true, userId: true, merchantRuleId: true, merchantName: true, merchantDomain: true },
+      });
+      if (!smart || !smart.userId) {
+        results.push({ eventId, ok: false, reason: "smartlink_not_found_or_no_user" });
+        continue;
+      }
 
-        if (!smart || !smart.userId) {
-          results.push({ eventId, ok: false, reason: "smartlink_not_found_or_no_user" });
-          continue;
-        }
+      // Normalize amount & currency
+      const numAmount = typeof rawAmount === "number" ? rawAmount : Number(rawAmount);
+      if (!Number.isFinite(numAmount) || numAmount <= 0) {
+        results.push({ eventId, ok: false, reason: "invalid_amount" });
+        continue;
+      }
+      const currencyCode = (typeof rawCurrency === "string" && rawCurrency.trim()) ? rawCurrency.trim().toUpperCase() : "PHP";
+      const amountMinor = Math.round(numAmount * 100);           // e.g., 123.45 -> 12345
+      const legacyAmount = Math.round(numAmount);                 // keep writing legacy int for old UI
 
-        // 5) Amount / currency / merchant from payload
-        const rawAmount = typeof payload?.amount === "number" ? payload.amount : Number(payload?.amount);
-        if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
-          results.push({ eventId, ok: false, reason: "invalid_amount" });
-          continue;
-        }
+      // Discover enum values (fallback-safe)
+      const model: any = prisma.commission;
+      const discoveredType = model?._meta?.fields?.type?.values?.[0] ?? "referral_purchase";
+      const discoveredStatus = model?._meta?.fields?.status?.values?.[0] ?? "PENDING";
 
-        // Many schemas store integers; round to be safe
-        const amount = Math.round(rawAmount);
-
-        const currency = (payload?.currency as string) || "PHP";
-        const merchant =
-          (payload?.merchant as string) ||
-          smart.merchantName ||
-          smart.merchantDomain ||
-          "Unknown Merchant";
-        const network = (payload?.network as string) || "Involve Asia";
-        const txnId = (payload?.transaction_id as string) || null;
-
-        // 6) Ensure we have enum values; if not, stage the record and skip
-        if (!discoveredType || !discoveredStatus) {
-          await prisma.eventLog.create({
-            data: {
-              type: "WEBHOOK_STAGED",
-              message: eventId,
-              detail: JSON.stringify({
-                note: "No enum sample found; commission not created",
-                subid,
-                amount,
-                currency,
-                merchant,
-                network,
-                txnId,
-              }),
-            },
-          });
-          results.push({
-            eventId,
-            ok: false,
-            reason: "unknown_enum_values",
-            typeUsed: discoveredType,
-            statusUsed: discoveredStatus,
-          });
-          continue;
-        }
-
-        // 7) Create Commission using discovered enum values
-        const commission = await prisma.commission.create({
+      // Try to create commission as PENDING first; fallback to discovered status if enum mismatch
+      let commissionId: string | null = null;
+      try {
+        const c = await prisma.commission.create({
           data: {
             userId: smart.userId,
-            amount: amount,
-            type: discoveredType as any,   // enum value from your DB
-            status: discoveredStatus as any, // enum value from your DB
+            // money v1 (legacy)
+            amount: legacyAmount,
+            // money v2 (new)
+            amountMinor,
+            currency: currencyCode,
+            // enums
+            type: (discoveredType as any),
+            status: ("PENDING" as any),
             paidOut: false,
+            // meta
             source: `webhook:${network}`,
             description: txnId
-              ? `Webhook ${network} ${merchant} ${currency} ${rawAmount} (txn ${txnId})`
-              : `Webhook ${network} ${merchant} ${currency} ${rawAmount}`,
+              ? `Webhook ${network} ${merchant} ${currencyCode} ${numAmount} (txn ${txnId})`
+              : `Webhook ${network} ${merchant} ${currencyCode} ${numAmount}`,
+            // optional relation
             ...(smart.merchantRuleId ? { merchantRuleId: smart.merchantRuleId } : {}),
           },
           select: { id: true },
         });
-
-        // 8) Mark processed
-        await prisma.eventLog.create({
+        commissionId = c.id;
+      } catch {
+        const c = await prisma.commission.create({
           data: {
-            type: "WEBHOOK_PROCESSED",
-            message: eventId,
-            detail: JSON.stringify({ subid, commissionId: commission.id }),
+            userId: smart.userId,
+            amount: legacyAmount,
+            amountMinor,
+            currency: currencyCode,
+            type: (discoveredType as any),
+            status: (discoveredStatus as any),
+            paidOut: false,
+            source: `webhook:${network}`,
+            description: txnId
+              ? `Webhook ${network} ${merchant} ${currencyCode} ${numAmount} (txn ${txnId})`
+              : `Webhook ${network} ${merchant} ${currencyCode} ${numAmount}`,
+            ...(smart.merchantRuleId ? { merchantRuleId: smart.merchantRuleId } : {}),
           },
+          select: { id: true },
         });
-
-        results.push({
-          eventId,
-          ok: true,
-          commissionId: commission.id,
-          typeUsed: discoveredType,
-          statusUsed: discoveredStatus,
-        });
-      } catch (e: any) {
-        results.push({
-          eventId: log.message || "",
-          ok: false,
-          reason: `exception:${safeErr(e)}`,
-        });
+        commissionId = c.id;
       }
+
+      // Mark processed (idempotency marker)
+      await prisma.eventLog.create({
+        data: {
+          type: "WEBHOOK_PROCESSED",
+          message: eventId ?? "",
+          detail: JSON.stringify({ subid, commissionId }),
+        },
+      });
+
+      results.push({
+        eventId,
+        ok: true,
+        commissionId: commissionId ?? undefined,
+        typeUsed: discoveredType,
+        statusUsed: "PENDING-or-fallback",
+      });
     }
 
     return NextResponse.json({ ok: true, processed: results.length, results });
   } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: "PROCESSOR_FAILED", message: safeErr(e) },
-      { status: 200 }
+      { ok: false, error: "PROCESSOR_FAILED", message: e?.message ?? String(e) },
+      { status: 500 }
     );
   }
-}
-
-function clampInt(v: string | null, min: number, max: number, fallback: number) {
-  const n = v == null ? NaN : Number(v);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-}
-
-function safeErr(e: any) {
-  return e?.message || String(e);
 }
