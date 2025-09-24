@@ -10,13 +10,21 @@ import { prisma } from "@/lib/db";
  * GET /api/debug/process-webhooks?limit=20
  * - Scans recent WEBHOOK_INCOMING logs
  * - Parses detail JSON, extracts subid -> SmartLink -> user
- * - Creates PENDING Commission rows (idempotent via WEBHOOK_PROCESSED log)
- * Returns JSON with per-event results instead of throwing 500s.
+ * - Creates Commission rows using discovered enum values from an existing row
+ * - If no enum example is available, stage the event and return reason
  */
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const take = clampInt(url.searchParams.get("limit"), 1, 100, 20);
+
+    // Discover enum values from any existing commission row
+    const enumSample = await prisma.commission.findFirst({
+      select: { type: true, status: true },
+    }).catch(() => null as any);
+
+    const discoveredType  = enumSample?.type  ?? null; // e.g., "SALE" | "STANDARD" | etc (from your schema)
+    const discoveredStatus = enumSample?.status ?? null; // e.g., "PENDING" | etc
 
     // 1) Load recent incoming webhook logs
     const logs = await prisma.eventLog.findMany({
@@ -31,6 +39,8 @@ export async function GET(req: NextRequest) {
       ok: boolean;
       reason?: string;
       commissionId?: string;
+      typeUsed?: string | null;
+      statusUsed?: string | null;
     }> = [];
 
     for (const log of logs) {
@@ -86,7 +96,7 @@ export async function GET(req: NextRequest) {
           continue;
         }
 
-        // Many schemas store integers (major units). Round to be safe.
+        // Many schemas store integers; round to be safe
         const amount = Math.round(rawAmount);
 
         const currency = (payload?.currency as string) || "PHP";
@@ -98,28 +108,51 @@ export async function GET(req: NextRequest) {
         const network = (payload?.network as string) || "Involve Asia";
         const txnId = (payload?.transaction_id as string) || null;
 
-        // 6) Create Commission (PENDING)
-        // Adjust enum values if your schema differs
+        // 6) Ensure we have enum values; if not, stage the record and skip
+        if (!discoveredType || !discoveredStatus) {
+          await prisma.eventLog.create({
+            data: {
+              type: "WEBHOOK_STAGED",
+              message: eventId,
+              detail: JSON.stringify({
+                note: "No enum sample found; commission not created",
+                subid,
+                amount,
+                currency,
+                merchant,
+                network,
+                txnId,
+              }),
+            },
+          });
+          results.push({
+            eventId,
+            ok: false,
+            reason: "unknown_enum_values",
+            typeUsed: discoveredType,
+            statusUsed: discoveredStatus,
+          });
+          continue;
+        }
+
+        // 7) Create Commission using discovered enum values
         const commission = await prisma.commission.create({
           data: {
             userId: smart.userId,
-            amount: amount, // integer major-units; adjust if your schema expects cents/Decimal
-            type: "SALE" as any,
-            status: "PENDING" as any,
+            amount: amount,
+            type: discoveredType as any,   // enum value from your DB
+            status: discoveredStatus as any, // enum value from your DB
             paidOut: false,
             source: `webhook:${network}`,
             description: txnId
               ? `Webhook ${network} ${merchant} ${currency} ${rawAmount} (txn ${txnId})`
               : `Webhook ${network} ${merchant} ${currency} ${rawAmount}`,
-            // If relation exists, use connect; if scalar, set merchantRuleId
-            ...(smart.merchantRuleId
-              ? { merchantRuleId: smart.merchantRuleId }
-              : {}),
+            ...(smart.merchantRuleId ? { merchantRuleId: smart.merchantRuleId } : {}),
           },
           select: { id: true },
         });
 
-        // 7) Mark processed (idempotency)
+        // 8) Mark processed
         await prisma.eventLog.create({
           data: {
             type: "WEBHOOK_PROCESSED",
@@ -128,9 +161,14 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        results.push({ eventId, ok: true, commissionId: commission.id });
+        results.push({
+          eventId,
+          ok: true,
+          commissionId: commission.id,
+          typeUsed: discoveredType,
+          statusUsed: discoveredStatus,
+        });
       } catch (e: any) {
-        // Per-log failure should not take down the whole batch
         results.push({
           eventId: log.message || "",
           ok: false,
@@ -141,7 +179,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ ok: true, processed: results.length, results });
   } catch (e: any) {
-    // Top-level safety net: never 500
     return NextResponse.json(
       { ok: false, error: "PROCESSOR_FAILED", message: safeErr(e) },
       { status: 200 }
