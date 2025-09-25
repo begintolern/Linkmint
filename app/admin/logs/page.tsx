@@ -6,10 +6,19 @@ export const revalidate = 0;
 import { assertAdmin } from "@/lib/utils/adminGuard";
 import { prisma } from "@/lib/db";
 
+type LogRow = {
+  id: string;
+  type: string;
+  message: string | null;
+  detail: string | null;
+  createdAt: Date | string;
+  userId: string | null;
+};
+
 export default async function AdminLogsPage() {
   await assertAdmin();
 
-  const logs = await prisma.eventLog.findMany({
+  const logs: LogRow[] = await prisma.eventLog.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,
     select: { id: true, type: true, message: true, detail: true, createdAt: true, userId: true },
@@ -34,12 +43,12 @@ export default async function AdminLogsPage() {
       <p className="text-sm text-slate-600 mt-1">Latest 100 events</p>
 
       <div className="mt-6 grid gap-3">
-        {logs.map((log) => (
+        {logs.map((log: LogRow) => (
           <div key={log.id} className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <span className={chip(log.type)}>{log.type}</span>
               <span className="text-xs text-slate-500">
-                {new Date(log.createdAt).toLocaleString()}
+                {new Date(log.createdAt as any).toLocaleString()}
               </span>
             </div>
             <div className="mt-2 text-sm">

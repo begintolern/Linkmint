@@ -1,120 +1,41 @@
+// app/api/merchant-rules/create/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import {
-  Prisma,
-  MerchantRule as DbMerchantRule,
-  CommissionCalc,
-  ImportMethod,
-} from "@prisma/client";
-import { logEvent } from "@/lib/compliance/log";
 
-function serialize(m: DbMerchantRule) {
-  return {
-    ...m,
-    commissionRate: m.commissionRate ? Number(m.commissionRate) : null,
-    lastImportedAt: m.lastImportedAt ? m.lastImportedAt.toISOString() : null,
-    createdAt: m.createdAt.toISOString(),
-    updatedAt: m.updatedAt.toISOString(),
-    allowedSources: m.allowedSources ?? null,
-    disallowed: m.disallowed ?? null,
-  };
-}
-
-export async function POST(req: Request) {
+/**
+ * POST /api/merchant-rules/create
+ * Creates a new merchant rule.
+ */
+export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json().catch(() => ({}))) as any;
-
-    // Required
-    const merchantName = (body.merchantName ?? "").toString().trim();
-    if (!merchantName) {
-      return NextResponse.json(
-        { ok: false, error: "merchantName_required" },
-        { status: 400 }
-      );
-    }
+    const body = await req.json();
 
     const created = await prisma.merchantRule.create({
       data: {
-        merchantName,
-        active: typeof body.active === "boolean" ? body.active : true,
+        merchantName: body.merchantName,
         network: body.network ?? null,
         domainPattern: body.domainPattern ?? null,
-        paramKey: body.paramKey ?? null,
-        paramValue: body.paramValue ?? null,
-        linkTemplate: body.linkTemplate ?? null,
-        allowedSources:
-          typeof body.allowedSources === "undefined"
-            ? undefined
-            : (body.allowedSources as Prisma.InputJsonValue),
-        disallowed:
-          typeof body.disallowed === "undefined"
-            ? undefined
-            : (body.disallowed as Prisma.InputJsonValue),
-        cookieWindowDays:
-          typeof body.cookieWindowDays === "number"
-            ? body.cookieWindowDays
-            : null,
-        payoutDelayDays:
-          typeof body.payoutDelayDays === "number"
-            ? body.payoutDelayDays
-            : null,
-        commissionType:
-          body.commissionType === "FIXED"
-            ? CommissionCalc.FIXED
-            : CommissionCalc.PERCENT,
-        commissionRate:
-          typeof body.commissionRate === "number"
-            ? new Prisma.Decimal(body.commissionRate)
-            : null,
-        calc: body.calc ?? null,
-        rate: typeof body.rate === "number" ? body.rate : null,
-        notes: body.notes ?? null,
-        importMethod:
-          body.importMethod === "API" ? ImportMethod.API : ImportMethod.MANUAL,
-        apiBaseUrl: body.apiBaseUrl ?? null,
-        apiAuthType: body.apiAuthType ?? null,
-        apiKeyRef: body.apiKeyRef ?? null,
+        active: body.active ?? true,
         status: body.status ?? "PENDING",
-        inactiveReason: body.inactiveReason ?? null,
-        allowedRegions: Array.isArray(body.allowedRegions)
-          ? body.allowedRegions
-          : typeof body.allowedRegions === "string"
-          ? body.allowedRegions.split(",").map((s: string) => s.trim())
-          : [],
+        commissionType: body.commissionType ?? null,
+        commissionRate: body.commissionRate
+          ? Number(body.commissionRate)
+          : null,
+        allowedSources: body.allowedSources ?? [],
+        disallowed: body.disallowed ?? [],
+        notes: body.notes ?? null,
       },
     });
 
-    // 🔒 Write a compliance audit trail entry (non-blocking)
-    await logEvent({
-      type: "MERCHANT_CREATED",
-      severity: 1,
-      message: `Merchant created: ${created.merchantName}`,
-      merchantId: created.id,
-      meta: {
-        network: created.network,
-        domainPattern: created.domainPattern,
-        commissionType: created.commissionType,
-        commissionRate: created.commissionRate ? Number(created.commissionRate) : null,
-        allowedRegions: created.allowedRegions,
-        status: created.status,
-      },
-    });
-
-    return NextResponse.json({ ok: true, merchant: serialize(created) });
-  } catch (err) {
-    console.error("merchant-rules/create POST failed:", err);
-    // Also try to log a compliance error (but don’t fail request twice)
-    await logEvent({
-      type: "MERCHANT_CREATE_ERROR",
-      severity: 3,
-      message: "Create merchant failed",
-      meta: { error: String(err) },
-    });
+    return NextResponse.json({ success: true, rule: created });
+  } catch (err: any) {
+    console.error("merchant-rules/create error:", err);
     return NextResponse.json(
-      { ok: false, error: "CREATE_FAILED" },
+      { success: false, error: err?.message ?? "Server error" },
       { status: 500 }
     );
   }

@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
+
+/** Minimal JSON type (no dependency on Prisma typings) */
+type JsonPrimitive = string | number | boolean | null;
+type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
 /**
  * Write a compliance event without ever crashing the request.
@@ -16,6 +19,19 @@ export async function logEvent(args: {
 }) {
   const { type, message, severity = 1, userId = null, merchantId = null, meta } = args;
 
+  // Best-effort: ensure meta is JSON-serializable
+  const toJsonValue = (v: unknown): JsonValue | undefined => {
+    if (typeof v === "undefined") return undefined;
+    try {
+      // Throws if circular / non-serializable
+      JSON.stringify(v);
+      return v as unknown as JsonValue;
+    } catch {
+      // Fallback to string representation
+      return String(v) as unknown as JsonValue;
+    }
+  };
+
   try {
     await prisma.complianceEvent.create({
       data: {
@@ -24,7 +40,7 @@ export async function logEvent(args: {
         severity,
         userId,
         merchantId,
-        meta: typeof meta === "undefined" ? undefined : (meta as Prisma.InputJsonValue),
+        meta: toJsonValue(meta) as any, // allow whatever your Prisma JSON column expects
       },
     });
   } catch (err) {

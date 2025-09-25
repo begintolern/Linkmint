@@ -1,5 +1,6 @@
 // lib/referrals/createReferralBatch.ts
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 const BONUS_WINDOW_DAYS = 90;
 
@@ -62,7 +63,7 @@ export async function createReferralBatch(inviterId: string) {
   const expiresAt = addDays(now, BONUS_WINDOW_DAYS);
 
   // Atomic create + attach
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Create group with required referrer relation
     const group = await tx.referralGroup.create({
       data: {

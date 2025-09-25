@@ -1,77 +1,53 @@
 // scripts/seed-invitee-commission.ts
-import { PrismaClient, CommissionStatus, CommissionType } from "@prisma/client";
-
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-function parseStatus(s: string | undefined): CommissionStatus {
-  switch ((s ?? "").toUpperCase()) {
-    case "APPROVED":
-      return CommissionStatus.APPROVED;
-    case "PAID":
-      return CommissionStatus.PAID;
-    case "PENDING":
-      return CommissionStatus.PENDING;
-    case "UNVERIFIED":
-      return CommissionStatus.UNVERIFIED;
-    default:
-      return CommissionStatus.PENDING;
-  }
-}
-
-function parseType(s: string | undefined): CommissionType {
-  switch ((s ?? "").toLowerCase()) {
-    case "override_bonus":
-      return CommissionType.override_bonus;
-    case "payout":
-      return CommissionType.payout;
-    case "referral_purchase":
-    default:
-      return CommissionType.referral_purchase;
-  }
-}
-
+/**
+ * Seeds a test commission for a given invitee.
+ * Usage:
+ *   ts-node scripts/seed-invitee-commission.ts --email someone@example.com --amount 4.55
+ */
 async function main() {
-  const [, , emailArg, amountArg, statusArg, typeArg] = process.argv;
-
-  if (!emailArg || !amountArg) {
-    console.error("Usage: ts-node scripts/seed-invitee-commission.ts <email> <amount> [status] [type]");
-    process.exit(1);
+  const email = arg("--email");
+  const amountStr = arg("--amount");
+  if (!email || !amountStr) {
+    throw new Error("Usage: seed-invitee-commission.ts --email <email> --amount <number>");
   }
 
-  const amount = Number(amountArg);
-  if (!isFinite(amount)) {
-    console.error("Amount must be a number");
-    process.exit(1);
+  const amount = Number(amountStr);
+  if (!isFinite(amount) || amount <= 0) {
+    throw new Error("Amount must be a positive number.");
   }
 
   const user = await prisma.user.findUnique({
-    where: { email: emailArg.toLowerCase().trim() },
-    select: { id: true },
+    where: { email },
+    select: { id: true, email: true },
   });
-  if (!user) {
-    console.error("User not found:", emailArg);
-    process.exit(1);
-  }
+  if (!user) throw new Error(`User not found: ${email}`);
 
-  const created = await prisma.commission.create({
+  const commission = await prisma.commission.create({
     data: {
       userId: user.id,
       amount,
-      status: parseStatus(statusArg),
-      type: parseType(typeArg),
-      description: "Seeded via script",
-      paidOut: false,
-      source: "seed-script",
+      type: "referral_purchase",  // plain string instead of CommissionType
+      status: "PENDING",          // plain string instead of CommissionStatus
+      description: "Seed invitee commission",
+      source: "seed",
     },
-    select: { id: true, amount: true, status: true, type: true, userId: true, createdAt: true },
+    select: { id: true, amount: true, status: true, type: true, createdAt: true },
   });
 
-  console.log("Created commission:", created);
+  console.log("✅ Seeded commission for invitee:", user.email, commission);
+}
+
+function arg(flag: string): string | undefined {
+  const idx = process.argv.indexOf(flag);
+  return idx >= 0 ? process.argv[idx + 1] : undefined;
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("Seed error:", e);
     process.exit(1);
   })
   .finally(async () => {

@@ -1,115 +1,176 @@
-// app/api/admin/merchant-rules/route.ts
+// app/api/merchant-rules/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getToken } from "next-auth/jwt";
 
-const ADMIN_EMAILS = new Set<string>([
-  "epo78741@yahoo.com",
-  "admin@linkmint.co",
-  "ertorig3@gmail.com",
-]);
+/**
+ * DTO returned to the client.
+ */
+type MerchantRuleDTO = {
+  id: string;
+  merchantName: string;
+  active: boolean;
+  network: string | null;
+  domainPattern: string | null;
 
-async function allow(req: NextRequest) {
-  // 1) Header key
-  const configured = (process.env.ADMIN_KEY ?? "").trim();
-  const headerKey = (req.headers.get("x-admin-key") ?? "").trim();
-  if (configured && headerKey === configured) return true;
+  // JSON fields normalized for the UI:
+  allowedSources: string[] | null;
+  disallowedSources: string[] | null;
 
-  // 2) NextAuth token (role/email)
-  try {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    if (token?.email) {
-      const emailLc = String(token.email).toLowerCase();
-      const role = String((token as any).role ?? "").toUpperCase();
-      if (role === "ADMIN" || ADMIN_EMAILS.has(emailLc)) return true;
+  // Commission + timing hints (nullable if not set):
+  defaultCommissionRate: number | null;
+  commissionType: string | null;
+  cookieWindowDays: number | null;
+  payoutDelayDays: number | null;
+
+  // Optional text
+  notes?: string | null;
+
+  // Timestamps (optional for UI)
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+/** Coerce unknown JSON-ish values into a clean string[] */
+function asStringArray(v: unknown): string[] | null {
+  if (v == null) return null;
+
+  // Already an array
+  if (Array.isArray(v)) {
+    const out = v.map((x) => String(x).trim()).filter(Boolean);
+    return out.length ? out : null;
+  }
+
+  // Objects: { sources: [...] } or flag maps { tiktok: true, reddit: true }
+  if (typeof v === "object") {
+    const obj = v as Record<string, unknown>;
+    if (Array.isArray((obj as any).sources)) {
+      const out = (obj as any).sources.map((x: unknown) => String(x).trim()).filter(Boolean);
+      return out.length ? out : null;
     }
-  } catch {
-    // ignore
+    const flags = Object.entries(obj)
+      .filter(([, val]) => val === true || val === "true" || val === 1)
+      .map(([k]) => k.trim())
+      .filter(Boolean);
+    return flags.length ? flags : null;
   }
 
-  // 3) Dev fallback
-  if (process.env.NODE_ENV !== "production") return true;
+  // Strings: try JSON parse, then CSV
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return null;
 
-  return false;
+    // JSON array/object
+    if ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith("{") && s.endsWith("}"))) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          const out = parsed.map((x: unknown) => String(x).trim()).filter(Boolean);
+          return out.length ? out : null;
+        }
+        if (parsed && typeof parsed === "object" && Array.isArray((parsed as any).sources)) {
+          const out = (parsed as any).sources.map((x: unknown) => String(x).trim()).filter(Boolean);
+          return out.length ? out : null;
+        }
+      } catch {
+        // fall through to CSV
+      }
+    }
+
+    // CSV / line-split
+    const parts = s
+      .split(/[,\n]/)
+      .map((x) => x.replace(/^\s*[\[\s"]+/, "").replace(/[\]\s"]+\s*$/, "").trim())
+      .map((x) => x.replace(/^"+|"+$/g, ""))
+      .filter(Boolean);
+    return parts.length ? parts : null;
+  }
+
+  return null;
 }
 
-// GET: list all rules
-export async function GET(req: NextRequest) {
-  if (!(await allow(req))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
-    const rules = await prisma.merchantRule.findMany({
-      orderBy: { merchantName: "asc" },
-    });
-    return NextResponse.json({ success: true, rules });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: "GET failed", detail: String(err?.message ?? err) },
-      { status: 500 }
-    );
-  }
+function asNumber(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v))) return Number(v);
+  return null;
 }
 
-// POST: create a rule
-export async function POST(req: NextRequest) {
-  if (!(await allow(req))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+/**
+ * GET /api/merchant-rules?activeOnly=true|false&market=PH|SG|US
+ * Defaults: activeOnly=true, market="PH".
+ */
+export async function GET(req: Request) {
   try {
-    const data = await req.json();
-    const created = await prisma.merchantRule.create({
-      data: {
-        active: data.active ?? true,
-        merchantName: data.merchantName,
-        network: data.network ?? null,
-        domainPattern: data.domainPattern ?? null,
-        paramKey: data.paramKey ?? null,
-        paramValue: data.paramValue ?? null,
-        linkTemplate: data.linkTemplate ?? null,
-        allowedSources: data.allowedSources ?? [],
-        disallowed: data.disallowed ?? [],
-        cookieWindowDays: data.cookieWindowDays ?? null,
-        payoutDelayDays: data.payoutDelayDays ?? null,
-        commissionType: data.commissionType ?? "PERCENT",
-        commissionRate: data.commissionRate ?? null,
-        calc: data.calc ?? null,
-        rate: data.rate ?? null,
-        notes: data.notes ?? null,
-        importMethod: data.importMethod ?? "MANUAL",
-        apiBaseUrl: data.apiBaseUrl ?? null,
-        apiAuthType: data.apiAuthType ?? null,
-        apiKeyRef: data.apiKeyRef ?? null,
-        lastImportedAt: data.lastImportedAt ?? null,
+    const url = new URL(req.url);
+    const activeOnlyParam = url.searchParams.get("activeOnly");
+    const marketParam = url.searchParams.get("market");
+
+    const activeOnly = activeOnlyParam == null ? true : activeOnlyParam === "true";
+    const market = (marketParam ?? "PH").toUpperCase();
+
+    const where: any = activeOnly ? { active: true, market } : { market };
+
+    const rows = await prisma.merchantRule.findMany({
+      where,
+      orderBy: [{ merchantName: "asc" }],
+      select: {
+        id: true,
+        merchantName: true,
+        active: true,
+        network: true,
+        domainPattern: true,
+
+        // JSON fields in DB
+        allowedSources: true,
+        disallowed: true,
+
+        // Commission/timing
+        commissionType: true,
+        commissionRate: true,
+        cookieWindowDays: true,
+        payoutDelayDays: true,
+
+        // Optional text
+        notes: true,
+
+        // Metadata
+        createdAt: true,
+        updatedAt: true,
+        market: true,
       },
     });
-    return NextResponse.json({ success: true, created });
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: "POST failed", detail: String(err?.message ?? err) },
-      { status: 500 }
-    );
-  }
-}
 
-// DELETE: remove a rule by id
-export async function DELETE(req: NextRequest) {
-  if (!(await allow(req))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
-    const { id } = await req.json();
-    if (!id) {
-      return NextResponse.json({ error: "Missing id" }, { status: 400 });
-    }
-    await prisma.merchantRule.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+    const rules: MerchantRuleDTO[] = rows.map((m) => ({
+      id: m.id,
+      merchantName: m.merchantName,
+      active: m.active,
+      network: m.network ?? null,
+      domainPattern: m.domainPattern ?? null,
+
+      // Normalize JSON -> string[]
+      allowedSources: asStringArray(m.allowedSources as unknown),
+      disallowedSources: asStringArray((m as any).disallowed),
+
+      // Prefer defaultCommissionRate if you add later; else commissionRate
+      defaultCommissionRate: asNumber(
+        ((m as any).defaultCommissionRate ?? (m as any).commissionRate) as unknown
+      ),
+      commissionType: (m.commissionType as unknown as string) ?? null,
+      cookieWindowDays: asNumber(m.cookieWindowDays as unknown),
+      payoutDelayDays: asNumber(m.payoutDelayDays as unknown),
+
+      notes: m.notes ?? null,
+
+      createdAt: m.createdAt?.toISOString?.(),
+      updatedAt: m.updatedAt?.toISOString?.(),
+    }));
+
+    return NextResponse.json({ ok: true, rules }, { status: 200 });
   } catch (err: any) {
     return NextResponse.json(
-      { error: "DELETE failed", detail: String(err?.message ?? err) },
+      { ok: false, error: "API_ERROR", message: err?.message ?? "Unknown error" },
       { status: 500 }
     );
   }

@@ -6,7 +6,6 @@ export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuard } from "@/lib/utils/adminGuard";
-import { Prisma, CommissionStatus } from "@prisma/client";
 
 /**
  * GET /api/admin/payouts/queue?limit=50&email=foo@example.com&cursor=<id>
@@ -23,9 +22,9 @@ export async function GET(req: NextRequest) {
   const emailFilter = (url.searchParams.get("email") || "").trim();
   const cursor = url.searchParams.get("cursor") || null;
 
-  // Build a typed where filter
-  const where: Prisma.CommissionWhereInput = {
-    status: CommissionStatus.APPROVED,
+  // Build filter object
+  const where: Record<string, any> = {
+    status: "APPROVED",
     paidOut: false,
     ...(emailFilter
       ? {
@@ -52,17 +51,19 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  const items = rows.map((r: typeof rows[number]) => ({
+    id: r.id,
+    userId: r.userId,
+    email: r.user?.email ?? "",
+    amount: Number(r.amount),
+    createdAt: r.createdAt,
+  }));
+
   const nextCursor = rows.length === limit ? rows[rows.length - 1].id : null;
 
   return NextResponse.json({
     success: true,
-    items: rows.map((r) => ({
-      id: r.id,
-      userId: r.userId,
-      email: r.user?.email ?? "",
-      amount: Number(r.amount),
-      createdAt: r.createdAt,
-    })),
+    items,
     nextCursor,
   });
 }

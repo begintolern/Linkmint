@@ -5,6 +5,25 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+type UserBrief = {
+  id: string;
+  email: string | null;
+  name: string | null;
+};
+
+type CommissionRow = {
+  id: string;
+  userId: string;
+  amount: number | string; // Prisma.Decimal | number | string
+  status: string;
+  paidOut: boolean;
+  type: string;
+  source: string | null;
+  description: string | null;
+  createdAt: Date;
+  user: UserBrief | null;
+};
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -14,11 +33,11 @@ export async function GET(req: Request) {
     const cursor = searchParams.get("cursor") || undefined;
 
     // filters (all optional)
-    const status = pick(searchParams.get("status"));   // e.g. APPROVED
-    const type = pick(searchParams.get("type"));       // e.g. referral_purchase
-    const paid = pick(searchParams.get("paid"));       // "paid" | "unpaid"
-    const email = pick(searchParams.get("email"));     // contains
-    const q = pick(searchParams.get("q"));             // free text (applied post-fetch)
+    const status = pick(searchParams.get("status")); // e.g. APPROVED
+    const type = pick(searchParams.get("type")); // e.g. referral_purchase
+    const paid = pick(searchParams.get("paid")); // "paid" | "unpaid"
+    const email = pick(searchParams.get("email")); // contains
+    const q = pick(searchParams.get("q")); // free text (applied post-fetch)
     const dateFrom = pick(searchParams.get("dateFrom"));
     const dateTo = pick(searchParams.get("dateTo"));
 
@@ -30,7 +49,8 @@ export async function GET(req: Request) {
     if (paid === "unpaid") where.paidOut = false;
 
     if (email) {
-      where.user = { email: { contains: email, mode: "insensitive" } };
+      // relation filter (works on modern Prisma)
+      where.user = { is: { email: { contains: email, mode: "insensitive" } } };
     }
 
     if (dateFrom || dateTo) {
@@ -40,7 +60,7 @@ export async function GET(req: Request) {
     }
 
     // fetch page (+1 to probe next page)
-    const page = await prisma.commission.findMany({
+    const page: CommissionRow[] = await prisma.commission.findMany({
       where,
       take: limit + 1,
       skip: cursor ? 1 : 0,
@@ -52,8 +72,8 @@ export async function GET(req: Request) {
     });
 
     // optional free-text post-filter on the fetched slice
-    const filtered = q
-      ? page.filter((it) => {
+    const filtered: CommissionRow[] = q
+      ? page.filter((it: CommissionRow) => {
           const haystack = [
             it.user?.email ?? "",
             it.user?.name ?? "",
@@ -70,18 +90,19 @@ export async function GET(req: Request) {
       : page;
 
     const hasNext = filtered.length > limit;
-    const data = hasNext ? filtered.slice(0, -1) : filtered;
+    const data: CommissionRow[] = hasNext ? filtered.slice(0, -1) : filtered;
     const nextCursor = hasNext ? filtered[filtered.length - 1].id : null;
 
     // add share breakdowns (adjust if you have custom rules)
-    const mapped = data.map((it) => {
-      const userShare = round2(it.amount * 0.7);
-      const referrerShare = round2(it.amount * 0.05);
-      const platformShare = round2(it.amount - userShare - referrerShare);
+    const mapped = data.map((it: CommissionRow) => {
+      const amountNum = Number(it.amount);
+      const userShare = round2(amountNum * 0.7);
+      const referrerShare = round2(amountNum * 0.05);
+      const platformShare = round2(amountNum - userShare - referrerShare);
       return {
         id: it.id,
         userId: it.userId,
-        amount: it.amount,
+        amount: amountNum,
         status: it.status,
         paidOut: it.paidOut,
         type: it.type,
@@ -109,7 +130,10 @@ export async function GET(req: Request) {
     });
   } catch (e: any) {
     console.error("Error in /api/admin/commissions", e);
-    return NextResponse.json({ success: false, error: e.message ?? "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: e.message ?? "Server error" },
+      { status: 500 }
+    );
   }
 }
 

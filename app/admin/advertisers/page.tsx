@@ -1,10 +1,20 @@
 // app/admin/advertisers/page.tsx
-import { PrismaClient, AdvertiserApplication } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = (globalThis as any).prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== "production") (globalThis as any).prisma = prisma;
 
 export const dynamic = "force-dynamic";
+
+// Temporary shim type — replace with actual Prisma model when available
+type AdvertiserApplication = {
+  id: string;
+  name: string;
+  advertiserId: string;
+  status: string;
+  appliedAt: Date | null;
+  updatedAt: Date | null;
+};
 
 export default async function AdvertisersPage() {
   const rows: AdvertiserApplication[] = await prisma.advertiserApplication.findMany({
@@ -46,14 +56,10 @@ export default async function AdvertisersPage() {
                   </span>
                 </td>
                 <td className="p-3">
-                  {r.appliedAt
-                    ? new Date(r.appliedAt).toLocaleString()
-                    : "—"}
+                  {r.appliedAt ? new Date(r.appliedAt).toLocaleString() : "—"}
                 </td>
                 <td className="p-3">
-                  {r.updatedAt
-                    ? new Date(r.updatedAt).toLocaleString()
-                    : "—"}
+                  {r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "—"}
                 </td>
               </tr>
             ))}

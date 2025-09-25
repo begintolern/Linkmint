@@ -1,25 +1,22 @@
-import {
-  PrismaClient,
-  CommissionCalc,
-  ImportMethod,
-  CommissionStatus,
-  CommissionType,
-} from "@prisma/client";
+// prisma/seed.ts
+import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 
 const prisma = new PrismaClient();
 
 /** ---------- helpers ---------- */
-function toCommissionCalc(value?: string | null): CommissionCalc {
-  if (!value) return CommissionCalc.PERCENT;
-  const maybe = (CommissionCalc as any)[value as keyof typeof CommissionCalc];
-  return maybe ?? CommissionCalc.PERCENT;
+function toCommissionType(value?: string | null): string | null {
+  if (!value) return "PERCENT";
+  const s = String(value).toUpperCase();
+  // allow common variants
+  if (s === "PERCENT" || s === "FIXED") return s;
+  return "PERCENT";
 }
 
 /** ---------- section 1: seed admin + sample commissions ---------- */
 async function seedAdminAndCommissions() {
-  const email = "ertorig3@gmail.com"; // Updated email
+  const email = "ertorig3@gmail.com"; // Adjust if needed
 
   const user = await prisma.user.upsert({
     where: { email },
@@ -34,16 +31,16 @@ async function seedAdminAndCommissions() {
     select: { id: true, email: true },
   });
 
-  // Sample rows using ENUMS (not strings)
-  const sampleRows: Array<{ amount: number; type: CommissionType; status: CommissionStatus }> = [
-    { amount: 3.5,  type: CommissionType.referral_purchase, status: CommissionStatus.APPROVED },
-    { amount: 4.25, type: CommissionType.referral_purchase, status: CommissionStatus.APPROVED },
-    { amount: 2.0,  type: CommissionType.referral_purchase, status: CommissionStatus.PENDING  },
+  // Sample rows using string enums (cast as any at write)
+  const sampleRows: Array<{ amount: number; type: string; status: string }> = [
+    { amount: 3.5,  type: "referral_purchase", status: "APPROVED" },
+    { amount: 4.25, type: "referral_purchase", status: "APPROVED" },
+    { amount: 2.0,  type: "referral_purchase", status: "PENDING"  },
   ];
 
   // Only insert if there are no approved+unpaid commissions yet
   const existing = await prisma.commission.count({
-    where: { userId: user.id, status: CommissionStatus.APPROVED, paidOut: false },
+    where: { userId: user.id, status: "APPROVED" as any, paidOut: false },
   });
 
   let createdCount = 0;
@@ -54,8 +51,9 @@ async function seedAdminAndCommissions() {
           data: {
             userId: user.id,
             amount: r.amount,
-            type: r.type,
-            status: r.status,
+            // Cast to any to satisfy enum expectations in Prisma types
+            type: r.type as any,
+            status: r.status as any,
             paidOut: false,
             description: "Seed commission",
             source: "seed",
@@ -90,16 +88,17 @@ async function seedMerchantRulesFromJson() {
     disallowed?: any;
     cookieWindowDays?: number | null;
     payoutDelayDays?: number | null;
-    commissionType?: string | null;
+    commissionType?: string | null;  // e.g., "PERCENT" | "FIXED"
     commissionRate?: number | null;
-    calc?: string | null;
-    rate?: number | null;
+    calc?: string | null;            // legacy alias
+    rate?: number | null;            // legacy alias
     notes?: string | null;
-    importMethod?: string | null;
+    importMethod?: string | null;    // leave as string
     apiBaseUrl?: string | null;
     apiAuthType?: string | null;
     apiKeyRef?: string | null;
     lastImportedAt?: string | null;
+    market?: string | null;
   };
 
   const raw = fs.readFileSync(dataPath, "utf-8");
@@ -116,7 +115,7 @@ async function seedMerchantRulesFromJson() {
       select: { id: true },
     });
 
-    const payload = {
+    const payload: any = {
       active: m.active ?? true,
       merchantName,
       network: m.network ?? undefined,
@@ -128,15 +127,14 @@ async function seedMerchantRulesFromJson() {
       disallowed: m.disallowed ?? undefined,
       cookieWindowDays: m.cookieWindowDays ?? undefined,
       payoutDelayDays: m.payoutDelayDays ?? undefined,
-      commissionType: toCommissionCalc(m.commissionType ?? undefined),
-      commissionRate: m.commissionRate ?? undefined,
-      calc: m.calc ?? undefined,
-      rate: m.rate ?? undefined,
+      commissionType: toCommissionType(m.commissionType ?? m.calc ?? undefined) as any, // cast
+      commissionRate: (m.commissionRate ?? m.rate) ?? undefined,
       notes: m.notes ?? undefined,
-      importMethod: ImportMethod.MANUAL,
+      importMethod: (m.importMethod ?? "MANUAL") as any, // cast if enum in schema
       apiBaseUrl: m.apiBaseUrl ?? undefined,
       apiAuthType: m.apiAuthType ?? undefined,
       apiKeyRef: m.apiKeyRef ?? undefined,
+      market: (m.market ?? "PH").toUpperCase(), // default to PH
       lastImportedAt: m.lastImportedAt ? new Date(m.lastImportedAt) : undefined,
     };
 
@@ -155,7 +153,6 @@ async function seedMerchantRulesFromJson() {
 
 /** ---------- section 3: seed bonus ---------- */
 async function seedBonus(userEmail: string) {
-  // Find the user by email to ensure they're valid
   const user = await prisma.user.findUnique({
     where: { email: userEmail },
   });
@@ -182,7 +179,7 @@ async function seedBonus(userEmail: string) {
 async function main() {
   const c = await seedAdminAndCommissions();
   const m = await seedMerchantRulesFromJson();
-  await seedBonus(c.userEmail); // Now use the correct email to seed bonus
+  await seedBonus(c.userEmail);
 
   console.log("✅ Seeding complete!");
   console.log(`   User: ${c.userEmail}`);

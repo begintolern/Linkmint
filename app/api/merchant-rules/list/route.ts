@@ -1,3 +1,4 @@
+// app/api/merchant-rules/list/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -34,17 +35,88 @@ type MerchantRuleDTO = {
   updatedAt?: string;
 };
 
-/** Small helpers to coerce unknown JSON from Prisma into arrays/numbers safely */
+/** Robustly coerce unknown JSON-ish values into a clean string[] */
 function asStringArray(v: unknown): string[] | null {
+  // Helper: trim quotes/brackets from a single token
+  const cleanToken = (s: string) =>
+    s.replace(/^\s*[\[\s"]+/, "").replace(/[\]\s"]+\s*$/, "").trim();
+
+  // If it's already an array…
   if (Array.isArray(v)) {
-    return v.map((x) => (typeof x === "string" ? x : String(x))).filter(Boolean);
+    const arr = v as unknown[];
+    if (arr.length && typeof arr[0] === "string" && typeof arr[arr.length - 1] === "string") {
+      const first = (arr[0] as string).trim();
+      const last = (arr[arr.length - 1] as string).trim();
+
+      // Case: array holds JSON fragments like ['["A"', '"B"', '"C"]']
+      if (/^\[/.test(first) && /\]$/.test(last)) {
+        try {
+          const joined = (arr as string[]).join("");
+          const parsed = JSON.parse(joined);
+          if (Array.isArray(parsed)) {
+            return parsed.map((x) => String(x).trim()).filter(Boolean);
+          }
+        } catch {
+          // fall through to cleaning tokens
+        }
+      }
+    }
+
+    // Generic clean of stringy entries
+    const out = arr
+      .map((x) => (typeof x === "string" ? cleanToken(x) : String(x)))
+      .map((s) => s.replace(/^"+|"+$/g, "")) // strip extra quotes if any
+      .filter(Boolean);
+
+    return out.length ? out : null;
   }
+
   if (v == null) return null;
-  // Some older seeds may store CSV strings; support that too:
+
+  // If it's a plain object, look for { sources: [...] } or truthy flags
+  if (typeof v === "object") {
+    const obj = v as Record<string, unknown>;
+    if (Array.isArray((obj as any).sources)) {
+      const arr = (obj as any).sources as unknown[];
+      const out = arr.map((x) => String(x).trim()).filter(Boolean);
+      return out.length ? out : null;
+    }
+    // { tiktok: true, reddit: true } → ["tiktok","reddit"]
+    const flags = Object.entries(obj)
+      .filter(([, val]) => val === true)
+      .map(([key]) => key);
+    return flags.length ? flags : null;
+  }
+
+  // Strings: try JSON, then CSV fallback
   if (typeof v === "string") {
-    const parts = v.split(",").map((s) => s.trim()).filter(Boolean);
+    const s = v.trim();
+    if (!s) return null;
+
+    // Try to parse JSON array/object
+    if ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith("{") && s.endsWith("}"))) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          return parsed.map((x) => String(x).trim()).filter(Boolean);
+        }
+        if (parsed && typeof parsed === "object" && Array.isArray((parsed as any).sources)) {
+          return (parsed as any).sources.map((x: unknown) => String(x).trim()).filter(Boolean);
+        }
+      } catch {
+        // fall back to CSV parsing
+      }
+    }
+
+    // CSV / line-split fallback, also cleaning stray quotes/brackets
+    const parts = s
+      .split(/[,\n]/)
+      .map(cleanToken)
+      .map((x) => x.replace(/^"+|"+$/g, ""))
+      .filter(Boolean);
     return parts.length ? parts : null;
   }
+
   return null;
 }
 
@@ -67,39 +139,40 @@ export async function GET(req: Request) {
     const marketParam = url.searchParams.get("market");
 
     const activeOnly = activeOnlyParam == null ? true : activeOnlyParam === "true";
-
-    // Philippines-first default: market = "PH" unless caller sets ?market=SG or ?market=US
     const market = (marketParam ?? "PH").toUpperCase();
 
     const where: any = activeOnly ? { active: true, market } : { market };
 
+    // No 'select' here — we normalize below with safe cast/guards
     const rows = await prisma.merchantRule.findMany({
       where,
       orderBy: [{ merchantName: "asc" }],
     });
 
-    const merchants: MerchantRuleDTO[] = rows.map((m) => ({
+    const merchants: MerchantRuleDTO[] = rows.map((m: any) => ({
       id: m.id,
       merchantName: m.merchantName,
       active: m.active,
-      network: m.network,
-      domainPattern: m.domainPattern,
+      network: m.network ?? null,
+      domainPattern: m.domainPattern ?? null,
 
-      allowedSources: asStringArray(m.allowedSources as unknown),
-      disallowedSources: asStringArray((m as any)?.disallowedSources),
+      // Normalize list-ish fields regardless of how they were stored
+      allowedSources: asStringArray(m.allowedSources),
+      // DB uses JSON column `disallowed`; normalize to string[]
+      disallowedSources: asStringArray(m.disallowed),
 
-      defaultCommissionRate: asNumber(
-        ((m as any).defaultCommissionRate ?? (m as any).commissionRate) as unknown
-      ),
-      commissionType: (m.commissionType as unknown as string) ?? null,
-      cookieWindowDays: asNumber(m.cookieWindowDays as unknown),
-      payoutDelayDays: asNumber(m.payoutDelayDays as unknown),
+      // Commission/timing
+      defaultCommissionRate: asNumber(m.defaultCommissionRate ?? m.commissionRate),
+      commissionType: m.commissionType ?? null,
+      cookieWindowDays: asNumber(m.cookieWindowDays),
+      payoutDelayDays: asNumber(m.payoutDelayDays),
 
-      isGreyListed: (m as any).isGreyListed ?? null,
+      // Optional flags/text — tolerate missing columns
+      isGreyListed: typeof m.isGreyListed === "boolean" ? m.isGreyListed : null,
       notes: m.notes ?? null,
 
-      createdAt: m.createdAt?.toISOString?.() ?? undefined,
-      updatedAt: m.updatedAt?.toISOString?.() ?? undefined,
+      createdAt: m.createdAt?.toISOString?.(),
+      updatedAt: m.updatedAt?.toISOString?.(),
     }));
 
     return NextResponse.json({ ok: true, merchants }, { status: 200 });

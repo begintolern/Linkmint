@@ -9,34 +9,34 @@ datasource db {
 }
 
 model User {
-  id                     String               @id @default(cuid())
-  email                  String               @unique
-  name                   String?
-  password               String?
-  createdAt              DateTime             @default(now())
-  referralGroupId        String?
-  referredById           String?
-  verifyToken            String?              @unique
-  verifyTokenExpiry      DateTime?
-  trustScore             Int?                 @default(0)
-  referralBadge          String?
-  referralCode           String?              @unique
-  role                   String?              @default("user")
-  emailVerifiedAt        DateTime?
-  updatedAt              DateTime             @updatedAt
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String?
+  password          String?
+  createdAt         DateTime  @default(now())
+  referralGroupId   String?
+  referredById      String?
+  verifyToken       String?   @unique
+  verifyTokenExpiry DateTime?
+  trustScore        Int?      @default(0)
+  referralBadge     String?
+  referralCode      String?   @unique
+  role              String?   @default("user")
+  emailVerifiedAt   DateTime?
+  updatedAt         DateTime  @updatedAt
 
   // 🌍 Market focus: default Philippines (ISO alpha-2)
-  countryCode            String               @default("PH") @db.VarChar(2)
+  countryCode String @default("PH") @db.VarChar(2)
 
-  ageConfirmed           Boolean              @default(false)
-  ageConfirmedAt         DateTime?
-  deletedAt              DateTime?
-  dob                    DateTime?
-  tosAcceptedAt          DateTime?
-  tosAcceptedIp          String?              @db.VarChar(64)
-  bonusCents             Int                  @default(0)
-  bonusEligibleUntil     DateTime?
-  bonusTier              Int                  @default(0)
+  ageConfirmed       Boolean   @default(false)
+  ageConfirmedAt     DateTime?
+  deletedAt          DateTime?
+  dob                DateTime?
+  tosAcceptedAt      DateTime?
+  tosAcceptedIp      String?   @db.VarChar(64)
+  bonusCents         Int       @default(0)
+  bonusEligibleUntil DateTime?
+  bonusTier          Int       @default(0)
 
   commissions            Commission[]
   eventLogs              EventLog[]
@@ -57,7 +57,6 @@ model User {
 
   @@index([deletedAt])
 }
-
 
 model ReferralGroup {
   id         String   @id @default(cuid())
@@ -230,8 +229,7 @@ model MerchantRule {
   inactiveReason   String?
   commissions      Commission[]
   smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
-  market           String   @default("US") // e.g. "US", "PH", "SG"
-
+  market           String         @default("US") // e.g. "US", "PH", "SG"
 }
 
 model VerificationToken {

@@ -6,8 +6,11 @@ export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuard } from "@/lib/utils/adminGuard";
-import { CommissionStatus } from "@prisma/client";
 
+/**
+ * POST /api/admin/trigger-payout
+ * Marks a commission as PAID manually (admin only)
+ */
 export async function POST(req: NextRequest) {
   const gate = await adminGuard();
   if (!gate.ok) {
@@ -15,41 +18,38 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = (await req.json()) as { id: string };
-    const id = body?.id?.trim();
-    if (!id) return NextResponse.json({ success: false, error: "Missing id" }, { status: 400 });
+    const { id } = (await req.json()) as { id: string };
 
-    const c = await prisma.commission.findUnique({
-      where: { id },
-      select: { id: true, userId: true, status: true, amount: true, paidOut: true },
-    });
-    if (!c) return NextResponse.json({ success: false, error: "Commission not found" }, { status: 404 });
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Missing id" }, { status: 400 });
+    }
 
-    // Must be APPROVED before payout trigger (no PROCESSING status in enum)
-    if (c.status !== CommissionStatus.APPROVED) {
-      return NextResponse.json(
-        { success: false, error: `Commission must be APPROVED, got ${c.status}` },
-        { status: 400 }
-      );
+    const commission = await prisma.commission.findUnique({ where: { id } });
+    if (!commission) {
+      return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+    }
+
+    if (commission.status === "PAID") {
+      return NextResponse.json({ success: false, error: "Already paid" }, { status: 400 });
     }
 
     const updated = await prisma.commission.update({
-      where: { id: c.id },
-      data: { status: CommissionStatus.PAID, paidOut: true },
+      where: { id },
+      data: { status: "PAID", paidOut: true },
     });
 
     await prisma.eventLog.create({
       data: {
-        userId: c.userId,
-        type: "commission",
-        message: `Commission ${c.id} paid (trigger-payout)`,
-        detail: `Amount ${Number(c.amount)}`,
+        userId: commission.userId,
+        type: "payout",
+        message: `Commission ${id} manually marked paid`,
+        detail: `Amount ${Number(commission.amount)}`,
       },
     });
 
     return NextResponse.json({ success: true, commission: updated });
   } catch (err) {
-    console.error("POST /api/admin/trigger-payout error:", err);
+    console.error("trigger-payout error:", err);
     return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }

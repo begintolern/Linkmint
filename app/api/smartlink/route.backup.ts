@@ -1,61 +1,46 @@
-// app/api/smartlink/history/route.ts
-import { NextResponse } from "next/server";
-import { NextRequest } from "next/server";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { getToken } from "next-auth/jwt";
-import { authOptions } from "@/lib/auth/options";
-import { prisma } from "@/lib/db";
-
+// app/api/smartlink/route.backup.ts
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-// GET /api/smartlink/history?merchantId=<id>&limit=20
-export async function GET(req: NextRequest) {
-  // Try normal session first
-  const raw = await getServerSession(authOptions);
-  const session = raw as Session | null;
-  let userId = (session?.user as any)?.id as string | undefined;
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 
-  // Fallback: read JWT directly (handles edge cases where session isn't hydrated in route)
-  if (!userId) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-    userId = (token as any)?.sub || (token as any)?.id;
-  }
-
-  if (!userId) {
-    // No user → empty list (don’t 401; keep UI simple)
-    return NextResponse.json({ links: [] }, { status: 200 });
-  }
-
-  const url = new URL(req.url);
-  const merchantId = url.searchParams.get("merchantId");
-  const limit = Math.max(1, Math.min(50, Number(url.searchParams.get("limit") ?? 20)));
-
+export async function GET() {
   try {
-    const links = await prisma.smartLink.findMany({
-      where: {
-        userId,
-        ...(merchantId ? { merchantRuleId: merchantId } : {}),
-      },
+    // Avoid strict selects so this won't break if the model doesn't have url/title.
+    const links = (await prisma.smartLink.findMany({
       orderBy: { createdAt: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        merchantName: true,
-        merchantDomain: true,
-        merchantRuleId: true,
-        originalUrl: true,
-        shortUrl: true,
-        label: true,
-        createdAt: true,
-      },
+      take: 100,
+    })) as any[];
+
+    const out = links.map((l) => {
+      const url =
+        l?.url ??
+        l?.destination ??
+        l?.destUrl ??
+        l?.href ??
+        null;
+
+      const title =
+        l?.title ??
+        l?.name ??
+        l?.label ??
+        null;
+
+      return {
+        id: String(l?.id),
+        title,
+        url,
+        createdAt:
+          l?.createdAt?.toISOString?.() ??
+          (typeof l?.createdAt === "string" ? l.createdAt : null),
+      };
     });
 
-    const out = links.map((l) => ({ ...l, createdAt: l.createdAt.toISOString() }));
-    return NextResponse.json({ links: out });
+    return NextResponse.json({ success: true, links: out });
   } catch (e) {
-    console.error("[/api/smartlink/history] error:", e);
-    return NextResponse.json({ links: [], error: "Failed to load history" }, { status: 500 });
+    console.error("GET /api/smartlink (backup) error:", e);
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
   }
 }

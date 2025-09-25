@@ -5,9 +5,10 @@ async function main() {
   console.log("Listing latest users…");
 
   // Quick sanity: how many rows are in User?
-  const [{ count }] = await prisma.$queryRawUnsafe<{ count: number }[]>(
-    `SELECT COUNT(*)::int AS count FROM "User";`
-  );
+ const [{ count }] = await prisma.$queryRaw<{ count: number }[]>`
+  SELECT COUNT(*)::int AS count FROM "User";
+`;
+
   console.log("Total users:", count);
 
   const users = await prisma.user.findMany({

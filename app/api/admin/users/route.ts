@@ -1,54 +1,56 @@
 // app/api/admin/users/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { adminGuardFromReq } from "@/lib/utils/adminGuardReq";
+import { adminGuard } from "@/lib/utils/adminGuard";
 
-/**
- * GET /api/admin/users?limit=10&cursor=<id>
- * Returns latest users with simple ID cursor pagination.
- */
 export async function GET(req: NextRequest) {
-  const gate = await adminGuardFromReq(req);
-  if (!gate.ok) return gate.res;
-
-  const { searchParams } = new URL(req.url);
-  const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "10", 10), 1), 50);
-  const cursor = searchParams.get("cursor"); // user.id
-
-  const where = {}; // (add filters later if needed)
-
-  const rows = await prisma.user.findMany({
-    where,
-    take: limit + 1, // fetch one extra to detect nextCursor
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      trustScore: true,
-      createdAt: true,
-      emailVerifiedAt: true,
-    },
-  });
-
-  let nextCursor: string | null = null;
-  if (rows.length > limit) {
-    const next = rows.pop()!; // remove the extra
-    nextCursor = next.id;
+  const gate = await adminGuard();
+  if (!gate.ok) {
+    return NextResponse.json({ success: false, error: gate.reason }, { status: gate.status });
   }
 
-  // Serialize dates to strings for the client
-  const out = rows.map((u) => ({
-    ...u,
-    createdAt: u.createdAt.toISOString(),
-    emailVerifiedAt: u.emailVerifiedAt ? u.emailVerifiedAt.toISOString() : null,
-  }));
+  try {
+    const { searchParams } = new URL(req.url);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500);
+    const email = searchParams.get("email")?.trim() || "";
 
-  return NextResponse.json({ success: true, rows: out, nextCursor });
+    const rows = await prisma.user.findMany({
+      where: email ? { email: { contains: email, mode: "insensitive" } } : {},
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        trustScore: true,
+        referralCode: true,
+        referralBadge: true,
+        emailVerifiedAt: true,
+      },
+    });
+
+    type Row = typeof rows[number];
+
+    const out = rows.map((u: Row) => ({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      createdAt: u.createdAt.toISOString(),
+      trustScore: u.trustScore,
+      referralCode: u.referralCode,
+      referralBadge: u.referralBadge,
+      emailVerified: Boolean(u.emailVerifiedAt),
+    }));
+
+    return NextResponse.json({ success: true, rows: out });
+  } catch (err) {
+    console.error("admin/users error:", err);
+    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+  }
 }

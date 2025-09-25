@@ -4,6 +4,7 @@ export const fetchCache = "force-no-store";
 
 import { prisma } from "@/lib/db";
 
+// Final shape for UI
 type ClickRow = {
   id: string;
   createdAt: string;
@@ -11,15 +12,27 @@ type ClickRow = {
   merchant?: { id: string; merchantName: string | null } | null;
   ip?: string | null;
   userAgent?: string | null;
-  url?: string | null;        // <- renamed
-  referer?: string | null;    // <- renamed
+  url?: string | null;
+  referer?: string | null;
+};
+
+// Raw row from Prisma select in this file
+type RawClickRow = {
+  id: string;
+  createdAt: Date | string;
+  userId: string | null;
+  merchantId: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  url: string | null;
+  referer: string | null;
 };
 
 async function getClicks(page = 1, pageSize = 50): Promise<ClickRow[]> {
   const skip = (page - 1) * pageSize;
 
   // 1) Fetch click rows with scalar fields only (no include)
-  const rows = await prisma.clickEvent.findMany({
+  const rows: RawClickRow[] = await prisma.clickEvent.findMany({
     skip,
     take: pageSize,
     orderBy: { createdAt: "desc" },
@@ -30,40 +43,54 @@ async function getClicks(page = 1, pageSize = 50): Promise<ClickRow[]> {
       merchantId: true,
       ip: true,
       userAgent: true,
-      url: true,       // <- correct field
-      referer: true,   // <- correct field
+      url: true,
+      referer: true,
     },
   });
 
   // 2) Collect distinct IDs
-  const userIds = Array.from(new Set(rows.map(r => r.userId).filter(Boolean) as string[]));
-  const merchantIds = Array.from(new Set(rows.map(r => r.merchantId).filter(Boolean) as string[]));
+  const userIds: string[] = Array.from(
+    new Set(rows.map((r: RawClickRow) => r.userId).filter(Boolean) as string[])
+  );
+  const merchantIds: string[] = Array.from(
+    new Set(rows.map((r: RawClickRow) => r.merchantId).filter(Boolean) as string[])
+  );
 
   // 3) Bulk fetch lookups
   const [users, merchants] = await Promise.all([
     userIds.length
-      ? prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true } })
-      : Promise.resolve([]),
+      ? prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, email: true },
+        })
+      : Promise.resolve([] as { id: string; email: string | null }[]),
     merchantIds.length
-      ? prisma.merchantRule.findMany({ where: { id: { in: merchantIds } }, select: { id: true, merchantName: true } })
-      : Promise.resolve([]),
+      ? prisma.merchantRule.findMany({
+          where: { id: { in: merchantIds } },
+          select: { id: true, merchantName: true },
+        })
+      : Promise.resolve([] as { id: string; merchantName: string | null }[]),
   ]);
 
-  const userMap = new Map(users.map(u => [u.id, u.email ?? null]));
-  const merchantMap = new Map(merchants.map(m => [m.id, m.merchantName ?? null]));
+  const userMap = new Map<string, string | null>(users.map((u: { id: any; email: any; }) => [u.id, u.email ?? null]));
+  const merchantMap = new Map<string, string | null>(
+    merchants.map((m: { id: any; merchantName: any; }) => [m.id, m.merchantName ?? null])
+  );
 
   // 4) Shape rows for UI
-  return rows.map(r => ({
+  return rows.map((r: RawClickRow): ClickRow => ({
     id: r.id,
     createdAt:
       (r.createdAt as any)?.toISOString?.() ??
       (typeof r.createdAt === "string" ? r.createdAt : String(r.createdAt)),
     user: r.userId ? { id: r.userId, email: userMap.get(r.userId) ?? null } : null,
-    merchant: r.merchantId ? { id: r.merchantId, merchantName: merchantMap.get(r.merchantId) ?? null } : null,
+    merchant: r.merchantId
+      ? { id: r.merchantId, merchantName: merchantMap.get(r.merchantId) ?? null }
+      : null,
     ip: r.ip ?? null,
     userAgent: r.userAgent ?? null,
-    url: r.url ?? null,           // <- correct
-    referer: r.referer ?? null,   // <- correct
+    url: r.url ?? null,
+    referer: r.referer ?? null,
   }));
 }
 
@@ -133,16 +160,10 @@ export default async function AdminClicksPage() {
                 <td className="px-4 py-3">
                   {c.merchant ? c.merchant.merchantName ?? c.merchant.id : "—"}
                 </td>
-                <td className="px-4 py-3 max-w-xs truncate">
-                  {c.url ?? "—"}
-                </td>
-                <td className="px-4 py-3 max-w-xs truncate">
-                  {c.referer ?? "—"}
-                </td>
+                <td className="px-4 py-3 max-w-xs truncate">{c.url ?? "—"}</td>
+                <td className="px-4 py-3 max-w-xs truncate">{c.referer ?? "—"}</td>
                 <td className="px-4 py-3">{c.ip ?? "—"}</td>
-                <td className="px-4 py-3 max-w-xs truncate">
-                  {c.userAgent ?? "—"}
-                </td>
+                <td className="px-4 py-3 max-w-xs truncate">{c.userAgent ?? "—"}</td>
               </tr>
             ))}
             {!clicks.length && !error ? (

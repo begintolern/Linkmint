@@ -6,7 +6,6 @@ export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuard } from "@/lib/utils/adminGuard";
-import { CommissionStatus } from "@prisma/client";
 
 export async function PATCH(_req: NextRequest, { params }: { params: { id: string } }) {
   // Admin auth
@@ -24,19 +23,19 @@ export async function PATCH(_req: NextRequest, { params }: { params: { id: strin
     }
 
     // Already paid? bail
-    if (existing.status === CommissionStatus.PAID) {
+    if (existing.status === "PAID") {
       return NextResponse.json({ success: false, error: "Already paid" }, { status: 400 });
     }
 
     // Already approved? just echo back
-    if (existing.status === CommissionStatus.APPROVED) {
+    if (existing.status === "APPROVED") {
       return NextResponse.json({ success: true, commission: existing });
     }
 
     // Otherwise move to APPROVED (from UNVERIFIED / PENDING / etc.)
     const updated = await prisma.commission.update({
       where: { id },
-      data: { status: CommissionStatus.APPROVED },
+      data: { status: "APPROVED" },
     });
 
     await prisma.eventLog.create({

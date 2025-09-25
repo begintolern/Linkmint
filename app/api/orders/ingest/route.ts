@@ -4,7 +4,6 @@ export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import recordCommission from "@/lib/engines/recordCommission.wrap";
 
 /**
  * POST /api/orders/ingest
@@ -20,9 +19,8 @@ import recordCommission from "@/lib/engines/recordCommission.wrap";
  *
  * Behavior:
  * - Loads ClickEvent + MerchantRule
- * - Computes commission via recordCommission.wrap (Shopee uses new engine)
+ * - Computes commission locally (simulation only; NO writes to Commission)
  * - Writes an EventLog record (type: "commission_simulated") with full payload
- * - Does NOT write to Commission table yet → zero risk to your enum types
  */
 export async function POST(req: Request) {
   try {
@@ -64,8 +62,8 @@ export async function POST(req: Request) {
         id: true,
         merchantName: true,
         domainPattern: true,
-        commissionType: true as any,
-        commissionRate: true as any,
+        commissionType: true as any,   // e.g. "PERCENT" | "FIXED" | etc.
+        commissionRate: true as any,   // numeric or string
         cookieWindowDays: true as any,
         payoutDelayDays: true as any,
         market: true as any,
@@ -74,42 +72,68 @@ export async function POST(req: Request) {
     if (!rule)
       return NextResponse.json({ ok: false, message: "MerchantRule not found." }, { status: 404 });
 
-    // Compute commission via safe wrapper
-    const result = await recordCommission({
+    // --- Commission simulation (no DB writes) ---
+    const orderValueMajor = Math.max(0, Math.round(orderValueMinor) / 100); // convert minor → major
+    const type = String((rule as any).commissionType ?? "PERCENT").toUpperCase();
+    const rawRate = (rule as any).commissionRate;
+    const rate = Number(rawRate);
+    const safeRate = Number.isFinite(rate) ? rate : 0;
+
+    // Simple strategy:
+    // - PERCENT: amount = orderValueMajor * (rate / 100)
+    // - FIXED:   amount = rate
+    // - default: treat as PERCENT for safety
+    let commissionAmount = 0;
+    if (type === "FIXED") {
+      commissionAmount = safeRate;
+    } else {
+      commissionAmount = orderValueMajor * (safeRate / 100);
+    }
+
+    // Round to 2 decimals for currency display
+    commissionAmount = Math.round(commissionAmount * 100) / 100;
+
+    const result = {
       click: {
         id: click.id,
         userId: click.userId,
         merchantId: click.merchantId,
-        createdAt: click.createdAt,
+        createdAt: click.createdAt.toISOString(),
         source: (click as any).source ?? null,
       },
       rule: {
         id: rule.id,
         merchantName: rule.merchantName,
         domainPattern: rule.domainPattern,
-        commissionType: (rule as any).commissionType,
-        commissionRate: (rule as any).commissionRate,
-        cookieWindowDays: (rule as any).cookieWindowDays,
-        payoutDelayDays: (rule as any).payoutDelayDays,
-        market: (rule as any).market,
+        commissionType: type,
+        commissionRate: safeRate,
+        cookieWindowDays: (rule as any).cookieWindowDays ?? null,
+        payoutDelayDays: (rule as any).payoutDelayDays ?? null,
+        market: (rule as any).market ?? null,
       },
       order: {
         orderId,
         orderAt,
-        orderValue: { amount: orderValueMinor, currency },
-        payoutCurrency: currency,
+        valueMajor: orderValueMajor,
+        valueMinor: Math.round(orderValueMinor),
+        currency,
         isCancelled,
       },
-    });
+      computation: {
+        model: type === "FIXED" ? "FIXED" : "PERCENT",
+        amount: commissionAmount,
+        currency,
+      },
+    };
 
-    // Log the simulation so you can audit it in DB (does not touch Commission table)
+    // Log the simulation so you can audit it (does not touch Commission table)
     try {
       await prisma.eventLog.create({
         data: {
           type: "commission_simulated",
           message: `Simulated commission for order ${orderId}`,
           // @ts-ignore tolerate JSON type drift
-          meta: {
+          detail: JSON.stringify({
             clickId,
             merchantId: click.merchantId,
             orderId,
@@ -118,8 +142,7 @@ export async function POST(req: Request) {
             currency,
             isCancelled,
             result,
-          },
-          // Optional: attach to the click's user if present
+          }),
           ...(click.userId ? { userId: click.userId } : {}),
         },
       } as any);

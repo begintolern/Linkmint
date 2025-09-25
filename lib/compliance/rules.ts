@@ -1,4 +1,11 @@
-import type { MerchantRule } from "@prisma/client";
+/**
+ * Minimal shape of a MerchantRule we care about for compliance checks.
+ * We only need the JSON fields for source allow/deny logic.
+ */
+export type MerchantRuleLike = {
+  allowedSources?: unknown;
+  disallowed?: unknown;
+};
 
 /**
  * Returns true if a traffic source is allowed for the given merchant.
@@ -7,9 +14,9 @@ import type { MerchantRule } from "@prisma/client";
  *  - disallowed:     { sources: ["tiktok"] }         OR { tiktok: false }
  * If both exist, disallowed wins. Default: allowed.
  */
-export function isSourceAllowed(merchant: MerchantRule, source: string): boolean {
-  const dis = (merchant.disallowed as unknown as any) || {};
-  const allow = (merchant.allowedSources as unknown as any) || {};
+export function isSourceAllowed(merchant: MerchantRuleLike, source: string): boolean {
+  const dis = (merchant.disallowed as any) || {};
+  const allow = (merchant.allowedSources as any) || {};
 
   // explicit disallow
   if (Array.isArray(dis?.sources) && dis.sources.includes(source)) return false;

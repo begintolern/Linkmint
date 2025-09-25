@@ -1,18 +1,20 @@
 // scripts/update-commission.ts
-import { PrismaClient, CommissionStatus } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+type CommissionStatus = "UNVERIFIED" | "PENDING" | "APPROVED" | "PAID";
 
 function parseStatus(s: string | undefined): CommissionStatus {
   switch ((s ?? "").toUpperCase()) {
     case "APPROVED":
-      return CommissionStatus.APPROVED;
+      return "APPROVED";
     case "PAID":
-      return CommissionStatus.PAID;
+      return "PAID";
     case "PENDING":
-      return CommissionStatus.PENDING;
+      return "PENDING";
     case "UNVERIFIED":
-      return CommissionStatus.UNVERIFIED;
+      return "UNVERIFIED";
     default:
       throw new Error(
         `Invalid status "${s}". Use one of: UNVERIFIED | PENDING | APPROVED | PAID`
