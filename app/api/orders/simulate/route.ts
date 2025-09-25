@@ -4,7 +4,6 @@ export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import recordCommission from "@/lib/engines/recordCommission.wrap";
 
 /**
  * POST /api/orders/simulate
@@ -18,12 +17,19 @@ import recordCommission from "@/lib/engines/recordCommission.wrap";
  *   isCancelled?: boolean
  * }
  *
- * Loads the click + its merchant rule from DB, then runs recordCommissionSafe().
- * This shows exactly what your live order ingestion will do, without touching legacy paths.
+ * Loads the click + merchant rule, computes a commission **locally** (no writes),
+ * and returns the simulation result.
  */
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({} as any));
+    const body = (await req.json().catch(() => ({} as any))) as {
+      clickId?: string;
+      orderId?: string;
+      orderAt?: string;
+      orderValueMinor?: number;
+      currency?: string;
+      isCancelled?: boolean;
+    };
 
     const clickId = String(body?.clickId || "").trim();
     const orderId = String(body?.orderId || "").trim();
@@ -34,7 +40,11 @@ export async function POST(req: Request) {
 
     if (!clickId || !orderId || !orderAt || !isFinite(orderValueMinor) || !currency) {
       return NextResponse.json(
-        { ok: false, message: "Missing/invalid fields. Required: clickId, orderId, orderAt, orderValueMinor, currency." },
+        {
+          ok: false,
+          message:
+            "Missing/invalid fields. Required: clickId, orderId, orderAt, orderValueMinor, currency.",
+        },
         { status: 400 }
       );
     }
@@ -65,8 +75,7 @@ export async function POST(req: Request) {
         id: true,
         merchantName: true,
         domainPattern: true,
-        // tolerate schema drift by casting to any
-        commissionType: true as any,
+        commissionType: true as any, // tolerate schema drift
         commissionRate: true as any,
         cookieWindowDays: true as any,
         payoutDelayDays: true as any,
@@ -78,33 +87,59 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, message: "MerchantRule not found." }, { status: 404 });
     }
 
-    // Run the safe wrapper (routes to Shopee engine if applicable)
-    const result = await recordCommission({
+    // --- Commission simulation (no DB writes) ---
+    const orderValueMajor = Math.max(0, Math.round(orderValueMinor) / 100);
+    const type = String((rule as any).commissionType ?? "PERCENT").toUpperCase();
+    const rawRate = (rule as any).commissionRate;
+    const rate = Number(rawRate);
+    const safeRate = Number.isFinite(rate) ? rate : 0;
+
+    // Simple strategy:
+    // - PERCENT: amount = orderValueMajor * (rate / 100)
+    // - FIXED:   amount = rate
+    // Default to PERCENT behavior if unknown type
+    let commissionAmount = 0;
+    if (type === "FIXED") {
+      commissionAmount = safeRate;
+    } else {
+      commissionAmount = orderValueMajor * (safeRate / 100);
+    }
+
+    // Round to 2 decimals for currency
+    commissionAmount = Math.round(commissionAmount * 100) / 100;
+
+    const result = {
       click: {
         id: click.id,
         userId: click.userId,
         merchantId: click.merchantId,
-        createdAt: click.createdAt,
+        createdAt: click.createdAt.toISOString(),
         source: (click as any).source ?? null,
       },
       rule: {
         id: rule.id,
         merchantName: rule.merchantName,
         domainPattern: rule.domainPattern,
-        commissionType: (rule as any).commissionType,
-        commissionRate: (rule as any).commissionRate,
-        cookieWindowDays: (rule as any).cookieWindowDays,
-        payoutDelayDays: (rule as any).payoutDelayDays,
-        market: (rule as any).market,
+        commissionType: type,
+        commissionRate: safeRate,
+        cookieWindowDays: (rule as any).cookieWindowDays ?? null,
+        payoutDelayDays: (rule as any).payoutDelayDays ?? null,
+        market: (rule as any).market ?? null,
       },
       order: {
         orderId,
         orderAt,
-        orderValue: { amount: orderValueMinor, currency },
-        payoutCurrency: currency,
+        valueMajor: orderValueMajor,
+        valueMinor: Math.round(orderValueMinor),
+        currency,
         isCancelled,
       },
-    });
+      computation: {
+        model: type === "FIXED" ? "FIXED" : "PERCENT",
+        amount: commissionAmount,
+        currency,
+      },
+    };
 
     return NextResponse.json({ ok: true, result });
   } catch (err) {

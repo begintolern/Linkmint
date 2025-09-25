@@ -1,78 +1,81 @@
-// app/api/admin/seed-referral/route.ts
+// app/api/seed-referral/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth/options";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { ensureBatchesFor } from "@/lib/referrals/createReferralBatch";
+import { adminGuard } from "@/lib/utils/adminGuard";
 
-export async function POST(req: NextRequest) {
+// Minimal type for referral group seeding
+type Group = {
+  id: string;
+  startedAt: Date | null;
+  expiresAt: Date | null;
+  referrerId: string | null;
+};
+
+export async function POST() {
+  const gate = await adminGuard();
+  if (!gate.ok) {
+    return NextResponse.json(
+      { success: false, error: gate.reason },
+      { status: gate.status }
+    );
+  }
+
   try {
-    const session = (await getServerSession(authOptions)) as Session | null;
-    if (!session?.user?.email) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin
-    const me = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, role: true, email: true },
-    });
-    if (!me || me.role !== "ADMIN") {
-      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
-    }
-
-    const body = await req.json().catch(() => ({}));
-    const inviteeEmail = String(body?.inviteeEmail || "").trim().toLowerCase();
-    const inviterEmail = String(body?.inviterEmail || me.email).trim().toLowerCase();
-
-    if (!inviteeEmail) {
-      return NextResponse.json({ ok: false, error: "Missing inviteeEmail" }, { status: 400 });
-    }
-
-    // Find inviter
-    const inviter = await prisma.user.findUnique({
-      where: { email: inviterEmail },
-      select: { id: true, email: true },
-    });
-    if (!inviter) {
-      return NextResponse.json({ ok: false, error: "Inviter not found" }, { status: 404 });
-    }
-
-    // Upsert the invitee and attach referredById
-    const invitee = await prisma.user.upsert({
-      where: { email: inviteeEmail },
-      create: {
-        email: inviteeEmail,
-        referredById: inviter.id,
-        trustScore: 0,
+    // Seed a fake referral referrer + users
+    const referrer = await prisma.user.create({
+      data: {
+        email: `referrer_${Date.now()}@test.local`,
+        trustScore: 50,
       },
-      update: {
-        referredById: inviter.id,
-      },
-      select: { id: true, email: true, referredById: true, createdAt: true },
     });
 
-    // Recompute batches
-    const { groups, ungroupedCount } = await ensureBatchesFor(inviter.id);
+    const invitees = await Promise.all(
+      Array.from({ length: 3 }).map((_, i) =>
+        prisma.user.create({
+          data: {
+            email: `invitee${i}_${Date.now()}@test.local`,
+            referredById: referrer.id,
+          },
+        })
+      )
+    );
+
+    const group = await prisma.referralGroup.create({
+      data: {
+        startedAt: new Date(),
+        expiresAt: new Date(Date.now() + 90 * 86_400_000),
+        referrerId: referrer.id,
+        users: {
+          connect: invitees.map((u) => ({ id: u.id })),
+        },
+      },
+      include: { users: true, referrer: true },
+    });
+
+    const groups = await prisma.referralGroup.findMany({
+      include: { users: true, referrer: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    });
 
     return NextResponse.json({
       ok: true,
-      inviter: inviter.email,
-      invitee,
-      ungroupedCount,
-      groups: groups.map((g) => ({
+      created: group.id,
+      groups: groups.map((g: Group) => ({
         id: g.id,
         startedAt: g.startedAt,
         expiresAt: g.expiresAt,
-        users: g.users.map((u) => u.email),
+        referrerId: g.referrerId,
       })),
     });
-  } catch (e: any) {
-    console.error("POST /api/admin/seed-referral error:", e);
-    return NextResponse.json({ ok: false, error: e?.message || "Server error" }, { status: 500 });
+  } catch (err: any) {
+    console.error("POST /api/seed-referral error:", err);
+    return NextResponse.json(
+      { ok: false, error: err?.message ?? "Server error" },
+      { status: 500 }
+    );
   }
 }

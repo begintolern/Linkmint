@@ -21,6 +21,14 @@ function computeStatus(expiresAt?: Date | null) {
   return expiresAt.getTime() >= Date.now() ? "ACTIVE" : "EXPIRED";
 }
 
+type GroupUser = { email: string | null };
+type Group = {
+  id: string;
+  startedAt: Date | null;
+  expiresAt: Date | null;
+  users: GroupUser[];
+};
+
 export async function GET() {
   try {
     const session = (await getServerSession(authOptions)) as Session | null;
@@ -34,7 +42,12 @@ export async function GET() {
     const inviterId = session.user.id;
 
     // Form any full groups and get current state
-    const { groups, ungroupedCount } = await ensureBatchesFor(inviterId);
+    const ensured = (await ensureBatchesFor(inviterId)) as {
+      groups: Group[];
+      ungroupedCount: number;
+    };
+    const groups = ensured.groups;
+    const ungroupedCount = ensured.ungroupedCount;
 
     // TrustScore sync (idempotent) + read back current value for debug
     const trustSync = await syncTrustFromReferrals(inviterId);
@@ -44,11 +57,11 @@ export async function GET() {
         trustScore: true,
         email: true,
         referralBadge: true,
-        referralCode: true, // <-- added
+        referralCode: true,
       },
     });
 
-    const result = groups.map((g) => {
+    const result = groups.map((g: Group) => {
       const status = computeStatus(g.expiresAt);
       return {
         id: g.id,
@@ -56,7 +69,7 @@ export async function GET() {
         startedAt: g.startedAt ?? null,
         expiresAt: g.expiresAt ?? null,
         daysRemaining: daysLeft(g.expiresAt),
-        members: g.users.map((u) => u.email),
+        members: g.users.map((u: GroupUser) => u.email),
       };
     });
 
@@ -65,7 +78,7 @@ export async function GET() {
       ungroupedInvitees: ungroupedCount,
       groups: result,
       badge: me?.referralBadge ?? null,
-      referralCode: me?.referralCode ?? null, // <-- added
+      referralCode: me?.referralCode ?? null,
 
       // ----- Debug fields (safe to keep for now) -----
       debug: {

@@ -32,26 +32,30 @@ export async function GET() {
       "commission_type",
     ];
 
-    const rows = (await prisma.$queryRawUnsafe<Row[]>(`
+    const rows = (await prisma.$queryRawUnsafe(
+      `
       SELECT t.typname, e.enumlabel
       FROM pg_type t
       JOIN pg_enum e ON t.oid = e.enumtypid
       WHERE t.typname = ANY(ARRAY[${candidates.map((c) => `'${c}'`).join(",")}])
       ORDER BY t.typname, e.enumsortorder;
-    `)) as Row[];
+      `
+    )) as unknown as Row[];
 
-    // Fuzzy catch-all for anything payout/payment/method
-    const fuzzy = (await prisma.$queryRawUnsafe<Row[]>(`
+    // Fuzzy catch-all for anything payout/payment/method/commission/status
+    const fuzzy = (await prisma.$queryRawUnsafe(
+      `
       SELECT t.typname, e.enumlabel
       FROM pg_type t
       JOIN pg_enum e ON t.oid = e.enumtypid
-      WHERE t.typname ILIKE '%payout%' 
-         OR t.typname ILIKE '%payment%' 
+      WHERE t.typname ILIKE '%payout%'
+         OR t.typname ILIKE '%payment%'
          OR t.typname ILIKE '%method%'
          OR t.typname ILIKE '%commission%'
          OR t.typname ILIKE '%status%'
       ORDER BY t.typname, e.enumsortorder;
-    `)) as Row[];
+      `
+    )) as unknown as Row[];
 
     return NextResponse.json({
       ok: true,

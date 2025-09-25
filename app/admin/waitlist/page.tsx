@@ -7,6 +7,13 @@ import { redirect } from "next/navigation";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+type WaitlistRow = {
+  id: string;
+  email: string;
+  source: string | null;
+  createdAt: Date;
+};
+
 export default async function AdminWaitlist() {
   // ✅ Only allow ADMIN role
   const session = (await getServerSession(authOptions)) as any;
@@ -19,6 +26,12 @@ export default async function AdminWaitlist() {
     prisma.waitlist.findMany({
       orderBy: { createdAt: "desc" },
       take: 500,
+      select: {
+        id: true,
+        email: true,
+        source: true,
+        createdAt: true,
+      },
     }),
   ]);
 
@@ -39,7 +52,7 @@ export default async function AdminWaitlist() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {rows.map((r: WaitlistRow) => (
               <tr key={r.id} className="border-t">
                 <td className="py-3 px-4">{r.email}</td>
                 <td className="py-3 px-4">{r.source ?? "-"}</td>

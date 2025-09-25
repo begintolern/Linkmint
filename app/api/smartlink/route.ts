@@ -49,7 +49,7 @@ function validateSource(
   };
 
   const allowed = toSet((merchant as any).allowedSources);
-  const disallowed = toSet((merchant as any).disallowedSources);
+  const disallowed = toSet((merchant as any).disallowed);
 
   if (disallowed.has(src)) {
     return {
@@ -236,7 +236,7 @@ export async function POST(req: NextRequest) {
   // 6) Enforce allowed/disallowed sources (only if the merchant defined them)
   const hasAllowList =
     Array.isArray((rule as any).allowedSources) && (rule as any).allowedSources.length > 0;
-  const denyList = (rule as any).disallowedSources; // may be undefined
+  const denyList = (rule as any).disallowed; // may be undefined
   const hasDenyList = Array.isArray(denyList) && denyList.length > 0;
 
   if (hasAllowList || hasDenyList) {

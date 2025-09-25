@@ -10,7 +10,20 @@ import StatusSelect from "./StatusSelect";
 
 type Status = "PENDING" | "ACTIVE" | "REJECTED";
 
-function normalizeStatus(s: any): Status {
+// Matches the fields selected in prisma.merchantRule.findMany below
+type Rule = {
+  id: string;
+  active: boolean;
+  status: string | null; // normalized below to Status
+  merchantName: string | null;
+  network: string | null;
+  domainPattern: string | null;
+  commissionType: string | null;
+  commissionRate: unknown; // Decimal | number | string | null
+  notes: string | null;
+};
+
+function normalizeStatus(s: unknown): Status {
   if (s === "ACTIVE" || s === "REJECTED" || s === "PENDING") return s;
   return "PENDING";
 }
@@ -36,15 +49,11 @@ function StatusBadge({ status }: { status: Status }) {
       : status === "PENDING"
       ? "bg-yellow-50 text-yellow-700 border-yellow-300"
       : "bg-red-50 text-red-700 border-red-300";
-  return (
-    <span className={`text-xs px-2 py-1 rounded-full border ${theme}`}>
-      {status}
-    </span>
-  );
+  return <span className={`text-xs px-2 py-1 rounded-full border ${theme}`}>{status}</span>;
 }
 
 export default async function MerchantRulesPage() {
-  const rules = await prisma.merchantRule.findMany({
+  const rules: Rule[] = await prisma.merchantRule.findMany({
     orderBy: { merchantName: "asc" },
     select: {
       id: true,
@@ -77,12 +86,13 @@ export default async function MerchantRulesPage() {
 
       {/* List */}
       <div className="space-y-3">
-        {rules.map((r) => {
-          const status = normalizeStatus(r.status as any);
+        {rules.map((r: Rule) => {
+          const status = normalizeStatus(r.status);
           const commissionRateStr = asPlainString(r.commissionRate);
           const networkStr = r.network ?? "—";
           const domainStr = r.domainPattern ?? "—";
           const notesStr = r.notes ?? "";
+          const merchantName = r.merchantName ?? "—";
 
           return (
             <div
@@ -95,7 +105,7 @@ export default async function MerchantRulesPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
                     <div className="text-lg font-semibold truncate">
-                      {r.merchantName}{" "}
+                      {merchantName}{" "}
                       <span className="text-sm text-gray-400">({networkStr})</span>
                     </div>
 
@@ -128,13 +138,11 @@ export default async function MerchantRulesPage() {
                     </span>
                   </div>
 
-                  {notesStr ? (
-                    <div className="text-sm text-gray-500 mt-1">{notesStr}</div>
-                  ) : null}
+                  {notesStr ? <div className="text-sm text-gray-500 mt-1">{notesStr}</div> : null}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  <DeleteRuleButton id={r.id} name={r.merchantName} />
+                  <DeleteRuleButton id={r.id} name={merchantName} />
                 </div>
               </div>
             </div>

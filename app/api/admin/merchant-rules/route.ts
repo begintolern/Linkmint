@@ -5,6 +5,7 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { getToken } from "next-auth/jwt";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
         paramValue: data.paramValue ?? null,
         linkTemplate: data.linkTemplate ?? null,
         allowedSources: data.allowedSources ?? [],
-        disallowed: data.disallowed ?? [],
+        disallowed: (data.disallowed ?? null) ?? Prisma.DbNull,
         cookieWindowDays: data.cookieWindowDays ?? null,
         payoutDelayDays: data.payoutDelayDays ?? null,
         commissionType: data.commissionType ?? "PERCENT",

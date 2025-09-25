@@ -35,10 +35,15 @@ export async function POST(req: Request) {
   const userId = session?.user?.id ?? null;
   if (!userId) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json().catch(() => ({} as any));
-  const provider = (body as any)?.provider;
-  const email = (body as any)?.email;
-  const label = (body as any)?.label ?? "Personal PayPal";
+  const body = (await req.json().catch(() => ({}))) as {
+    provider?: string;
+    email?: string;
+    label?: string;
+  };
+
+  const provider = body?.provider;
+  const email = body?.email;
+  const label = body?.label ?? "Personal PayPal";
 
   if (provider !== "PAYPAL") {
     return NextResponse.json({ success: false, error: "Provider must be PAYPAL" }, { status: 400 });
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Valid email required" }, { status: 400 });
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     await tx.payoutAccount.updateMany({
       where: { userId, isDefault: true },
       data: { isDefault: false },

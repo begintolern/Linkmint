@@ -1,5 +1,6 @@
 // scripts/forceDeleteUser.ts
 import { prisma } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 
 async function main() {
   const email = process.argv[2];
@@ -18,7 +19,7 @@ async function main() {
     process.exit(1);
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // Delete dependent/related data — adjust relations as needed for your schema
     await tx.overrideCommission.deleteMany({ where: { referrerId: user.id } });
     await tx.overrideCommission.deleteMany({ where: { inviteeId: user.id } });

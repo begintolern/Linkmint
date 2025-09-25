@@ -1,3 +1,4 @@
+// app/api/admin/payouts/list/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -6,6 +7,16 @@ import { prisma } from "@/lib/db";
 import { adminGuard } from "@/lib/utils/adminGuard";
 
 type Status = "PENDING" | "PROCESSING" | "PAID" | "FAILED";
+
+type Row = {
+  id: string;
+  createdAt: Date;
+  provider: string | null;
+  statusEnum: Status | null;
+  netCents: number | null;
+  feeCents: number | null;
+  user: { email: string | null; name: string | null } | null;
+};
 
 export async function GET(req: Request) {
   try {
@@ -27,11 +38,11 @@ export async function GET(req: Request) {
       };
     }
 
-    const rows = await prisma.payout.findMany({
+    const rows: Row[] = await prisma.payout.findMany({
       where,
       orderBy: { createdAt: "desc" },
       select: {
-        id: true,                // ✅ include the ID
+        id: true,
         createdAt: true,
         provider: true,
         statusEnum: true,
@@ -41,8 +52,8 @@ export async function GET(req: Request) {
       },
     });
 
-    const mapped = rows.map((r) => ({
-      id: r.id,                                   // ✅ map ID
+    const mapped = rows.map((r: Row) => ({
+      id: r.id,
       createdAt: r.createdAt.toISOString(),
       provider: r.provider,
       statusEnum: r.statusEnum,

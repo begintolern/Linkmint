@@ -1,9 +1,9 @@
+// app/api/track/conversion/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import { logEvent } from "@/lib/compliance/log";
 
 export async function POST(req: Request) {
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         userId: userId ?? null,
         merchantId,
         orderId: orderId ?? null,
-        amount: amount ? new Prisma.Decimal(amount) : null,
+        amount: amount != null ? Number(amount) : null,
         source: source ?? null,
         status: status ?? "PENDING",
       },

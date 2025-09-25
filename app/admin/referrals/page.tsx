@@ -6,11 +6,31 @@ export const revalidate = 0;
 import { assertAdmin } from "@/lib/utils/adminGuard";
 import { prisma } from "@/lib/db";
 
+type RefUser = {
+  id: string;
+  email: string | null;
+  emailVerifiedAt: Date | null;
+  createdAt: Date | string;
+};
+
+type Referrer = {
+  id: string;
+  email: string | null;
+};
+
+type Group = {
+  id: string;
+  startedAt: Date | string;
+  expiresAt: Date | string | null;
+  referrer: Referrer | null;
+  users: RefUser[];
+};
+
 export default async function AdminReferralsPage() {
   await assertAdmin();
 
   // Adjust to your schema: no `status` column; we infer from expiresAt
-  const groups = await prisma.referralGroup.findMany({
+  const groups: Group[] = await prisma.referralGroup.findMany({
     orderBy: { startedAt: "desc" },
     take: 50,
     select: {
@@ -32,7 +52,7 @@ export default async function AdminReferralsPage() {
       </p>
 
       <div className="mt-6 grid gap-4">
-        {groups.map((g) => {
+        {groups.map((g: Group) => {
           const expiresMs = g.expiresAt ? new Date(g.expiresAt).getTime() : null;
           const daysLeft =
             expiresMs != null ? Math.max(0, Math.ceil((expiresMs - nowMs) / (1000 * 60 * 60 * 24))) : null;
@@ -47,10 +67,10 @@ export default async function AdminReferralsPage() {
                     Referrer: {g.referrer?.email ?? "—"}
                   </div>
                   <div className="text-slate-600">
-                    Started: {new Date(g.startedAt).toLocaleString()}
+                    Started: {new Date(g.startedAt as any).toLocaleString()}
                     {g.expiresAt && (
                       <>
-                        {" · "}Expires: {new Date(g.expiresAt).toLocaleString()}
+                        {" · "}Expires: {new Date(g.expiresAt as any).toLocaleString()}
                         {" · "}Days left: {daysLeft}
                       </>
                     )}
@@ -64,11 +84,11 @@ export default async function AdminReferralsPage() {
               <div className="mt-4">
                 <div className="text-xs text-slate-500 mb-2">Invitees</div>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {g.users.map((u) => (
+                  {g.users.map((u: RefUser) => (
                     <div key={u.id} className="rounded-md border p-3 text-sm">
                       <div className="font-medium">{u.email ?? "—"}</div>
                       <div className="text-xs text-slate-600">
-                        Joined: {new Date(u.createdAt).toLocaleString()}
+                        Joined: {new Date(u.createdAt as any).toLocaleString()}
                         {" · "}
                         {u.emailVerifiedAt ? "Verified" : "Unverified"}
                       </div>

@@ -12,6 +12,21 @@ type AdminSession = Session & {
   user?: { id?: string; email?: string | null; name?: string | null; role?: string | null };
 };
 
+type Row = {
+  id: string;
+  startedAt: Date;
+  expiresAt: Date | null;
+  createdAt: Date;
+  referrer: { id: string; email: string | null; name: string | null } | null;
+  users: { id: string; email: string | null; name: string | null }[];
+  _count: { users: number };
+};
+
+type OutRow = Row & {
+  daysRemaining: number | null; // null if no expiry
+  active: boolean; // true if currently active (no expiry or expiry in future) and after start
+};
+
 export async function GET() {
   try {
     const session = (await getServerSession(authOptions)) as AdminSession | null;
@@ -22,7 +37,7 @@ export async function GET() {
     const role = session?.user?.role ?? "USER";
     if (role !== "ADMIN") return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
 
-    const rows = await prisma.referralGroup.findMany({
+    const rows: Row[] = await prisma.referralGroup.findMany({
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -37,12 +52,20 @@ export async function GET() {
 
     // add derived countdown fields
     const now = Date.now();
-    const data = rows.map((g) => {
-      const startedMs = new Date(g.startedAt).getTime();
-      const expiresMs = new Date(g.expiresAt).getTime();
-      const msLeft = Math.max(0, expiresMs - now);
-      const daysLeft = Math.floor(msLeft / 86_400_000);
-      return { ...g, daysRemaining: daysLeft, active: expiresMs > now && startedMs <= now };
+    const data: OutRow[] = rows.map((g: Row): OutRow => {
+      const startedMs = new Date(g.startedAt as any).getTime();
+      const expiresMs = g.expiresAt ? new Date(g.expiresAt as any).getTime() : null;
+
+      let daysRemaining: number | null = null;
+      if (typeof expiresMs === "number") {
+        const msLeft = Math.max(0, expiresMs - now);
+        daysRemaining = Math.floor(msLeft / 86_400_000);
+      }
+
+      const active =
+        (expiresMs == null || expiresMs > now) && startedMs <= now;
+
+      return { ...g, daysRemaining, active };
     });
 
     return NextResponse.json({ success: true, rows: data });

@@ -6,7 +6,8 @@ export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuard } from "@/lib/utils/adminGuard";
-import { CommissionStatus } from "@prisma/client";
+
+type Action = "approve" | "pay";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const gate = await adminGuard();
@@ -15,7 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const id = params.id;
-  const { action } = (await req.json()) as { action: "approve" | "pay" };
+  const { action } = (await req.json()) as { action: Action };
 
   const commission = await prisma.commission.findUnique({ where: { id } });
   if (!commission) {
@@ -23,16 +24,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   if (action === "approve") {
-    if (commission.status === CommissionStatus.PAID) {
+    if (commission.status === "PAID") {
       return NextResponse.json({ success: false, error: "Already paid" }, { status: 400 });
     }
-    if (commission.status === CommissionStatus.APPROVED) {
+    if (commission.status === "APPROVED") {
       return NextResponse.json({ success: true, commission });
     }
 
     const updated = await prisma.commission.update({
       where: { id },
-      data: { status: CommissionStatus.APPROVED },
+      data: { status: "APPROVED" },
     });
 
     await prisma.eventLog.create({
@@ -48,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   if (action === "pay") {
-    if (commission.status !== CommissionStatus.APPROVED) {
+    if (commission.status !== "APPROVED") {
       return NextResponse.json(
         { success: false, error: "Only approved commissions can be paid" },
         { status: 400 }
@@ -57,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const updated = await prisma.commission.update({
       where: { id },
-      data: { status: CommissionStatus.PAID, paidOut: true },
+      data: { status: "PAID", paidOut: true },
     });
 
     await prisma.eventLog.create({
