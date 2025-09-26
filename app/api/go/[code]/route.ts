@@ -12,12 +12,11 @@ export async function GET(
 ) {
   const code = params.code;
 
-  // 1) Look up the smart link by code; include rule + owner
-  // Cast to any to tolerate minor schema differences across envs
-  const link: any = await prisma.smartLink.findUnique({
-    where: { code },
+  // Look up by shortUrl; include rule + owner
+  const link = await prisma.smartLink.findFirst({
+    where: { shortUrl: code },
     include: { merchantRule: true, user: true },
-  } as any);
+  });
 
   if (!link) {
     return NextResponse.json(
@@ -26,61 +25,53 @@ export async function GET(
     );
   }
 
-  // 2) Resolve destination URL using several common field names
-  const dest: string | null =
-    link.destinationUrl ??
-    link.targetUrl ??
-    link.url ??
-    link.redirectUrl ??
-    null;
-
+  const dest: string | null = link.originalUrl ?? null;
   if (!dest) {
     return NextResponse.json(
-      { ok: false, error: "No destination URL on smart link." },
+      { ok: false, error: "No originalUrl set on smart link." },
       { status: 422 }
     );
   }
 
-  // 3) Build minimal shapes for geo evaluation
+  // Build minimal shapes for geo evaluation
   const userForGeo = {
     homeCountry: link.user?.homeCountry ?? link.user?.countryCode ?? null,
     currentMarket: link.user?.currentMarket ?? null,
     currentMarketAt: link.user?.currentMarketAt ?? null,
   };
 
-  const rule = link.merchantRule ?? {};
-  const ruleForGeo = {
-    allowedCountries: rule.allowedCountries ?? null,
-    blockedCountries: rule.blockedCountries ?? null,
-    merchantName: rule.merchantName ?? null,
-  };
+  const rule: any = link.merchantRule || {};
+const ruleForGeo = {
+  allowedCountries: rule.allowedCountries ?? null,
+  blockedCountries: rule.blockedCountries ?? null,
+  merchantName: rule.merchantName ?? link.merchantName ?? null,
+};
 
-  // 4) Evaluate geo access from headers (x-vercel-ip-country / cf-ipcountry, etc.)
+  // Evaluate from headers (x-vercel-ip-country / cf-ipcountry, etc.)
   const decision = evaluateGeoAccess(req, userForGeo, ruleForGeo);
 
-  // 5) Audit log (tolerant to schema differences)
-try {
-  await prisma.eventLog.create({
-    data: {
-      type: "GEO_CHECK",
-      message: decision.allowed ? "Geo allowed" : "Geo blocked",
-      // Use only fields most repos have; cast meta to any to satisfy Json type
-      userId: link.userId ?? null,
-      meta: {
-        ipCountry: decision.ipCountry,
-        market: decision.market,
-        allowed: decision.allowed,
-        reason: decision.reason ?? null,
-        linkCode: link.code,
-        destinationHost: safeHost(dest),
+  // Audit log (minimal fields only; tolerate JSON typing)
+  try {
+    await prisma.eventLog.create({
+      data: {
+        type: "GEO_CHECK",
+        message: decision.allowed ? "Geo allowed" : "Geo blocked",
+        userId: link.userId ?? null,
+        meta: {
+          ipCountry: decision.ipCountry,
+          market: decision.market,
+          allowed: decision.allowed,
+          reason: decision.reason ?? null,
+          shortUrl: link.shortUrl,
+          merchantRuleId: link.merchantRuleId ?? null,
+          destinationHost: safeHost(dest),
+        } as any,
       } as any,
-    } as any, // tolerate missing optional columns like merchantId/severity
-  });
-} catch {
+    });
+  } catch {
     // ignore log failures
   }
 
-  // 6) Enforce
   if (!decision.allowed) {
     const html = blockedHtml({
       ipCountry: decision.ipCountry,
@@ -88,7 +79,7 @@ try {
       reason: decision.reason ?? "geo_restricted",
     });
     return new NextResponse(html, {
-      status: 451, // Unavailable For Legal Reasons
+      status: 451,
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
