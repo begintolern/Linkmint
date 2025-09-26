@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
 /**
  * Debug-only webhook processor.
  * Scans WEBHOOK_INCOMING logs, resolves SmartLink + user, and records commissions.
- * Writes new money fields (amountMinor + currency) while keeping legacy `amount`.
+ * Writes legacy `amount` (Float) only — no amountMinor/currency columns in current schema.
  */
 export async function POST() {
   try {
@@ -55,22 +55,32 @@ export async function POST() {
       // Resolve SmartLink
       const smart = await prisma.smartLink.findUnique({
         where: { id: subid },
-        select: { id: true, userId: true, merchantRuleId: true, merchantName: true, merchantDomain: true },
+        select: {
+          id: true,
+          userId: true,
+          merchantRuleId: true,
+          merchantName: true,
+          merchantDomain: true,
+        },
       });
       if (!smart || !smart.userId) {
         results.push({ eventId, ok: false, reason: "smartlink_not_found_or_no_user" });
         continue;
       }
 
-      // Normalize amount & currency
+      // Normalize amount & currency (currency used only in description text)
       const numAmount = typeof rawAmount === "number" ? rawAmount : Number(rawAmount);
       if (!Number.isFinite(numAmount) || numAmount <= 0) {
         results.push({ eventId, ok: false, reason: "invalid_amount" });
         continue;
       }
-      const currencyCode = (typeof rawCurrency === "string" && rawCurrency.trim()) ? rawCurrency.trim().toUpperCase() : "PHP";
-      const amountMinor = Math.round(numAmount * 100);           // e.g., 123.45 -> 12345
-      const legacyAmount = Math.round(numAmount);                 // keep writing legacy int for old UI
+      const currencyCode =
+        typeof rawCurrency === "string" && rawCurrency.trim()
+          ? rawCurrency.trim().toUpperCase()
+          : "PHP";
+
+      // Legacy amount (Float) for current schema
+      const legacyAmount = Math.round(numAmount); // keep integer-ish legacy behavior
 
       // Discover enum values (fallback-safe)
       const model: any = prisma.commission;
@@ -83,21 +93,14 @@ export async function POST() {
         const c = await prisma.commission.create({
           data: {
             userId: smart.userId,
-            // money v1 (legacy)
-            amount: legacyAmount,
-            // money v2 (new)
-            amountMinor,
-            currency: currencyCode,
-            // enums
+            amount: legacyAmount, // Float in schema
             type: (discoveredType as any),
             status: ("PENDING" as any),
             paidOut: false,
-            // meta
             source: `webhook:${network}`,
             description: txnId
               ? `Webhook ${network} ${merchant} ${currencyCode} ${numAmount} (txn ${txnId})`
               : `Webhook ${network} ${merchant} ${currencyCode} ${numAmount}`,
-            // optional relation
             ...(smart.merchantRuleId ? { merchantRuleId: smart.merchantRuleId } : {}),
           },
           select: { id: true },
@@ -108,8 +111,6 @@ export async function POST() {
           data: {
             userId: smart.userId,
             amount: legacyAmount,
-            amountMinor,
-            currency: currencyCode,
             type: (discoveredType as any),
             status: (discoveredStatus as any),
             paidOut: false,
