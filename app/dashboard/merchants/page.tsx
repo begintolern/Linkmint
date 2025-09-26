@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import React from "react";
+import { headers } from "next/headers";
 
 type MerchantDTO = {
   id: string;
@@ -28,8 +29,7 @@ type ListResponse = {
 
 function fmtPercentFromBps(bps: number | null) {
   if (bps == null) return "—";
-  // 100 bps = 1.00%
-  const pct = bps / 100;
+  const pct = bps / 100; // 100 bps = 1%
   return `${pct.toFixed(pct % 1 === 0 ? 0 : 2)}%`;
 }
 
@@ -38,11 +38,22 @@ function joinOrDash(arr: string[] | null) {
   return arr.join(", ");
 }
 
+function getBaseUrl() {
+  const h = headers();
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  const host = h.get("host") ?? "linkmint.co";
+  return `${proto}://${host}`;
+}
+
 export default async function MerchantsPage() {
   let data: ListResponse | null = null;
+  const baseUrl = getBaseUrl();
+
   try {
-    const res = await fetch("/api/merchant-rules/list", {
+    const res = await fetch(`${baseUrl}/api/merchant-rules/list`, {
       cache: "no-store",
+      // Forward cookies if needed later for authed APIs:
+      headers: { accept: "application/json" },
     });
     data = (await res.json()) as ListResponse;
   } catch (e) {
@@ -54,7 +65,7 @@ export default async function MerchantsPage() {
       <div className="p-6">
         <h1 className="text-2xl font-semibold mb-2">Merchants</h1>
         <p className="text-sm text-red-600">
-          Failed to load merchant rules {data?.error ? `— ${data.error}` : ""}.
+          Failed to load merchant rules{data?.error ? ` — ${data.error}` : ""}.
         </p>
       </div>
     );
