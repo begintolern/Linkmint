@@ -86,7 +86,7 @@ export default function TrustCenterPage() {
         </ul>
       </Section>
 
-      {/* Lifecycle */}
+      {/* Commission Lifecycle */}
       <Section title="Commission Lifecycle">
         <ol className="list-decimal pl-5 space-y-2">
           <li>User clicks a tracked link and completes a purchase.</li>
@@ -108,11 +108,11 @@ export default function TrustCenterPage() {
         </div>
       </Section>
 
-      {/* Referral & Overrides */}
+      {/* Referrals & Overrides */}
       <Section title="Referrals & Overrides (Fair Use)">
         <ul className="list-disc pl-5 space-y-2">
           <li>
-            <span className="font-medium">3‑Invite Batch:</span> when you invite 3 verified friends, a referral batch is
+            <span className="font-medium">3-Invite Batch:</span> when you invite 3 verified friends, a referral batch is
             created and logged.
           </li>
           <li>
@@ -120,7 +120,7 @@ export default function TrustCenterPage() {
             purchases for a limited window (e.g. 90 days), capped and logged for transparency.
           </li>
           <li>
-            <span className="font-medium">No Multi‑Level Payouts:</span> overrides are single‑level and time‑limited.
+            <span className="font-medium">No Multi-Level Payouts:</span> overrides are single-level and time-limited.
           </li>
         </ul>
         <p className="mt-3 text-xs text-zinc-500">
@@ -152,6 +152,35 @@ export default function TrustCenterPage() {
             View Referral Logs (Admin)
           </Link>
         </div>
+      </Section>
+
+      {/* Market Access & VPNs */}
+      <Section title="Market Access & VPNs">
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <span className="font-medium">Account Country = Your Market:</span> The country you select at signup (e.g.,
+            <strong> Philippines</strong> or <strong>United States</strong>) determines which merchants you can promote
+            and earn from.
+          </li>
+          <li>
+            <span className="font-medium">VPNs Don’t Change Your Market:</span> Using a VPN won’t switch your earning
+            market. A PH account on a US VPN is still treated as PH; a US account on a PH VPN is still US.
+          </li>
+          <li>
+            <span className="font-medium">Travel Override (24h):</span> If you are traveling, you may temporarily switch
+            via the “Switch Market” banner. This sets a 24-hour cookie so you can browse local offers while away. It
+            does not bypass merchant geo rules.
+          </li>
+          <li>
+            <span className="font-medium">Compliance & Brand Safety:</span> Geo rules are enforced at click time. If a
+            merchant is PH-only, US traffic is blocked (and vice-versa). This protects programs and keeps your account
+            in good standing.
+          </li>
+          <li>
+            <span className="font-medium">Examples:</span> PH account + PH market → allowed on PH-only links. PH account
+            + US market override → blocked on PH-only links; allowed on dual-market links if rules include US.
+          </li>
+        </ul>
       </Section>
 
       {/* FAQs */}
