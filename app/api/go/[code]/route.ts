@@ -6,6 +6,22 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { evaluateGeoAccess } from "@/lib/geo/market";
 
+// Parse geo rules from notes, e.g. `geo:allow=US,PH; geo:block=CN`
+function parseGeoFromNotes(notes?: string | null): { allow?: string[]; block?: string[] } {
+  if (!notes) return {};
+  const allowMatch = notes.match(/geo:allow=([A-Z,\s]+)/i);
+  const blockMatch = notes.match(/geo:block=([A-Z,\s]+)/i);
+  const toList = (s: string) =>
+    s
+      .split(",")
+      .map((x) => x.trim().toUpperCase())
+      .filter(Boolean);
+  return {
+    allow: allowMatch ? toList(allowMatch[1]) : undefined,
+    block: blockMatch ? toList(blockMatch[1]) : undefined,
+  };
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { code: string } }
@@ -34,18 +50,22 @@ export async function GET(
   }
 
   // Build minimal shapes for geo evaluation
-  const userForGeo = {
-    homeCountry: link.user?.homeCountry ?? link.user?.countryCode ?? null,
-    currentMarket: link.user?.currentMarket ?? null,
-    currentMarketAt: link.user?.currentMarketAt ?? null,
-  };
+  const u: any = link.user || {};
+const userForGeo = {
+  homeCountry: u.homeCountry ?? u.countryCode ?? null, // fallback to countryCode
+  currentMarket: u.currentMarket ?? null,
+  currentMarketAt: u.currentMarketAt ?? null,
+};
 
   const rule: any = link.merchantRule || {};
-const ruleForGeo = {
-  allowedCountries: rule.allowedCountries ?? null,
-  blockedCountries: rule.blockedCountries ?? null,
-  merchantName: rule.merchantName ?? link.merchantName ?? null,
-};
+  const parsed = parseGeoFromNotes(rule.notes as string | undefined);
+
+  const ruleForGeo = {
+    // prefer real columns; fall back to notes-based config
+    allowedCountries: rule.allowedCountries ?? parsed.allow ?? null,
+    blockedCountries: rule.blockedCountries ?? parsed.block ?? null,
+    merchantName: rule.merchantName ?? link.merchantName ?? null,
+  };
 
   // Evaluate from headers (x-vercel-ip-country / cf-ipcountry, etc.)
   const decision = evaluateGeoAccess(req, userForGeo, ruleForGeo);
