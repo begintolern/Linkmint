@@ -51,41 +51,47 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Param 'add' must be a non-negative number" } as any, { status: 400 });
     }
 
-    // Minimal select so Prisma won't fetch columns your DB doesn't have
+    // ✅ Do NOT select fields that may not exist. Use relation _count instead.
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
         email: true,
-        totalReferrals: true,
-        permanentOverrideBps: true,
-      } as any,
+        _count: { select: { referrals: true } }, // count existing direct referrals
+      },
     });
 
     if (!user) return NextResponse.json({ ok: false, error: "User not found" } as any, { status: 404 });
 
-    const currentTotal = Number(user.totalReferrals ?? 0);
+    // Treat current totals as the live count + 0 permanent (since column may not exist)
+    const currentTotal = Number(user._count?.referrals ?? 0);
     const nextTotal = currentTotal + add;
-    const currentBps = Number(user.permanentOverrideBps ?? 0);
+
+    // No permanent column to read → assume 0 for preview; compute next from milestones
+    const currentBps = 0;
     const nextBps = resolvePermanentBps(nextTotal);
 
-    const enabled = (process.env.REFERRAL_V2_ENABLED || "").toLowerCase() === "true";
+    // Only allow writes when both flags are true (and ONLY after columns exist)
+    const v2Enabled = (process.env.REFERRAL_V2_ENABLED || "").toLowerCase() === "true";
+    const writeEnabled = (process.env.REFERRAL_V2_WRITE || "").toLowerCase() === "true";
+    const canWrite = v2Enabled && writeEnabled;
 
-    if (!enabled) {
-      // Read-only preview while flag is OFF
+    if (!canWrite) {
+      // Read-only preview; safe on any schema
       return NextResponse.json({
         ok: true,
         dryRun: true,
-        flagEnabled: false,
+        flagEnabled: v2Enabled,
+        writeEnabled,
         user: { id: user.id, email: user.email },
         before: { totalReferrals: currentTotal, permanentOverrideBps: currentBps },
         after:  { totalReferrals: nextTotal,    permanentOverrideBps: nextBps },
         milestones,
-        note: "Flag OFF: preview only. No DB writes performed.",
+        note: "Preview only. No DB writes performed. (Enable REFERRAL_V2_ENABLED=true and REFERRAL_V2_WRITE=true AFTER columns exist.)",
       } as any);
     }
 
-    // If flag is ON, persist the bump and milestone (safe: additive only)
+    // ⚠️ Only reached if both flags ON and schema has the columns
     const updated = await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -95,6 +101,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         email: true,
+        // these fields must exist in schema when writeEnabled=true
         totalReferrals: true,
         permanentOverrideBps: true,
       } as any,
@@ -115,7 +122,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       dryRun: false,
-      flagEnabled: true,
+      flagEnabled: v2Enabled,
+      writeEnabled,
       user: { id: updated.id, email: updated.email },
       before: { totalReferrals: currentTotal, permanentOverrideBps: currentBps },
       after:  {
@@ -123,7 +131,7 @@ export async function GET(req: NextRequest) {
         permanentOverrideBps: Number((updated as any).permanentOverrideBps ?? nextBps),
       },
       milestones,
-      note: "Flag ON: DB updated.",
+      note: "DB updated.",
     } as any);
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || String(err) } as any, { status: 500 });
