@@ -33,9 +33,12 @@ export async function GET() {
     }
 
     // 2) Pick first user as owner
-    const owner = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
-    if (!owner?.id) throw new Error("No users found to own SmartLink");
-    const userId = owner.id;
+    const owner = await prisma.user.findFirst({
+  orderBy: { createdAt: "asc" },
+  select: { id: true }, // 🔑 avoid selecting non-existent columns like homeCountry
+});
+if (!owner?.id) throw new Error("No users found to own SmartLink");
+const userId = owner.id;
 
     // 3) Minimal SmartLink create/update (match your schema exactly)
     let link = await prisma.smartLink.findFirst({ where: { shortUrl } });

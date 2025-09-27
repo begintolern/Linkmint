@@ -28,11 +28,31 @@ export async function GET(
 ) {
   const code = params.code;
 
-  // Look up by shortUrl; include rule + owner
-  const link = await prisma.smartLink.findFirst({
-    where: { shortUrl: code },
-    include: { merchantRule: true, user: true },
-  });
+  // Look up by shortUrl; select only columns that exist in prod
+const link = await prisma.smartLink.findFirst({
+  where: { shortUrl: code },
+  select: {
+    id: true,
+    shortUrl: true,
+    originalUrl: true,
+    merchantRuleId: true,
+    userId: true,
+    merchantName: true, // SmartLink.merchantName
+    user: {
+      select: {
+        id: true,
+        countryCode: true, // existing column; we won't touch homeCountry/currentMarket here
+      },
+    },
+    merchantRule: {
+      select: {
+        id: true,
+        merchantName: true,
+        notes: true, // we parse geo:allow / geo:block from notes as fallback
+      },
+    },
+  },
+});
 
   if (!link) {
     return NextResponse.json(
