@@ -28,31 +28,31 @@ export async function GET(
 ) {
   const code = params.code;
 
-  // Look up by shortUrl; select only columns that exist in prod
-const link = await prisma.smartLink.findFirst({
-  where: { shortUrl: code },
-  select: {
-    id: true,
-    shortUrl: true,
-    originalUrl: true,
-    merchantRuleId: true,
-    userId: true,
-    merchantName: true, // SmartLink.merchantName
-    user: {
-      select: {
-        id: true,
-        countryCode: true, // existing column; we won't touch homeCountry/currentMarket here
+  // Look up by shortUrl; select only columns known to exist
+  const link = await prisma.smartLink.findFirst({
+    where: { shortUrl: code },
+    select: {
+      id: true,
+      shortUrl: true,
+      originalUrl: true,
+      merchantRuleId: true,
+      userId: true,
+      merchantName: true, // from SmartLink row
+      user: {
+        select: {
+          id: true,
+          countryCode: true, // existing column; we won’t select homeCountry/currentMarket here
+        },
+      },
+      merchantRule: {
+        select: {
+          id: true,
+          merchantName: true,
+          notes: true, // parse geo:allow / geo:block from notes (fallback)
+        },
       },
     },
-    merchantRule: {
-      select: {
-        id: true,
-        merchantName: true,
-        notes: true, // we parse geo:allow / geo:block from notes as fallback
-      },
-    },
-  },
-});
+  });
 
   if (!link) {
     return NextResponse.json(
@@ -71,24 +71,24 @@ const link = await prisma.smartLink.findFirst({
 
   // Build minimal shapes for geo evaluation
   const u: any = link.user || {};
-const userForGeo = {
-  homeCountry: u.homeCountry ?? u.countryCode ?? null, // fallback to countryCode
-  currentMarket: u.currentMarket ?? null,
-  currentMarketAt: u.currentMarketAt ?? null,
-};
+  const userForGeo = {
+    homeCountry: u.countryCode ?? null, // fallback to existing column
+    currentMarket: null,
+    currentMarketAt: null,
+  };
 
   const rule: any = link.merchantRule || {};
   const parsed = parseGeoFromNotes(rule.notes as string | undefined);
 
   const ruleForGeo = {
-    // prefer real columns; fall back to notes-based config
-    allowedCountries: rule.allowedCountries ?? parsed.allow ?? null,
-    blockedCountries: rule.blockedCountries ?? parsed.block ?? null,
+    // Prefer real columns if you add them later; for now use notes-based config
+    allowedCountries: parsed.allow ?? null,
+    blockedCountries: parsed.block ?? null,
     merchantName: rule.merchantName ?? link.merchantName ?? null,
   };
 
   // Evaluate from headers (x-vercel-ip-country / cf-ipcountry, etc.)
-  const decision = evaluateGeoAccess(req, userForGeo, ruleForGeo);
+  const decision = evaluateGeoAccess(req as any, userForGeo, ruleForGeo);
 
   // Audit log (minimal fields only; tolerate JSON typing)
   try {
@@ -163,7 +163,7 @@ function blockedHtml(opts: {
   body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 32px; max-width: 720px; margin: 0 auto; line-height: 1.55; }
   .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; }
   .tag { display:inline-block; padding:2px 8px; border-radius:9999px; background:#f3f4f6; font-size:12px; margin-left:8px; }
-  a.button { display:inline-block; padding:10px 14px; border-radius:10px; text-decoration:none; border:1px solid #e5e7eb; margin-right:8px; }
+  a.button { display:inline-block; padding:10px 14px; border-radius:10px; text-decoration:none; border:1px solid #e5e7eb; }
 </style>
 <div class="card">
   <h1>Not available in your location <span class="tag">${ipCountry ?? "Unknown"}</span></h1>
