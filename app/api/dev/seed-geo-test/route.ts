@@ -10,41 +10,34 @@ export async function GET() {
     const RULE_NAME = "Amazon (US Test)";
     const shortUrl = "TEST-US-ONLY";
     const originalUrl = "https://www.amazon.com/";
+    const notes = "Seeded for geo-gating test. geo:allow=US";
 
-    // 1) Find or create MerchantRule
-    let rule = await prisma.merchantRule.findFirst({ where: { merchantName: RULE_NAME } });
+    // 1) Minimal MerchantRule (only fields guaranteed to exist)
+    let rule = await prisma.merchantRule.findFirst({
+      where: { merchantName: RULE_NAME },
+    });
+
     if (!rule) {
       rule = await prisma.merchantRule.create({
         data: {
           merchantName: RULE_NAME,
           active: true,
-          network: "amazon",
-          domainPattern: "amazon.com",
-          allowedSources: ["tiktok", "facebook", "direct"] as any,
-          // ⬇⬇ these are the fields that might be failing on server
-          allowedCountries: ["US"] as any,
-          blockedCountries: [] as any,
-          baseCommissionBps: 500,
-          notes: "Seeded for geo-gating test (US only)",
+          notes,
         } as any,
       });
     } else {
       rule = await prisma.merchantRule.update({
         where: { id: rule.id },
-        data: {
-          allowedCountries: ["US"] as any,
-          blockedCountries: [] as any,
-          notes: "Seeded for geo-gating test (US only, updated)",
-        } as any,
+        data: { notes },
       });
     }
 
     // 2) Pick first user as owner
     const owner = await prisma.user.findFirst({ orderBy: { createdAt: "asc" } });
-    const userId = owner?.id!;
-    if (!userId) throw new Error("No users found to own SmartLink");
+    if (!owner?.id) throw new Error("No users found to own SmartLink");
+    const userId = owner.id;
 
-    // 3) Find or create SmartLink
+    // 3) Minimal SmartLink create/update (match your schema exactly)
     let link = await prisma.smartLink.findFirst({ where: { shortUrl } });
     if (!link) {
       link = await prisma.smartLink.create({
@@ -53,7 +46,6 @@ export async function GET() {
           originalUrl,
           merchantRuleId: rule.id,
           merchantName: RULE_NAME,
-          merchantDomain: "amazon.com",
           userId,
         } as any,
       });
@@ -64,7 +56,6 @@ export async function GET() {
           originalUrl,
           merchantRuleId: rule.id,
           merchantName: RULE_NAME,
-          merchantDomain: "amazon.com",
           userId,
         } as any,
       });
@@ -80,13 +71,11 @@ export async function GET() {
       shortUrl,
       originalUrl,
       goUrl,
+      note: "US-only via notes (geo:allow=US). Non-US IPs should see geo-block page.",
     });
   } catch (err: any) {
-    const msg = err?.message || String(err);
-    const code = (err?.code as string) || undefined;
-    const meta = err?.meta ?? undefined;
     return NextResponse.json(
-      { ok: false, error: msg, code, meta },
+      { ok: false, error: err?.message || String(err) },
       { status: 500 }
     );
   }
