@@ -38,6 +38,19 @@ function joinOrDash(arr: string[] | null) {
   return arr.join(", ");
 }
 
+// Parse geo rules from notes, e.g. `geo:allow=US,PH; geo:block=CN`
+function parseGeoFromNotes(notes?: string | null): { allow?: string[]; block?: string[] } {
+  if (!notes) return {};
+  const allowMatch = notes.match(/geo:allow=([A-Z,\s]+)/i);
+  const blockMatch = notes.match(/geo:block=([A-Z,\s]+)/i);
+  const toList = (s: string) =>
+    s.split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
+  return {
+    allow: allowMatch ? toList(allowMatch[1]) : undefined,
+    block: blockMatch ? toList(blockMatch[1]) : undefined,
+  };
+}
+
 function getBaseUrl() {
   const h = headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
@@ -46,17 +59,16 @@ function getBaseUrl() {
 }
 
 export default async function MerchantsPage() {
-  let data: ListResponse | null = null;
   const baseUrl = getBaseUrl();
+  let data: ListResponse | null = null;
 
   try {
     const res = await fetch(`${baseUrl}/api/merchant-rules/list`, {
       cache: "no-store",
-      // Forward cookies if needed later for authed APIs:
       headers: { accept: "application/json" },
     });
     data = (await res.json()) as ListResponse;
-  } catch (e) {
+  } catch {
     data = { ok: false, merchants: [], error: "Failed to fetch." };
   }
 
@@ -77,9 +89,7 @@ export default async function MerchantsPage() {
     <div className="p-6">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold">Merchants</h1>
-        <div className="text-sm text-gray-500">
-          Total: {merchants.length.toLocaleString()}
-        </div>
+        <div className="text-sm text-gray-500">Total: {merchants.length.toLocaleString()}</div>
       </div>
 
       <div className="overflow-x-auto border rounded-xl">
@@ -90,6 +100,7 @@ export default async function MerchantsPage() {
               <th className="px-4 py-3">Active</th>
               <th className="px-4 py-3">Network</th>
               <th className="px-4 py-3">Domain</th>
+              <th className="px-4 py-3">Geo</th>
               <th className="px-4 py-3">Allowed</th>
               <th className="px-4 py-3">Disallowed</th>
               <th className="px-4 py-3">Cookie</th>
@@ -99,45 +110,52 @@ export default async function MerchantsPage() {
             </tr>
           </thead>
           <tbody>
-            {merchants.map((m) => (
-              <tr key={m.id} className="border-t">
-                <td className="px-4 py-3 font-medium">{m.merchantName}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={
-                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs " +
-                      (m.active
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-600")
-                    }
-                  >
-                    {m.active ? "Active" : "Inactive"}
-                  </span>
-                </td>
-                <td className="px-4 py-3">{m.network ?? "—"}</td>
-                <td className="px-4 py-3">{m.domainPattern ?? "—"}</td>
-                <td className="px-4 py-3">{joinOrDash(m.allowedSources)}</td>
-                <td className="px-4 py-3">{joinOrDash(m.disallowedSources)}</td>
-                <td className="px-4 py-3">
-                  {m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  {fmtPercentFromBps(m.baseCommissionBps)}
-                </td>
-                <td className="px-4 py-3 max-w-[24rem]">
-                  <div className="truncate" title={m.notes ?? ""}>
-                    {m.notes ?? "—"}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {merchants.map((m) => {
+              const parsed = parseGeoFromNotes(m.notes ?? undefined);
+              const allowed = parsed.allow ?? [];
+              const blocked = parsed.block ?? [];
+              const geo =
+                allowed.length && blocked.length
+                  ? `Allow: ${allowed.join(", ")} | Block: ${blocked.join(", ")}`
+                  : allowed.length
+                  ? `Allow: ${allowed.join(", ")}`
+                  : blocked.length
+                  ? `Block: ${blocked.join(", ")}`
+                  : "—";
+
+              return (
+                <tr key={m.id} className="border-t">
+                  <td className="px-4 py-3 font-medium">{m.merchantName}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs " +
+                        (m.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600")
+                      }
+                    >
+                      {m.active ? "Active" : "Inactive"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{m.network ?? "—"}</td>
+                  <td className="px-4 py-3">{m.domainPattern ?? "—"}</td>
+                  <td className="px-4 py-3">{geo}</td>
+                  <td className="px-4 py-3">{joinOrDash(m.allowedSources)}</td>
+                  <td className="px-4 py-3">{joinOrDash(m.disallowedSources)}</td>
+                  <td className="px-4 py-3">{m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}</td>
+                  <td className="px-4 py-3">{m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}</td>
+                  <td className="px-4 py-3">{fmtPercentFromBps(m.baseCommissionBps)}</td>
+                  <td className="px-4 py-3 max-w-[24rem]">
+                    <div className="truncate" title={m.notes ?? ""}>
+                      {m.notes ?? "—"}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
 
             {merchants.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-gray-500" colSpan={10}>
+                <td className="px-4 py-6 text-center text-gray-500" colSpan={11}>
                   No merchants yet.
                 </td>
               </tr>
