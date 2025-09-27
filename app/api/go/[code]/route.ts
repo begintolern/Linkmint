@@ -69,12 +69,26 @@ export async function GET(
     );
   }
 
-  // Build minimal shapes for geo evaluation
+  // Build minimal shapes for geo evaluation (cookie override → IP → homeCountry)
   const u: any = link.user || {};
+
+  const cookieHeader = req.headers.get("cookie") || "";
+  const cookieMap = Object.fromEntries(
+    cookieHeader.split(";").map((p) => {
+      const i = p.indexOf("=");
+      if (i === -1) return [p.trim(), ""];
+      const k = p.slice(0, i).trim();
+      const v = decodeURIComponent(p.slice(i + 1).trim());
+      return [k, v];
+    })
+  );
+  const cookieMarket = (cookieMap["lm_market"] || "").toUpperCase() || null;
+  const cookieMarketAt = cookieMap["lm_market_at"] || null;
+
   const userForGeo = {
-    homeCountry: u.countryCode ?? null, // fallback to existing column
-    currentMarket: null,
-    currentMarketAt: null,
+    homeCountry: u.countryCode ?? null, // fallback to DB column
+    currentMarket: cookieMarket,        // 24h override
+    currentMarketAt: cookieMarketAt,
   };
 
   const rule: any = link.merchantRule || {};
