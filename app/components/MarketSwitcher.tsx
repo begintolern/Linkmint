@@ -15,7 +15,9 @@ export default function MarketSwitcher() {
   }, []);
 
   const go = (to: "PH" | "US") => {
-    const back = encodeURIComponent(window.location.pathname + window.location.search);
+    const origin = window.location.origin; // ensures absolute URL (https://linkmint.co)
+    const backAbs = origin + window.location.pathname + window.location.search;
+    const back = encodeURIComponent(backAbs);
     window.location.href = `/api/market/set?to=${to}&back=${back}`;
   };
 
