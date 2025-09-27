@@ -3,6 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
+import MarketSwitcher from "./components/MarketSwitcher";
 
 export const metadata: Metadata = {
   title: "linkmint.co",
@@ -24,6 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-white text-gray-900">
+        {/* 🔹 Market switcher banner (cookie override for PH/US) */}
+        <MarketSwitcher />
+
         <Header isLoggedIn={!!email} isAdmin={role === "admin"} />
         <div className="min-h-[76vh]">{children}</div>
         <Footer />
