@@ -5,12 +5,18 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const RULE_NAME = "Amazon (US Test)";
+    const url = new URL(req.url);
+    const allowParam = url.searchParams.get("allow"); // e.g. "PH" or "PH,US"
+    const allowList = allowParam
+      ? allowParam.toUpperCase().replace(/\s+/g, "")
+      : "US";
+    const notes = `Seeded for geo-gating test. geo:allow=${allowList}`;
+
+    const RULE_NAME = "Amazon (Geo Test)";
     const shortUrl = "TEST-US-ONLY";
     const originalUrl = "https://www.amazon.com/";
-    const notes = "Seeded for geo-gating test. geo:allow=US";
 
     // 1) Minimal MerchantRule (only fields guaranteed to exist)
     let rule = await prisma.merchantRule.findFirst({
@@ -32,15 +38,15 @@ export async function GET() {
       });
     }
 
-    // 2) Pick first user as owner
+    // 2) Pick first user as owner (safe select)
     const owner = await prisma.user.findFirst({
-  orderBy: { createdAt: "asc" },
-  select: { id: true }, // 🔑 avoid selecting non-existent columns like homeCountry
-});
-if (!owner?.id) throw new Error("No users found to own SmartLink");
-const userId = owner.id;
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    });
+    if (!owner?.id) throw new Error("No users found to own SmartLink");
+    const userId = owner.id;
 
-    // 3) Minimal SmartLink create/update (match your schema exactly)
+    // 3) Find or create SmartLink
     let link = await prisma.smartLink.findFirst({ where: { shortUrl } });
     if (!link) {
       link = await prisma.smartLink.create({
@@ -74,7 +80,7 @@ const userId = owner.id;
       shortUrl,
       originalUrl,
       goUrl,
-      note: "US-only via notes (geo:allow=US). Non-US IPs should see geo-block page.",
+      note: `Geo rule written to notes: geo:allow=${allowList}`,
     });
   } catch (err: any) {
     return NextResponse.json(
