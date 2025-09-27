@@ -5,7 +5,7 @@ export const fetchCache = "force-no-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 
-// Same milestones as the simulator (bps = 100 bps = 1%)
+// Milestones (bps = 100 bps = 1%)
 const milestones = [
   { at: 100, bps: 500 },
   { at: 60,  bps: 300 },
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     const url = req.nextUrl;
     const userId = url.searchParams.get("userId");
-    const add = Number(url.searchParams.get("add") || "0"); // how many new verified invites to simulate
+    const add = Number(url.searchParams.get("add") || "0"); // how many verified invites to add (simulated / or real if flag ON)
 
     if (!userId) {
       return NextResponse.json({ ok: false, error: "Missing userId. Use ?userId=<id>&add=3" }, { status: 400 });
@@ -50,15 +50,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Param 'add' must be a non-negative number" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
+    // Loosen typing to tolerate older Prisma client types (dev-only route)
+    const user = (await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, totalReferrals: true, permanentOverrideBps: true },
-    });
+    })) as any;
+
     if (!user) return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
 
-    const currentTotal = user.totalReferrals ?? 0;
+    const currentTotal = Number(user.totalReferrals ?? 0);
     const nextTotal = currentTotal + add;
-    const currentBps = user.permanentOverrideBps ?? 0;
+    const currentBps = Number(user.permanentOverrideBps ?? 0);
     const nextBps = resolvePermanentBps(nextTotal);
 
     const enabled = (process.env.REFERRAL_V2_ENABLED || "").toLowerCase() === "true";
@@ -78,14 +79,13 @@ export async function GET(req: NextRequest) {
     }
 
     // If flag is ON, persist the bump and milestone (safe: additive only)
-    const updated = await prisma.user.update({
+    const updated = (await prisma.user.update({
       where: { id: user.id },
       data: {
         totalReferrals: nextTotal,
         permanentOverrideBps: nextBps,
-      },
-      select: { id: true, email: true, totalReferrals: true, permanentOverrideBps: true },
-    });
+      } as any, // tolerate older client types
+    })) as any;
 
     // Audit log (best-effort)
     try {
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
       flagEnabled: true,
       user: { id: updated.id, email: updated.email },
       before: { totalReferrals: currentTotal, permanentOverrideBps: currentBps },
-      after:  { totalReferrals: updated.totalReferrals, permanentOverrideBps: updated.permanentOverrideBps },
+      after:  { totalReferrals: Number(updated.totalReferrals ?? nextTotal), permanentOverrideBps: Number(updated.permanentOverrideBps ?? nextBps) },
       milestones,
       note: "Flag ON: DB updated.",
     });
