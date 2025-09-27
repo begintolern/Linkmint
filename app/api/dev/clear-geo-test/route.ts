@@ -5,14 +5,25 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+// Accept comma-separated emails in ADMIN_EMAIL
+function getAdminEmails(): string[] {
+  const raw = process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS || "";
+  return raw
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 export async function GET() {
   try {
-    if (!ADMIN_EMAIL) {
-      return NextResponse.json({ ok: false, error: "ADMIN_EMAIL not set" }, { status: 401 });
+    const admins = getAdminEmails();
+    if (admins.length === 0) {
+      return NextResponse.json({ ok: false, error: "ADMIN_EMAIL(S) not set" }, { status: 401 });
     }
-    const admin = await prisma.user.findFirst({ where: { email: ADMIN_EMAIL }, select: { id: true } });
+    const admin = await prisma.user.findFirst({
+      where: { email: { in: admins } },
+      select: { id: true, email: true },
+    });
     if (!admin?.id) return NextResponse.json({ ok: false, error: "Admin user not found" }, { status: 401 });
 
     const RULE_NAME = "Amazon (Geo Test)";
