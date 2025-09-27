@@ -1,5 +1,5 @@
 // @ts-nocheck
-/ app/api/dev/referral-v2-bump/route.ts
+// app/api/dev/referral-v2-bump/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Param 'add' must be a non-negative number" } as any, { status: 400 });
     }
 
-    // ✅ Minimal select so Prisma won't fetch columns your DB doesn't have
+    // Minimal select so Prisma won't fetch columns your DB doesn't have
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
