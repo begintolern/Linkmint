@@ -66,7 +66,14 @@ export async function GET(req: NextRequest) {
 
     if (!user) return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
 
-    const totalReferrals = user.referrals.length;
+    // Actual referral count
+    const totalReferralsReal = user.referrals.length;
+
+    // Allow override with ?simulateReferrals=N
+    const simulate = url.searchParams.get("simulateReferrals");
+    const totalReferrals =
+      simulate != null ? Math.max(0, Number(simulate) || 0) : totalReferralsReal;
+
     const permanentBps = resolvePermanentBps(totalReferrals);
 
     // v1 (no permanent)
@@ -81,7 +88,13 @@ export async function GET(req: NextRequest) {
       ok: true,
       user: { id: user.id, email: user.email },
       inputs: { sampleAmount, baseBps, batchBps, platformFloorBps: PLATFORM_FLOOR_BPS },
-      referrals: { totalReferrals, milestones, permanentBps },
+      referrals: {
+        totalReferralsReal,
+        simulateReferrals: simulate != null ? totalReferrals : null,
+        totalReferrals,
+        milestones,
+        permanentBps,
+      },
       v1: { finalBps: v1.finalBps, capped: v1.capped, capAtBps: v1.capAtBps, payoutCents: v1Payout },
       v2: { finalBps: v2.finalBps, capped: v2.capped, capAtBps: v2.capAtBps, payoutCents: v2Payout },
       delta: { payoutCents: v2Payout - v1Payout, bps: v2.finalBps - v1.finalBps },
