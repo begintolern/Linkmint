@@ -1,90 +1,65 @@
 // lib/geo/market.ts
-import type { NextRequest } from "next/server";
-
-/** Read best-effort country code from CDN/edge headers (ISO alpha-2 like "US", "PH"). */
-export function getIpCountry(req: NextRequest): string | null {
-  const h = req.headers;
-  // Common CDNs / hosts
-  const v = h.get("x-vercel-ip-country");   // Vercel
-  const cf = h.get("cf-ipcountry");         // Cloudflare
-  const fly = h.get("fly-client-ip-country"); // Fly.io (rare)
-  const ak = h.get("x-ak-country");         // Akamai (rare)
-  const any =
-    (v && v !== "XX" && v !== "zz" ? v : null) ||
-    (cf && cf !== "XX" ? cf : null) ||
-    fly ||
-    ak;
-  return any ? any.toUpperCase() : null;
-}
-
-/** 24-hour expiry for temporary market overrides. */
-export function isMarketOverrideValid(at?: Date | string | null): boolean {
-  if (!at) return false;
-  const setAt = typeof at === "string" ? new Date(at) : at;
-  if (Number.isNaN(setAt.getTime())) return false;
-  const now = new Date();
-  const diffMs = now.getTime() - setAt.getTime();
-  return diffMs >= 0 && diffMs <= 24 * 60 * 60 * 1000; // <= 24h
-}
-
-export type MinimalUser = {
-  homeCountry?: string | null;     // e.g., "PH"
-  currentMarket?: string | null;   // e.g., "US"
-  currentMarketAt?: Date | string | null;
+export type GeoDecision = {
+  allowed: boolean;
+  reason?: string | null;
+  market: string | null;      // resolved market we used
+  ipCountry: string | null;   // from headers, if present
 };
 
-export type MinimalMerchantRule = {
-  allowedCountries?: string[] | null; // if present, must include market
-  blockedCountries?: string[] | null; // if present, must NOT include market
-  merchantName?: string | null;
-};
+const LOCK_MARKET = (process.env.LOCK_MARKET || "").toLowerCase() === "true";
 
-/** Pick the effective market for this request. Priority: currentMarket(<=24h) → ipCountry → homeCountry. */
-export function resolveMarket(
-  ipCountry: string | null,
-  user?: MinimalUser | null
-): string | null {
-  const override =
-    user?.currentMarket && isMarketOverrideValid(user?.currentMarketAt)
-      ? user.currentMarket
-      : null;
-  return (override || ipCountry || user?.homeCountry || null)?.toUpperCase() || null;
-}
+export function evaluateGeoAccess(
+  req: Request,
+  user: { countryCode?: string | null } | null,
+  rule: { allowedCountries?: string[] | null; blockedCountries?: string[] | null }
+): GeoDecision {
+  const headers = (req as any).headers ?? new Headers();
+  // Vercel / Cloudflare country headers
+  const ipCountry =
+    headers.get("x-vercel-ip-country") ||
+    headers.get("cf-ipcountry") ||
+    headers.get("x-country") ||
+    null;
 
-/** Check a market against a merchant's allow/deny lists. */
-export function checkGeoAllowed(
-  market: string | null,
-  rule: MinimalMerchantRule
-): { allowed: boolean; reason?: string } {
-  if (!market) return { allowed: false, reason: "unknown_market" };
+  // Resolve market:
+  // - if LOCK_MARKET: use user.countryCode only
+  // - else: fall back to cookie override, then user.countryCode, then ipCountry
+  let market: string | null = null;
 
-  const m = market.toUpperCase();
-  const blocked = (rule.blockedCountries || []).map((x) => x.toUpperCase());
-  if (blocked.includes(m)) return { allowed: false, reason: "blocked_country" };
-
-  const allowedList = rule.allowedCountries?.length
-    ? (rule.allowedCountries as string[]).map((x) => x.toUpperCase())
-    : null;
-  if (allowedList && !allowedList.includes(m)) {
-    return { allowed: false, reason: "not_in_allow_list" };
+  if (LOCK_MARKET) {
+    market = (user?.countryCode || null)?.toUpperCase() || null;
+  } else {
+    const cookieHeader = headers.get("cookie") || "";
+    const cookieMarket = getCookie(cookieHeader, "lm_market");
+    market =
+      (cookieMarket || user?.countryCode || ipCountry || null)?.toUpperCase() || null;
   }
 
-  return { allowed: true };
+  const allow = (rule?.allowedCountries && rule.allowedCountries.length > 0)
+    ? rule.allowedCountries.map((c) => c.toUpperCase()).includes(market || "")
+    : true; // if no allowlist, treat as open
+
+  const block = (rule?.blockedCountries && rule.blockedCountries.length > 0)
+    ? rule.blockedCountries.map((c) => c.toUpperCase()).includes(market || "")
+    : false;
+
+  const allowed = allow && !block;
+
+  return {
+    allowed,
+    reason: allowed ? null : (!allow ? "not_in_allow_list" : "blocked_country"),
+    market,
+    ipCountry: (ipCountry || null)?.toUpperCase() || null,
+  };
 }
 
-/** One-shot helper to decide geo access. */
-export function evaluateGeoAccess(
-  req: NextRequest,
-  user: MinimalUser | null,
-  rule: MinimalMerchantRule
-): {
-  ipCountry: string | null;
-  market: string | null;
-  allowed: boolean;
-  reason?: string;
-} {
-  const ipCountry = getIpCountry(req);
-  const market = resolveMarket(ipCountry, user);
-  const { allowed, reason } = checkGeoAllowed(market, rule);
-  return { ipCountry, market, allowed, reason };
+// tiny cookie reader (no deps)
+function getCookie(cookieHeader: string, name: string): string | null {
+  if (!cookieHeader) return null;
+  const parts = cookieHeader.split(/; */);
+  const target = name + "=";
+  for (const p of parts) {
+    if (p.startsWith(target)) return decodeURIComponent(p.slice(target.length));
+  }
+  return null;
 }

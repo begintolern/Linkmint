@@ -6,51 +6,18 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { evaluateGeoAccess } from "@/lib/geo/market";
 
-// Parse geo rules from notes, e.g. `geo:allow=US,PH; geo:block=CN`
-function parseGeoFromNotes(notes?: string | null): { allow?: string[]; block?: string[] } {
-  if (!notes) return {};
-  const allowMatch = notes.match(/geo:allow=([A-Z,\s]+)/i);
-  const blockMatch = notes.match(/geo:block=([A-Z,\s]+)/i);
-  const toList = (s: string) =>
-    s
-      .split(",")
-      .map((x) => x.trim().toUpperCase())
-      .filter(Boolean);
-  return {
-    allow: allowMatch ? toList(allowMatch[1]) : undefined,
-    block: blockMatch ? toList(blockMatch[1]) : undefined,
-  };
-}
-
 export async function GET(
   req: NextRequest,
   { params }: { params: { code: string } }
 ) {
   const code = params.code;
 
-  // Look up by shortUrl; select only columns known to exist
+  // Look up by shortUrl; include rule + minimal user info
   const link = await prisma.smartLink.findFirst({
     where: { shortUrl: code },
-    select: {
-      id: true,
-      shortUrl: true,
-      originalUrl: true,
-      merchantRuleId: true,
-      userId: true,
-      merchantName: true, // from SmartLink row
-      user: {
-        select: {
-          id: true,
-          countryCode: true, // existing column; we won’t select homeCountry/currentMarket here
-        },
-      },
-      merchantRule: {
-        select: {
-          id: true,
-          merchantName: true,
-          notes: true, // parse geo:allow / geo:block from notes (fallback)
-        },
-      },
+    include: {
+      merchantRule: true,
+      user: { select: { id: true, countryCode: true } },
     },
   });
 
@@ -69,42 +36,20 @@ export async function GET(
     );
   }
 
-  // Build minimal shapes for geo evaluation (cookie override → IP → homeCountry)
-  const u: any = link.user || {};
-
-  const cookieHeader = req.headers.get("cookie") || "";
-  const cookieMap = Object.fromEntries(
-    cookieHeader.split(";").map((p) => {
-      const i = p.indexOf("=");
-      if (i === -1) return [p.trim(), ""];
-      const k = p.slice(0, i).trim();
-      const v = decodeURIComponent(p.slice(i + 1).trim());
-      return [k, v];
-    })
-  );
-  const cookieMarket = (cookieMap["lm_market"] || "").toUpperCase() || null;
-  const cookieMarketAt = cookieMap["lm_market_at"] || null;
-
-  const userForGeo = {
-    homeCountry: u.countryCode ?? null, // fallback to DB column
-    currentMarket: cookieMarket,        // 24h override
-    currentMarketAt: cookieMarketAt,
-  };
-
+  // Prepare inputs for geo decision
   const rule: any = link.merchantRule || {};
-  const parsed = parseGeoFromNotes(rule.notes as string | undefined);
-
   const ruleForGeo = {
-    // Prefer real columns if you add them later; for now use notes-based config
-    allowedCountries: parsed.allow ?? null,
-    blockedCountries: parsed.block ?? null,
+    allowedCountries: rule.allowedCountries ?? null,
+    blockedCountries: rule.blockedCountries ?? null,
     merchantName: rule.merchantName ?? link.merchantName ?? null,
   };
 
-  // Evaluate from headers (x-vercel-ip-country / cf-ipcountry, etc.)
+  // 🚦 Market resolution now uses account country only when LOCK_MARKET=true
+  const userForGeo = { countryCode: link.user?.countryCode ?? null };
+
   const decision = evaluateGeoAccess(req as any, userForGeo, ruleForGeo);
 
-  // Audit log (minimal fields only; tolerate JSON typing)
+  // Audit log (best-effort; ignore failures)
   try {
     await prisma.eventLog.create({
       data: {
@@ -122,9 +67,7 @@ export async function GET(
         } as any,
       } as any,
     });
-  } catch {
-    // ignore log failures
-  }
+  } catch {}
 
   if (!decision.allowed) {
     const html = blockedHtml({
@@ -138,11 +81,12 @@ export async function GET(
     });
   }
 
-  // ✅ Redirect
+  // ✅ Pass-through
   return NextResponse.redirect(dest, { status: 302 });
 }
 
-// ---- helpers ----
+/* ---------- helpers ---------- */
+
 function safeHost(url: string | null | undefined) {
   try {
     if (!url) return null;
@@ -163,7 +107,7 @@ function blockedHtml(opts: {
       /[&<>"']/g,
       (c) =>
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
-          c
+          c as "&" | "<" | ">" | '"' | "'"
         ]!
         )
     );
@@ -177,7 +121,7 @@ function blockedHtml(opts: {
   body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 32px; max-width: 720px; margin: 0 auto; line-height: 1.55; }
   .card { border: 1px solid #e5e7eb; border-radius: 14px; padding: 24px; }
   .tag { display:inline-block; padding:2px 8px; border-radius:9999px; background:#f3f4f6; font-size:12px; margin-left:8px; }
-  a.button { display:inline-block; padding:10px 14px; border-radius:10px; text-decoration:none; border:1px solid #e5e7eb; }
+  a.button { display:inline-block; padding:10px 14px; border-radius:10px; text-decoration:none; border:1px solid #e5e7eb; margin-right:8px; }
 </style>
 <div class="card">
   <h1>Not available in your location <span class="tag">${ipCountry ?? "Unknown"}</span></h1>
