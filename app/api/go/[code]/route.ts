@@ -12,7 +12,7 @@ export async function GET(
 ) {
   const code = params.code;
 
-  // Look up by shortUrl; include rule + minimal user info
+  // Look up by shortUrl; include rule + minimal user info + destinationsJson
   const link = await prisma.smartLink.findFirst({
     where: { shortUrl: code },
     include: {
@@ -28,14 +28,8 @@ export async function GET(
     );
   }
 
-  const dest: string | null = link.originalUrl ?? null;
-  if (!dest) {
-    return NextResponse.json(
-      { ok: false, error: "No originalUrl set on smart link." },
-      { status: 422 }
-    );
-  }
-
+  // Read per-market destinations (JSON column)
+  const destinations = safeDestinations(link as any);
   // Prepare inputs for geo decision
   const rule: any = link.merchantRule || {};
   const ruleForGeo = {
@@ -44,12 +38,19 @@ export async function GET(
     merchantName: rule.merchantName ?? link.merchantName ?? null,
   };
 
-  // 🚦 Market resolution now uses account country only when LOCK_MARKET=true
+  // 🚦 Market resolution uses account country only when LOCK_MARKET=true
   const userForGeo = { countryCode: link.user?.countryCode ?? null };
-
   const decision = evaluateGeoAccess(req as any, userForGeo, ruleForGeo);
 
-  // Audit log (best-effort; ignore failures)
+  // Resolve destination:
+  // 1) exact market match (e.g. "PH" or "US")
+  // 2) fallback to originalUrl
+  const marketKey = (decision.market || "").toUpperCase();
+  const dest =
+    (marketKey && destinations[marketKey]) ||
+    (link.originalUrl ?? null);
+
+  // Audit log (best-effort)
   try {
     await prisma.eventLog.create({
       data: {
@@ -69,19 +70,19 @@ export async function GET(
     });
   } catch {}
 
-  if (!decision.allowed) {
+  if (!decision.allowed || !dest) {
     const html = blockedHtml({
       ipCountry: decision.ipCountry,
       merchantName: ruleForGeo.merchantName ?? "this merchant",
-      reason: decision.reason ?? "geo_restricted",
+      reason: decision.reason ?? (!dest ? "no_destination" : "geo_restricted"),
     });
     return new NextResponse(html, {
-      status: 451,
+      status: decision.allowed ? 422 : 451,
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
 
-  // ✅ Pass-through
+  // ✅ Redirect
   return NextResponse.redirect(dest, { status: 302 });
 }
 
@@ -132,4 +133,32 @@ function blockedHtml(opts: {
     <a class="button" href="/">Back to home</a>
   </p>
 </div>`;
+}
+
+// Normalize destinationsJson from DB into a string map
+function safeDestinations(link: any): Record<string, string> {
+  try {
+    const raw = link?.destinationsJson;
+    if (!raw) return {};
+    // If Prisma returns a plain object, keep it. If it’s a string, parse it.
+    const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
+    const out: Record<string, string> = {};
+    for (const [k, v] of Object.entries(obj || {})) {
+      if (typeof k === "string" && typeof v === "string" && isUrl(v)) {
+        out[k.toUpperCase()] = v;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function isUrl(s: string): boolean {
+  try {
+    new URL(s);
+    return true;
+  } catch {
+    return false;
+  }
 }
