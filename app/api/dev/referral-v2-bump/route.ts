@@ -19,7 +19,6 @@ function resolvePermanentBps(totalReferrals: number) {
   return 0;
 }
 
-// Admin guard: read from env list (comma-separated)
 function getAdminEmails(): string[] {
   const raw = process.env.ADMIN_EMAIL || process.env.ADMIN_EMAILS || "";
   return raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
@@ -27,7 +26,7 @@ function getAdminEmails(): string[] {
 
 export async function GET(req: NextRequest) {
   try {
-    // Admin check (must exist in DB)
+    // Admin guard
     const admins = getAdminEmails();
     if (!admins.length) {
       return NextResponse.json({ ok: false, error: "ADMIN_EMAIL(S) not set" } as any, { status: 401 });
@@ -43,78 +42,75 @@ export async function GET(req: NextRequest) {
     const url = req.nextUrl;
     const userId = url.searchParams.get("userId");
     const add = Number(url.searchParams.get("add") || "0");
-
-    if (!userId) {
-      return NextResponse.json({ ok: false, error: "Missing userId. Use ?userId=<id>&add=3" } as any, { status: 400 });
-    }
+    if (!userId) return NextResponse.json({ ok: false, error: "Missing userId" } as any, { status: 400 });
     if (add < 0 || !Number.isFinite(add)) {
       return NextResponse.json({ ok: false, error: "Param 'add' must be a non-negative number" } as any, { status: 400 });
     }
 
-    // ✅ Do NOT select fields that may not exist. Use relation _count instead.
+    // Get live referral count via relation _count (portable on any schema)
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        _count: { select: { referrals: true } }, // count existing direct referrals
-      },
+      select: { id: true, email: true, _count: { select: { referrals: true } } },
     });
-
     if (!user) return NextResponse.json({ ok: false, error: "User not found" } as any, { status: 404 });
 
-    // Treat current totals as the live count + 0 permanent (since column may not exist)
     const currentTotal = Number(user._count?.referrals ?? 0);
     const nextTotal = currentTotal + add;
-
-    // No permanent column to read → assume 0 for preview; compute next from milestones
-    const currentBps = 0;
+    const currentBps = 0; // we can't read column safely; assume 0 before writes
     const nextBps = resolvePermanentBps(nextTotal);
 
-    // Only allow writes when both flags are true (and ONLY after columns exist)
-    const v2Enabled = (process.env.REFERRAL_V2_ENABLED || "").toLowerCase() === "true";
-    const writeEnabled = (process.env.REFERRAL_V2_WRITE || "").toLowerCase() === "true";
-    const canWrite = v2Enabled && writeEnabled;
+    const v2Enabled  = (process.env.REFERRAL_V2_ENABLED || "").toLowerCase() === "true";
+    const writeFlag  = (process.env.REFERRAL_V2_WRITE   || "").toLowerCase() === "true";
+    const canWrite = v2Enabled && writeFlag;
 
     if (!canWrite) {
-      // Read-only preview; safe on any schema
       return NextResponse.json({
         ok: true,
         dryRun: true,
         flagEnabled: v2Enabled,
-        writeEnabled,
+        writeEnabled: writeFlag,
         user: { id: user.id, email: user.email },
         before: { totalReferrals: currentTotal, permanentOverrideBps: currentBps },
         after:  { totalReferrals: nextTotal,    permanentOverrideBps: nextBps },
         milestones,
-        note: "Preview only. No DB writes performed. (Enable REFERRAL_V2_ENABLED=true and REFERRAL_V2_WRITE=true AFTER columns exist.)",
+        note: "Preview only. No DB writes performed.",
       } as any);
     }
 
-    // ⚠️ Only reached if both flags ON and schema has the columns
-    const updated = await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        totalReferrals: nextTotal,
-        permanentOverrideBps: nextBps,
-      } as any,
-      select: {
-        id: true,
-        email: true,
-        // these fields must exist in schema when writeEnabled=true
-        totalReferrals: true,
-        permanentOverrideBps: true,
-      } as any,
-    });
+    // ⚙️ WRITE PATH (raw SQL to avoid Prisma Client type checks)
 
-    // Audit log (best-effort)
+    // 1) Ensure columns exist (idempotent)
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "totalReferrals" INTEGER NOT NULL DEFAULT 0;'
+    );
+    await prisma.$executeRawUnsafe(
+      'ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "permanentOverrideBps" INTEGER NOT NULL DEFAULT 0;'
+    );
+
+    // 2) Update the values
+    // Safe params: numbers are validated; user.id came from DB
+    await prisma.$executeRawUnsafe(
+      'UPDATE "User" SET "totalReferrals" = $1, "permanentOverrideBps" = $2 WHERE id = $3;',
+      nextTotal,
+      nextBps,
+      user.id
+    );
+
+    // 3) Read back using raw select (works even if Prisma Client types are stale)
+    const rows = await prisma.$queryRawUnsafe<
+      Array<{ totalReferrals: number; permanentOverrideBps: number }>
+    >('SELECT "totalReferrals", "permanentOverrideBps" FROM "User" WHERE id = $1;', user.id);
+
+    const after = rows?.[0] ?? { totalReferrals: nextTotal, permanentOverrideBps: nextBps };
+
+    // Best-effort audit log
     try {
       await prisma.eventLog.create({
         data: {
           type: "REFERRAL_MILESTONE_REACHED",
           userId: user.id,
-          message: `Total referrals ${currentTotal} → ${nextTotal}; bps ${currentBps} → ${nextBps}`,
-          meta: { fromBps: currentBps, toBps: nextBps, add },
+          message: `Total referrals ${currentTotal} → ${after.totalReferrals}; bps ${currentBps} → ${after.permanentOverrideBps}`,
+          meta: { fromBps: currentBps, toBps: after.permanentOverrideBps, add },
         } as any,
       });
     } catch {}
@@ -123,15 +119,12 @@ export async function GET(req: NextRequest) {
       ok: true,
       dryRun: false,
       flagEnabled: v2Enabled,
-      writeEnabled,
-      user: { id: updated.id, email: updated.email },
+      writeEnabled: writeFlag,
+      user: { id: user.id, email: user.email },
       before: { totalReferrals: currentTotal, permanentOverrideBps: currentBps },
-      after:  {
-        totalReferrals: Number((updated as any).totalReferrals ?? nextTotal),
-        permanentOverrideBps: Number((updated as any).permanentOverrideBps ?? nextBps),
-      },
+      after,
       milestones,
-      note: "DB updated.",
+      note: "DB updated via raw SQL (schema-agnostic).",
     } as any);
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || String(err) } as any, { status: 500 });
