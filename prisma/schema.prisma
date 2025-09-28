@@ -50,11 +50,13 @@ model User {
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
   verificationTokens     VerificationToken[]
-  
-  // 🌐 Geo preferences (for travel/market override)
-  homeCountry       String?   @db.VarChar(2)  // e.g. "PH", "US"
-  currentMarket     String?   @db.VarChar(2)  // temporary override, e.g. "US"
-  currentMarketAt   DateTime?                 // when override was set (for 24h expiry)
+  totalReferrals         Int @default(0)
+  permanentOverrideBps   Int @default(0) // 100 bps = 1%
+
+
+  // Geo gating (ISO-3166-1 alpha-2 codes like "US","PH")
+  allowedCountries String[] @default([])
+  blockedCountries String[] @default([])
 
   @@index([deletedAt])
 }
@@ -231,6 +233,9 @@ model MerchantRule {
   allowedSources   Json?
   commissions      Commission[]
   smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
+  // Geo gating (ISO-3166-1 alpha-2 codes like "US","PH")
+  allowedCountries String[]       @default([])
+  blockedCountries String[]       @default([])
 }
 
 model VerificationToken {
@@ -297,6 +302,9 @@ model SmartLink {
   createdAt      DateTime      @default(now())
   merchantRule   MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
   user           User          @relation("UserToSmartLink", fields: [userId], references: [id])
+
+  // NEW: per-market destinations (e.g., {"PH":"…","US":"…"})
+  destinationsJson Json?
 }
 
 model AdvertiserApplication {
