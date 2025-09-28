@@ -12,7 +12,7 @@ export async function GET(
 ) {
   const code = params.code;
 
-  // Look up by shortUrl; include rule + minimal user info + destinationsJson
+  // Look up SmartLink by short code; include rule + minimal user
   const link = await prisma.smartLink.findFirst({
     where: { shortUrl: code },
     include: {
@@ -28,9 +28,19 @@ export async function GET(
     );
   }
 
-  // Read per-market destinations (JSON column)
-  const destinations = safeDestinations(link as any);
-  // Prepare inputs for geo decision
+  // Pull destinationsJson via raw SQL to avoid Prisma type mismatch
+  let destinations = {} as Record<string, string>;
+  try {
+    const rows = await prisma.$queryRawUnsafe<Array<{ destinationsJson: unknown }>>(
+      'SELECT "destinationsJson" FROM "SmartLink" WHERE id = $1 LIMIT 1;',
+      link.id
+    );
+    destinations = normalizeDestinations(rows?.[0]?.destinationsJson);
+  } catch {
+    destinations = {};
+  }
+
+  // Merchant rule shape for geo evaluation
   const rule: any = link.merchantRule || {};
   const ruleForGeo = {
     allowedCountries: rule.allowedCountries ?? null,
@@ -38,19 +48,23 @@ export async function GET(
     merchantName: rule.merchantName ?? link.merchantName ?? null,
   };
 
-  // 🚦 Market resolution uses account country only when LOCK_MARKET=true
+  // 🚦 Sharer account market only (LOCK_MARKET is handled inside evaluateGeoAccess)
   const userForGeo = { countryCode: link.user?.countryCode ?? null };
   const decision = evaluateGeoAccess(req as any, userForGeo, ruleForGeo);
 
-  // Resolve destination:
-  // 1) exact market match (e.g. "PH" or "US")
-  // 2) fallback to originalUrl
-  const marketKey = (decision.market || "").toUpperCase();
+  // Destination preference:
+  // 1) viewer IP market
+  // 2) sharer account market
+  // 3) originalUrl fallback
+  const viewerKey = (decision.ipCountry || "").toUpperCase();
+  const sharerKey = (decision.market || "").toUpperCase();
   const dest =
-    (marketKey && destinations[marketKey]) ||
-    (link.originalUrl ?? null);
+    (viewerKey && destinations[viewerKey]) ||
+    (sharerKey && destinations[sharerKey]) ||
+    link.originalUrl ||
+    null;
 
-  // Audit log (best-effort)
+  // Audit log (best-effort; ignore failures)
   try {
     await prisma.eventLog.create({
       data: {
@@ -65,6 +79,7 @@ export async function GET(
           shortUrl: link.shortUrl,
           merchantRuleId: link.merchantRuleId ?? null,
           destinationHost: safeHost(dest),
+          chosenKey: viewerKey && destinations[viewerKey] ? "viewer" : (sharerKey && destinations[sharerKey] ? "sharer" : "fallback"),
         } as any,
       } as any,
     });
@@ -87,6 +102,32 @@ export async function GET(
 }
 
 /* ---------- helpers ---------- */
+
+function normalizeDestinations(input: unknown): Record<string, string> {
+  try {
+    const obj = typeof input === "string" ? JSON.parse(input) : input;
+    const out: Record<string, string> = {};
+    if (obj && typeof obj === "object") {
+      for (const [k, v] of Object.entries(obj as any)) {
+        if (typeof k === "string" && typeof v === "string" && isUrl(v)) {
+          out[k.toUpperCase()] = v;
+        }
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function isUrl(s: string): boolean {
+  try {
+    new URL(s);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function safeHost(url: string | null | undefined) {
   try {
@@ -133,32 +174,4 @@ function blockedHtml(opts: {
     <a class="button" href="/">Back to home</a>
   </p>
 </div>`;
-}
-
-// Normalize destinationsJson from DB into a string map
-function safeDestinations(link: any): Record<string, string> {
-  try {
-    const raw = link?.destinationsJson;
-    if (!raw) return {};
-    // If Prisma returns a plain object, keep it. If it’s a string, parse it.
-    const obj = typeof raw === "string" ? JSON.parse(raw) : raw;
-    const out: Record<string, string> = {};
-    for (const [k, v] of Object.entries(obj || {})) {
-      if (typeof k === "string" && typeof v === "string" && isUrl(v)) {
-        out[k.toUpperCase()] = v;
-      }
-    }
-    return out;
-  } catch {
-    return {};
-  }
-}
-
-function isUrl(s: string): boolean {
-  try {
-    new URL(s);
-    return true;
-  } catch {
-    return false;
-  }
 }
