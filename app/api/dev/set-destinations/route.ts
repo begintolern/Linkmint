@@ -18,7 +18,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Missing destinations map" }, { status: 400 });
     }
 
-    // Find link by short code
     const link = await prisma.smartLink.findFirst({
       where: { shortUrl: code },
       select: { id: true, shortUrl: true },
@@ -39,10 +38,10 @@ export async function POST(req: Request) {
 
     const jsonText = JSON.stringify(norm);
 
-    // Ensure column exists (jsonb) then write it — schema-agnostic / idempotent
+    // Ensure column exists (jsonb) then write it — with proper cast
     await prisma.$executeRawUnsafe('ALTER TABLE "SmartLink" ADD COLUMN IF NOT EXISTS "destinationsJson" JSONB;');
     await prisma.$executeRawUnsafe(
-      'UPDATE "SmartLink" SET "destinationsJson" = $1 WHERE id = $2;',
+      'UPDATE "SmartLink" SET "destinationsJson" = CAST($1 AS JSONB) WHERE id = $2;',
       jsonText,
       link.id
     );
