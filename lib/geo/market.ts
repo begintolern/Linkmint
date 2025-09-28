@@ -1,9 +1,9 @@
 // lib/geo/market.ts
 export type GeoDecision = {
   allowed: boolean;
-  reason?: string | null;
-  market: string | null;      // resolved market we used
-  ipCountry: string | null;   // from headers, if present
+  reason?: string | null;  // market_not_allowed | ip_not_allowed | blocked_country | not_in_allow_list
+  market: string | null;   // sharer account market used
+  ipCountry: string | null;
 };
 
 const LOCK_MARKET = (process.env.LOCK_MARKET || "").toLowerCase() === "true";
@@ -14,18 +14,18 @@ export function evaluateGeoAccess(
   rule: { allowedCountries?: string[] | null; blockedCountries?: string[] | null }
 ): GeoDecision {
   const headers = (req as any).headers ?? new Headers();
-  // Vercel / Cloudflare country headers
-  const ipCountry =
+
+  // Country from edge headers (viewer)
+  const ipCountryRaw =
     headers.get("x-vercel-ip-country") ||
     headers.get("cf-ipcountry") ||
     headers.get("x-country") ||
     null;
 
-  // Resolve market:
-  // - if LOCK_MARKET: use user.countryCode only
-  // - else: fall back to cookie override, then user.countryCode, then ipCountry
-  let market: string | null = null;
+  const ipCountry = ipCountryRaw ? ipCountryRaw.toUpperCase() : null;
 
+  // Resolve sharer market
+  let market: string | null = null;
   if (LOCK_MARKET) {
     market = (user?.countryCode || null)?.toUpperCase() || null;
   } else {
@@ -35,21 +35,38 @@ export function evaluateGeoAccess(
       (cookieMarket || user?.countryCode || ipCountry || null)?.toUpperCase() || null;
   }
 
-  const allow = (rule?.allowedCountries && rule.allowedCountries.length > 0)
-    ? rule.allowedCountries.map((c) => c.toUpperCase()).includes(market || "")
-    : true; // if no allowlist, treat as open
+  const allowList = (rule?.allowedCountries ?? []).map((c) => c.toUpperCase());
+  const blockList = (rule?.blockedCountries ?? []).map((c) => c.toUpperCase());
 
-  const block = (rule?.blockedCountries && rule.blockedCountries.length > 0)
-    ? rule.blockedCountries.map((c) => c.toUpperCase()).includes(market || "")
-    : false;
+  // If no allowList configured, treat as open
+  const hasAllow = allowList.length > 0;
 
-  const allowed = allow && !block;
+  const marketAllowed = hasAllow ? !!(market && allowList.includes(market)) : true;
+  const ipAllowed     = hasAllow ? !!(ipCountry && allowList.includes(ipCountry)) : true;
+
+  const marketBlocked = !!(market && blockList.includes(market));
+  const ipBlocked     = !!(ipCountry && blockList.includes(ipCountry));
+
+  let allowed = marketAllowed && ipAllowed && !marketBlocked && !ipBlocked;
+
+  let reason: string | null = null;
+  if (!allowed) {
+    if (marketBlocked || ipBlocked) {
+      reason = "blocked_country";
+    } else if (!marketAllowed) {
+      reason = hasAllow ? "market_not_allowed" : "not_in_allow_list";
+    } else if (!ipAllowed) {
+      reason = hasAllow ? "ip_not_allowed" : "not_in_allow_list";
+    } else {
+      reason = "not_in_allow_list";
+    }
+  }
 
   return {
     allowed,
-    reason: allowed ? null : (!allow ? "not_in_allow_list" : "blocked_country"),
+    reason,
     market,
-    ipCountry: (ipCountry || null)?.toUpperCase() || null,
+    ipCountry,
   };
 }
 
