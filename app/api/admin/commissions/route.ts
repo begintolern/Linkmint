@@ -60,11 +60,11 @@ export async function GET(req: Request) {
     }
 
     // fetch page (+1 to probe next page)
-    const page: CommissionRow[] = await prisma.commission.findMany({
+    const page = await prisma.commission.findMany({
       where,
       take: limit + 1,
       skip: cursor ? 1 : 0,
-      ...(cursor && { cursor: { id: cursor } }),
+      ...(cursor && { cursor: { id: String(cursor) } }),
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, email: true, name: true } },
@@ -73,13 +73,13 @@ export async function GET(req: Request) {
 
     // optional free-text post-filter on the fetched slice
     const filtered: CommissionRow[] = q
-      ? page.filter((it: CommissionRow) => {
+      ? page.filter((it: any) => {
           const haystack = [
             it.user?.email ?? "",
             it.user?.name ?? "",
             it.source ?? "",
             it.description ?? "",
-            it.id,
+            String(it.id),
             it.type,
             it.status,
           ]
@@ -87,41 +87,51 @@ export async function GET(req: Request) {
             .toLowerCase();
           return haystack.includes(q.toLowerCase());
         })
-      : page;
+      : (page as any);
 
     const hasNext = filtered.length > limit;
-    const data: CommissionRow[] = hasNext ? filtered.slice(0, -1) : filtered;
-    const nextCursor = hasNext ? filtered[filtered.length - 1].id : null;
+    const data = hasNext ? filtered.slice(0, -1) : filtered;
+    const nextCursor = hasNext ? String(filtered[filtered.length - 1].id) : null;
 
     // add share breakdowns (adjust if you have custom rules)
-    const mapped = data.map((it: CommissionRow) => {
+    const mapped: any[] = data.map((it: any) => {
       const amountNum = Number(it.amount);
       const userShare = round2(amountNum * 0.7);
       const referrerShare = round2(amountNum * 0.05);
       const platformShare = round2(amountNum - userShare - referrerShare);
+
+      const userBrief: UserBrief | null = it.user
+        ? {
+            id: String(it.user.id),
+            email: it.user.email ?? null,
+            name: it.user.name ?? null,
+          }
+        : null;
+
       return {
-        id: it.id,
-        userId: it.userId,
+        id: String(it.id),
+        userId: String(it.userId),
         amount: amountNum,
-        status: it.status,
-        paidOut: it.paidOut,
-        type: it.type,
-        source: it.source,
-        description: it.description,
-        createdAt: it.createdAt,
-        user: {
-          id: it.user?.id ?? null,
-          email: it.user?.email ?? null,
-          name: it.user?.name ?? null,
-        },
+        status: String(it.status),
+        paidOut: Boolean(it.paidOut),
+        type: String(it.type),
+        source: it.source ?? null,
+        description: it.description ?? null,
+        createdAt: it.createdAt as Date,
+        user: userBrief,
         userShare,
         referrerShare,
         platformShare,
-        hasReferrer: Boolean(it.userId), // tweak if you track referrer separately
+        // If you track referrer separately, update this field accordingly
+        hasReferrer: userBrief !== null,
+      } satisfies CommissionRow & {
+        userShare: number;
+        referrerShare: number;
+        platformShare: number;
+        hasReferrer: boolean;
       };
     });
 
-    // return both shapes for compatibility with existing code
     return NextResponse.json({
       success: true,
       items: mapped,

@@ -5,10 +5,12 @@ export const fetchCache = "force-no-store";
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getOpsHealth } from "@/lib/ops/health";
 
-const TOKEN  = process.env.TELEGRAM_BOT_TOKEN!;
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID!;
-const SECRET  = process.env.HEALTH_ALERT_SECRET!;
+const TOKEN  = process.env.TELEGRAM_BOT_TOKEN || "";
+// support either TELEGRAM_CHAT_ID (your existing) or TELEGRAM_ADMIN_CHAT_ID (new pack)
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID || "";
+const SECRET  = process.env.HEALTH_ALERT_SECRET || "";
 const LATENCY = Number(process.env.HEALTH_LATENCY_THRESHOLD_MS ?? 600);
 
 async function sendTelegram(text: string) {
@@ -51,6 +53,9 @@ export async function GET(req: NextRequest) {
   const slow = Number.isFinite(dbLatency!) && (dbLatency as number) > LATENCY;
   const took = Date.now() - started;
 
+  // NEW: consolidated ops snapshot (recent errors, payout queue, auto-payout flag, etc.)
+  const opsHealth = await getOpsHealth();
+
   if (unhealthy || slow) {
     const msg =
       `*Linkmint Health Alert*\n` +
@@ -60,7 +65,8 @@ export async function GET(req: NextRequest) {
       `Commit: ${process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || "n/a"}\n` +
       `Env: ${process.env.NODE_ENV || "n/a"}\n` +
       `RSS: ${rssMB ?? "n/a"}MB, Heap: ${heapMB ?? "n/a"}MB\n` +
-      (dbErr ? `DB error: ${dbErr}` : "");
+      (dbErr ? `DB error: ${dbErr}\n` : "") +
+      `Ops: recentErrors=${opsHealth.recentErrors}, payoutQueue=${opsHealth.payoutQueue}, autoPayout=${opsHealth.autoPayoutEnabled}`;
     await sendTelegram(msg);
   }
 
@@ -85,5 +91,7 @@ export async function GET(req: NextRequest) {
         env: process.env.NODE_ENV || null,
       },
     },
+    // NEW: attach consolidated ops snapshot
+    opsHealth,
   }, { status: dbOk ? 200 : 503 });
 }
