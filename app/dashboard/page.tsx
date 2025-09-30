@@ -11,6 +11,8 @@ export default async function DashboardPage() {
   const store = cookies();
   const email = store.get("email")?.value ?? "";
   const name = email ? email.split("@")[0] : "there";
+  const roleCookie = store.get("role")?.value ?? "user";
+  const role = roleCookie.toLowerCase();
 
   return (
     <>
@@ -43,10 +45,12 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* System Health */}
-      <section className="mb-8">
-        <HealthStatusCard />
-      </section>
+      {/* System Health — ADMIN ONLY */}
+      {role === "admin" && (
+        <section className="mb-8">
+          <HealthStatusCard />
+        </section>
+      )}
     </>
   );
 }
