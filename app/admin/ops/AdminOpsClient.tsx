@@ -40,6 +40,20 @@ export default function AdminOpsClient() {
     }
   }
 
+  async function sendHeartbeatNow() {
+    setLoading(true);
+    setMsg(null);
+    try {
+      const r = await fetch("/api/admin/ops/heartbeat", { method: "POST" });
+      const j = await r.json();
+      setMsg(JSON.stringify(j));
+    } catch {
+      setMsg("Heartbeat failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
       <h1 className="text-2xl font-semibold">Admin Ops Console</h1>
@@ -89,6 +103,13 @@ export default function AdminOpsClient() {
               onClick={() => act("TRIM_EVENTLOG")}
             >
               Trim EventLog
+            </button>
+            <button
+              className="px-3 py-2 rounded-2xl border"
+              disabled={loading}
+              onClick={sendHeartbeatNow}
+            >
+              Send Heartbeat Now
             </button>
           </div>
           {msg && <div className="text-sm text-gray-600">{msg}</div>}
