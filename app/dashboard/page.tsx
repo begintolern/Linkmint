@@ -25,6 +25,8 @@ export default async function DashboardPage() {
         <Tile title="Referrals" desc="Invite and track bonuses" href="/dashboard/referrals" />
         <Tile title="Earnings" desc="Commissions and status" href="/dashboard/earnings" />
         <Tile title="Payouts" desc="History and accounts" href="/dashboard/payouts" />
+        {/* NEW: AI policy checker */}
+        <Tile title="Policy Pre-Check (AI)" desc="Scan captions for risky terms" href="/tools/policy-check" />
       </div>
 
       {/* Summary */}
