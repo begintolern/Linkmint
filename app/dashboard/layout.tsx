@@ -47,6 +47,14 @@ export default function DashboardLayout({
     setOpen(false);
   }, [pathname]);
 
+  /**
+   * Global site header (from app/layout.tsx) sits at the top.
+   * Its height ~56px (py-3). We place our mobile bar *below* it: top-14 (56px).
+   * Then we add extra padding to main content on mobile so nothing is hidden.
+   */
+  const GLOBAL_HEADER_H = "top-14"; // 56px
+  const MOBILE_MAIN_PT = "pt-32";   // ~128px (header 56 + bar 56 + spacing)
+
   return (
     <div className="min-h-screen flex">
       {/* Desktop sidebar (≥ md) */}
@@ -71,8 +79,8 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Mobile top bar (＜ md) */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-40 border-b bg-white">
+      {/* Mobile top bar (＜ md) — placed BELOW global header */}
+      <div className={`md:hidden fixed inset-x-0 z-40 border-b bg-white ${GLOBAL_HEADER_H}`}>
         <div className="flex items-center justify-between px-4 h-14">
           <button
             aria-label="Open menu"
@@ -84,15 +92,15 @@ export default function DashboardLayout({
           <Link href="/" className="font-semibold text-teal-700">
             linkmint.co
           </Link>
-          <div className="w-[54px]" /> {/* spacer to balance Menu button width */}
+          <div className="w-[54px]" />
         </div>
       </div>
 
-      {/* Mobile drawer + overlay */}
+      {/* Mobile drawer + overlay — also start BELOW global header */}
       <div
-        className={`md:hidden fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}
+        className={`md:hidden fixed inset-x-0 bottom-0 z-50 ${GLOBAL_HEADER_H} ${open ? "" : "pointer-events-none"}`}
       >
-        {/* Dim background */}
+        {/* Dim background (only below global header) */}
         <div
           className={`absolute inset-0 bg-black/30 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
           onClick={() => setOpen(false)}
@@ -100,7 +108,7 @@ export default function DashboardLayout({
         />
         {/* Drawer */}
         <aside
-          className={`absolute left-0 top-0 h-full w-64 bg-teal-900 text-teal-100 border-r border-teal-800 transform transition-transform ${
+          className={`absolute left-0 top-0 bottom-0 w-64 bg-teal-900 text-teal-100 border-r border-teal-800 transform transition-transform ${
             open ? "translate-x-0" : "-translate-x-full"
           }`}
           role="dialog"
@@ -137,8 +145,8 @@ export default function DashboardLayout({
         </aside>
       </div>
 
-      {/* Main content (adds top padding on mobile to clear the fixed bar) */}
-      <main className="flex-1 px-4 md:px-6 py-6 pt-20 md:pt-6">{children}</main>
+      {/* Main content: extra top padding on mobile to clear BOTH bars */}
+      <main className={`flex-1 px-4 md:px-6 py-6 md:pt-6 ${MOBILE_MAIN_PT}`}>{children}</main>
     </div>
   );
 }
