@@ -26,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-white text-gray-900">
-        {/* 🔹 Market switcher banner (cookie override for PH/US) */}
+        {/* Market switcher banner (cookie override for PH/US) */}
         <MarketSwitcher />
 
         <Header isLoggedIn={!!email} isAdmin={role === "admin"} />
@@ -87,17 +87,24 @@ function Header({
 
 function Footer() {
   return (
-    <footer className="border-t bg-white">
+    <footer className="mt-16 border-t bg-white">
       <div className="mx-auto max-w-6xl px-4 py-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600">
         <p className="leading-tight">
           © {new Date().getFullYear()} linkmint.co · All rights reserved.
         </p>
         <div className="flex items-center gap-4">
-          <Link href="/tos" className="hover:underline">
-            Terms of Service
-          </Link>
-          {/* <Link href="/privacy" className="hover:underline">Privacy Policy</Link> */}
-          <span className="text-gray-400">·</span>
+          <nav className="flex items-center gap-4">
+            <Link href="/terms" className="hover:underline">
+              Terms of Service
+            </Link>
+            <Link href="/privacy" className="hover:underline">
+              Privacy Policy
+            </Link>
+            <Link href="/disclosure" className="hover:underline">
+              Affiliate Disclosure
+            </Link>
+          </nav>
+          <span className="hidden sm:inline text-gray-400">·</span>
           <span className="leading-tight">
             Payouts are released only after merchants pay Linkmint. Voided
             commissions are not payable. Expect up to 90 days.
