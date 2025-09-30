@@ -45,6 +45,7 @@ export default function TermsPage() {
             <li><a className="hover:underline" href="#eligibility">Eligibility</a></li>
             <li><a className="hover:underline" href="#nature">Nature of Service</a></li>
             <li><a className="hover:underline" href="#payouts">Commission & Payout Rules</a></li>
+            <li><a className="hover:underline" href="#taxes">Taxes</a></li>
             <li><a className="hover:underline" href="#responsibilities">User Responsibilities</a></li>
             <li><a className="hover:underline" href="#trustscore">TrustScore & Referral Rules</a></li>
             <li><a className="hover:underline" href="#relationship">Independent Affiliate Relationship</a></li>
@@ -111,8 +112,31 @@ export default function TermsPage() {
           </ol>
         </section>
 
+        {/* NEW TAXES SECTION */}
+        <section id="taxes" className="prose prose-gray max-w-none mt-8">
+          <h2>4. Taxes</h2>
+          <p>
+            You are solely responsible for reporting and paying all taxes, duties, and government
+            charges arising from amounts you earn on Linkmint (including commissions, bonuses, and
+            incentives). You act as an independent contractor, not an employee, agent, or partner of
+            Linkmint.
+          </p>
+          <p>
+            We may request and store tax forms (e.g., <strong>W-9</strong> for U.S. persons,
+            <strong> W-8</strong> for non-U.S. persons), issue required informational returns (e.g.,
+            <strong> Form 1099-NEC</strong>), and withhold or delay payouts if required by law or
+            until valid tax information is provided. Linkmint does not provide tax, legal, or
+            accounting advice. Please consult your professional advisor.
+          </p>
+          <p>
+            Non-U.S. users are responsible for local income taxes and any VAT/GST obligations related
+            to their activity. Unless expressly stated, Linkmint does not collect or remit seller
+            VAT/GST on your behalf.
+          </p>
+        </section>
+
         <section id="responsibilities" className="prose prose-gray max-w-none mt-8">
-          <h2>4. User Responsibilities</h2>
+          <h2>5. User Responsibilities</h2>
           <p>You agree to comply with:</p>
           <ul>
             <li>Affiliate network terms of service;</li>
@@ -128,7 +152,7 @@ export default function TermsPage() {
         </section>
 
         <section id="trustscore" className="prose prose-gray max-w-none mt-8">
-          <h2>5. TrustScore &amp; Referral Rules</h2>
+          <h2>6. TrustScore &amp; Referral Rules</h2>
           <p>
             Linkmint assigns each User a <strong>TrustScore</strong> which may affect payout
             eligibility, referral bonuses, and commission share tiers. Linkmint may adjust
@@ -138,7 +162,7 @@ export default function TermsPage() {
         </section>
 
         <section id="relationship" className="prose prose-gray max-w-none mt-8">
-          <h2>6. Independent Affiliate Relationship</h2>
+          <h2>7. Independent Affiliate Relationship</h2>
           <p>
             Nothing in these Terms creates an employer-employee, joint venture, agency, or
             partnership relationship. You act solely as an <strong>independent affiliate</strong>,
@@ -147,7 +171,7 @@ export default function TermsPage() {
         </section>
 
         <section id="fraud" className="prose prose-gray max-w-none mt-8">
-          <h2>7. Fraud &amp; Abuse</h2>
+          <h2>8. Fraud &amp; Abuse</h2>
           <p>
             Linkmint may suspend or terminate accounts at its sole discretion if fraud, abuse, or
             suspicious activity is detected. Fraudulent or abusive Users forfeit all pending and
@@ -157,7 +181,7 @@ export default function TermsPage() {
         </section>
 
         <section id="termination" className="prose prose-gray max-w-none mt-8">
-          <h2>8. Termination</h2>
+          <h2>9. Termination</h2>
           <ul>
             <li>
               Linkmint may suspend, limit, or terminate your account at any time, including for
@@ -171,7 +195,7 @@ export default function TermsPage() {
         </section>
 
         <section id="liability" className="prose prose-gray max-w-none mt-8">
-          <h2>9. Limitation of Liability</h2>
+          <h2>10. Limitation of Liability</h2>
           <p>
             To the fullest extent permitted by law, Linkmint is not responsible for indirect,
             incidental, or consequential damages, including lost profits. Linkmint’s maximum
@@ -181,7 +205,7 @@ export default function TermsPage() {
         </section>
 
         <section id="indemnification" className="prose prose-gray max-w-none mt-8">
-          <h2>10. Indemnification</h2>
+          <h2>11. Indemnification</h2>
           <p>
             You agree to indemnify, defend, and hold harmless Linkmint and its affiliates,
             officers, directors, and employees from any claims, damages, liabilities, and expenses
@@ -191,7 +215,7 @@ export default function TermsPage() {
         </section>
 
         <section id="changes" className="prose prose-gray max-w-none mt-8">
-          <h2>11. Changes to Terms</h2>
+          <h2>12. Changes to Terms</h2>
           <p>
             Linkmint may update these Terms at any time. Continued use after changes constitutes
             acceptance. Material changes will be notified via the dashboard or email.
@@ -199,7 +223,7 @@ export default function TermsPage() {
         </section>
 
         <section id="law" className="prose prose-gray max-w-none mt-8">
-          <h2>12. Governing Law &amp; Dispute Resolution</h2>
+          <h2>13. Governing Law &amp; Dispute Resolution</h2>
           <p>
             These Terms are governed by the laws of the <strong>State of California, USA</strong>.
             Any disputes will be resolved in the state or federal courts located in California.
@@ -208,7 +232,7 @@ export default function TermsPage() {
         </section>
 
         <section id="entire" className="prose prose-gray max-w-none mt-8">
-          <h2>13. Entire Agreement</h2>
+          <h2>14. Entire Agreement</h2>
           <p>
             These Terms, together with our{" "}
             <Link href="/privacy" className="text-blue-600 hover:underline">

@@ -50,6 +50,7 @@ export default async function SettingsPage() {
       {/* Payout method */}
       <section>
         <h2 className="text-lg font-semibold mb-2">Payout method</h2>
+        <p className="text-xs text-gray-600 mb-3">Tax notice: You’re responsible for taxes on your earnings. We may    collect a W-9/W-8, issue required forms (e.g., 1099-NEC), and withhold or delay payouts if required by law.</p>
         <PayoutMethodCard />
       </section>
 

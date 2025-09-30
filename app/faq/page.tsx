@@ -1,96 +1,185 @@
 // app/faq/page.tsx
-"use client";
+import React from "react";
+import Link from "next/link";
 
-import { useEffect, useRef } from "react";
+export const metadata = {
+  title: "FAQ | linkmint.co",
+  description:
+    "Frequently asked questions about Linkmint — payouts, commissions, tracking, and account basics.",
+};
 
-function Section({
-  id,
-  title,
-  children,
-  defaultOpen = false,
-}: {
-  id?: string;
+type SectionProps = {
+  id: string;
   title: string;
   children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const ref = useRef<HTMLDetailsElement | null>(null);
-
-  // Set initial open state (uncontrolled) on mount
-  useEffect(() => {
-    if (ref.current && defaultOpen) {
-      ref.current.open = true;
-    }
-  }, [defaultOpen]);
-
-  // If navigated with #hash, auto-open and scroll into view
-  useEffect(() => {
-    if (!id || !ref.current) return;
-    const hash = typeof window !== "undefined" ? window.location.hash.slice(1) : "";
-    if (hash === id) {
-      ref.current.open = true;
-      setTimeout(() => {
-        ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
-    }
-  }, [id]);
-
+};
+function Section({ id, title, children }: SectionProps) {
   return (
-    <details ref={ref} id={id} className="rounded-xl border bg-white p-4 shadow-sm transition">
-      <summary className="cursor-pointer list-none select-none">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <span className="ml-4 text-gray-500">▼</span>
-        </div>
-      </summary>
-      <div className="mt-3 text-gray-700">{children}</div>
-    </details>
+    <section id={id} className="prose prose-gray max-w-none mt-8">
+      <h2>{title}</h2>
+      {children}
+    </section>
   );
 }
 
 export default function FAQPage() {
   return (
-    <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">FAQ</h1>
-      <p className="text-gray-600">Quick answers about Linkmint’s referrals, commissions, payouts, and compliance.</p>
+    <main className="min-h-screen px-4 py-10 md:py-16">
+      <div className="mx-auto w-full max-w-3xl">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">Frequently Asked Questions</h1>
+          <p className="mt-3 text-sm text-gray-600">
+            Quick answers about commissions, payouts, tracking, and your account. If you don’t see
+            your question, message us at{" "}
+            <a className="text-blue-600 hover:underline" href="mailto:admin@linkmint.co">
+              admin@linkmint.co
+            </a>
+            .
+          </p>
+        </header>
 
-      <div className="grid gap-4">
-        <Section title="General" defaultOpen>
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Linkmint helps creators and partners track commissions, referrals, and payouts in one place.</li>
-            <li>Accounts must be verified before participating in referral programs or receiving payouts.</li>
-          </ul>
-        </Section>
-
-        <Section title="Referral Policy">
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Inviting 3 verified accounts within 90 days activates referral bonuses.</li>
-            <li>Batches expire after 90 days if not fully verified.</li>
-            <li>Referral overrides provide 5% of invitee commissions during the active window.</li>
-          </ul>
-        </Section>
-
-        {/* Anchor matches /faq#payout-policy */}
-        <Section id="payout-policy" title="Payout Policy">
-          <ul className="list-disc pl-5 space-y-1">
+        <nav
+          aria-label="Table of contents"
+          className="mb-8 rounded-xl border bg-white p-4 shadow-sm"
+        >
+          <h2 className="mb-2 text-sm font-semibold text-gray-800">Table of Contents</h2>
+          <ol className="list-decimal pl-5 text-sm text-gray-700 space-y-1">
             <li>
-              Payouts progress through stages: <strong>Pending → Approved → Paid</strong>.
+              <a className="hover:underline" href="#payout-policy">
+                Payout Policy
+              </a>
             </li>
-            <li>A clearance period allows attribution and fraud checks before approval.</li>
-            <li>Payouts can be processed automatically (admin toggle) or via manual approval.</li>
-            <li>PayPal and ACH supported; standard processor fees may apply.</li>
-            <li>All payout events are logged for audit and reconciliation.</li>
+            <li>
+              <a className="hover:underline" href="#tracking">
+                Tracking & Approvals
+              </a>
+            </li>
+            <li>
+              <a className="hover:underline" href="#account">
+                Account & Security
+              </a>
+            </li>
+            <li>
+              <a className="hover:underline" href="#legal">
+                Legal & Compliance
+              </a>
+            </li>
+          </ol>
+        </nav>
+
+        {/* Known section from your repo; we’re preserving key lines you already had */}
+        <Section id="payout-policy" title="Payout Policy">
+          <p>
+            Payouts progress through stages: <strong>Pending → Approved → Paid</strong>.
+          </p>
+          <ul>
+            <li>
+              Payouts can be processed automatically (<em>admin toggle</em>) or via manual approval.
+            </li>
+            <li>Payouts are via PayPal only. PayPal transaction fees are deducted.</li>
+            <li>
+              New users may have a minimum waiting period before first payout; approvals depend on
+              affiliate network confirmations and funds received by Linkmint.
+            </li>
+          </ul>
+
+          {/* NEW concise tax entry */}
+          <div className="mt-4">
+            <h3 className="font-medium">Who handles taxes on my commission?</h3>
+            <p className="text-sm text-gray-700 mt-1">
+              You do. Linkmint may collect a W-9/W-8 and issue required forms (e.g., 1099-NEC). We
+              may withhold or delay payouts if required by law or until valid tax info is on file.
+            </p>
+          </div>
+
+          <div className="mt-4">
+            <h3 className="font-medium">When do payouts happen?</h3>
+            <p className="text-sm text-gray-700 mt-1">
+              After a merchant/affiliate network approves the commission and funds are received by
+              Linkmint. We don’t pay out pending or reversed commissions.
+            </p>
+          </div>
+
+          <div className="mt-4">
+            <h3 className="font-medium">Minimum payout?</h3>
+            <p className="text-sm text-gray-700 mt-1">
+              Minimum thresholds may apply and are shown on your{" "}
+              <Link href="/dashboard/payouts" className="text-blue-600 hover:underline">
+                Payouts
+              </Link>{" "}
+              page.
+            </p>
+          </div>
+        </Section>
+
+        <Section id="tracking" title="Tracking & Approvals">
+          <ul>
+            <li>
+              Conversions are tracked via affiliate network links/cookies. Some merchants have
+              stricter rules; see our{" "}
+              <Link href="/dashboard/merchants" className="text-blue-600 hover:underline">
+                Merchant Rules
+              </Link>{" "}
+              for details.
+            </li>
+            <li>
+              Approvals are controlled by merchants/networks. If a merchant reverses a transaction,
+              the commission is removed.
+            </li>
+            <li>
+              If you think something didn’t track, email{" "}
+              <a className="text-blue-600 hover:underline" href="mailto:admin@linkmint.co">
+                admin@linkmint.co
+              </a>{" "}
+              with your link and timestamp.
+            </li>
           </ul>
         </Section>
 
-        <Section title="Compliance">
-          <ul className="list-disc pl-5 space-y-1">
-            <li>Automated flags detect abnormal click/purchase patterns.</li>
-            <li>Admins can review events and reverse payouts in edge cases.</li>
-            <li>Fraudulent activity may result in batch cancellation and forfeiture of payouts.</li>
+        <Section id="account" title="Account & Security">
+          <ul>
+            <li>
+              Keep your account secure with a unique password. We may flag unusual activity to
+              protect your balance.
+            </li>
+            <li>
+              Don’t spam, mislead, or run prohibited promotions. Violations can result in suspension
+              and forfeiture of pending earnings.
+            </li>
+            <li>
+              If your PayPal address changes, update it in{" "}
+              <Link href="/settings" className="text-blue-600 hover:underline">
+                Settings
+              </Link>{" "}
+              before requesting payouts.
+            </li>
+          </ul>
+        </Section>
+
+        <Section id="legal" title="Legal & Compliance">
+          <ul>
+            <li>
+              See our{" "}
+              <Link href="/terms" className="text-blue-600 hover:underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-blue-600 hover:underline">
+                Privacy Policy
+              </Link>
+              .
+            </li>
+            <li>
+              Taxes: you are responsible for your local tax obligations. Linkmint may collect
+              W-9/W-8 and issue 1099-NEC where required.
+            </li>
+            <li>
+              Some merchant programs restrict self-purchases, coupon use, or paid traffic. Always
+              check rules before promoting.
+            </li>
           </ul>
         </Section>
       </div>
-    </div>
+    </main>
   );
 }
