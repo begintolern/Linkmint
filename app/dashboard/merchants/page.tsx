@@ -1,9 +1,11 @@
 // app/dashboard/merchants/page.tsx
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import React from "react";
 import { headers, cookies } from "next/headers";
+import { prisma } from "@/lib/db";
 
 type MerchantDTO = {
   id: string;
@@ -18,7 +20,7 @@ type MerchantDTO = {
   cookieWindowDays: number | null;
   payoutDelayDays: number | null;
   baseCommissionBps: number | null;
-  notes: string | null; // <-- we will parse mkt:US / mkt:PH here
+  notes: string | null; // parse mkt:US/PH here
 };
 
 type ListResponse = {
@@ -29,7 +31,7 @@ type ListResponse = {
 
 function fmtPercentFromBps(bps: number | null) {
   if (bps == null) return "—";
-  const pct = bps / 100; // 100 bps = 1%
+  const pct = bps / 100;
   return `${pct.toFixed(pct % 1 === 0 ? 0 : 2)}%`;
 }
 
@@ -55,38 +57,63 @@ function readMarketFromCookies(store: ReturnType<typeof cookies>) {
   return v === "PH" ? "PH" : "US";
 }
 
-/** Extract explicit market tag from notes, e.g.:
- *   notes: "mkt:US; geo:allow=US; ..."
- *   notes: "mkt:PH ..."
- * Returns "US" | "PH" | null if not tagged.
- */
+/** notes: "mkt:US" or "mkt:PH" */
 function parseMarketFromNotes(notes?: string | null): "US" | "PH" | null {
   if (!notes) return null;
   const m = notes.match(/mkt\s*:\s*(US|PH)\b/i);
-  if (!m) return null;
-  return m[1].toUpperCase() as "US" | "PH";
+  return m ? (m[1].toUpperCase() as "US" | "PH") : null;
 }
 
-// Strict user filter:
-// - must be active
-// - must have explicit mkt: tag that matches user's market
+// Strict user filter: active + mkt tag matches user market
 function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
   if (!m.active) return false;
   const tag = parseMarketFromNotes(m.notes ?? undefined);
-  if (!tag) return false;            // STRICT: hide if merchant not tagged with mkt:
+  if (!tag) return false;
   return tag === userMarket;
+}
+
+// ROBUST admin detection: DB OR cookie OR allow-list
+async function isAdmin(store: ReturnType<typeof cookies>): Promise<boolean> {
+  const cookieRole = (store.get("role")?.value ?? "").toLowerCase();
+  if (cookieRole === "admin") return true;
+
+  const email = store.get("email")?.value || "";
+  const uid =
+    store.get("uid")?.value ||
+    store.get("userId")?.value ||
+    "";
+
+  // Env allow-list fallback (comma-separated emails)
+  const allowList = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (email && allowList.includes(email.toLowerCase())) return true;
+
+  // DB check by id or email
+  try {
+    if (uid) {
+      const u = await prisma.user.findUnique({ where: { id: uid }, select: { role: true } });
+      if (u?.role && String(u.role).toLowerCase() === "admin") return true;
+    }
+    if (email) {
+      const u = await prisma.user.findUnique({ where: { email }, select: { role: true } });
+      if (u?.role && String(u.role).toLowerCase() === "admin") return true;
+    }
+  } catch {
+    // ignore, fall through
+  }
+
+  return false;
 }
 
 export default async function MerchantsPage() {
   const baseUrl = getBaseUrl();
-
-  // Read role/market from cookies
   const store = cookies();
-  const role = (store.get("role")?.value || "user").toLowerCase();
   const market = readMarketFromCookies(store);
+  const admin = await isAdmin(store); // <-- robust admin flag
 
   let data: ListResponse | null = null;
-
   try {
     const res = await fetch(`${baseUrl}/api/merchant-rules/list`, {
       cache: "no-store",
@@ -109,15 +136,14 @@ export default async function MerchantsPage() {
   }
 
   const all = data.merchants;
-  const merchants =
-    role === "admin" ? all : all.filter((m) => userCanSeeMerchantStrict(m, market));
+  const merchants = admin ? all : all.filter((m) => userCanSeeMerchantStrict(m, market));
 
   return (
     <div className="p-6">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold">Merchants</h1>
         <div className="text-sm text-gray-500">
-          {role === "admin"
+          {admin
             ? `Admin view · US + PH · Total: ${merchants.length.toLocaleString()}`
             : `Your market: ${market} · Strict region filter (mkt:${market}) · Total: ${merchants.length.toLocaleString()}`}
         </div>
@@ -143,17 +169,11 @@ export default async function MerchantsPage() {
           <tbody>
             {merchants.map((m) => {
               const tag = parseMarketFromNotes(m.notes ?? undefined) || "—";
-
               return (
                 <tr key={m.id} className="border-t">
                   <td className="px-4 py-3 font-medium">{m.merchantName}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs " +
-                        (m.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600")
-                      }
-                    >
+                    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-xs " + (m.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600")}>
                       {m.active ? "Active" : "Inactive"}
                     </span>
                   </td>
@@ -162,12 +182,8 @@ export default async function MerchantsPage() {
                   <td className="px-4 py-3">{tag}</td>
                   <td className="px-4 py-3">{joinOrDash(m.allowedSources)}</td>
                   <td className="px-4 py-3">{joinOrDash(m.disallowedSources)}</td>
-                  <td className="px-4 py-3">
-                    {m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}
-                  </td>
+                  <td className="px-4 py-3">{m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}</td>
+                  <td className="px-4 py-3">{m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}</td>
                   <td className="px-4 py-3">{fmtPercentFromBps(m.baseCommissionBps)}</td>
                   <td className="px-4 py-3 max-w-[24rem]">
                     <div className="truncate" title={m.notes ?? ""}>
@@ -189,10 +205,9 @@ export default async function MerchantsPage() {
         </table>
       </div>
 
-      {role !== "admin" && (
+      {!admin && (
         <p className="mt-3 text-xs text-gray-500">
-          Strict region filter is enabled for users. To list a merchant, add <code>mkt:US</code> or{" "}
-          <code>mkt:PH</code> in the merchant’s Notes.
+          Strict region filter is enabled for users. To list a merchant, add <code>mkt:US</code> or <code>mkt:PH</code> in the merchant’s Notes.
         </p>
       )}
     </div>
