@@ -90,7 +90,8 @@ model EventLog {
   message   String?
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
-
+  severity  Int      @default(1) // 1=info, 2=warn, 3=error, 4=critical
+  
   @@index([userId, createdAt])
 }
 
