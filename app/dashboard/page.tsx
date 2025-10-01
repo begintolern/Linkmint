@@ -27,6 +27,7 @@ export default async function DashboardPage() {
         <Tile title="Referrals" desc="Invite and track bonuses" href="/dashboard/referrals" />
         <Tile title="Earnings" desc="Commissions and status" href="/dashboard/earnings" />
         <Tile title="Payouts" desc="History and accounts" href="/dashboard/payouts" />
+        <Tile title="Opportunities" desc="AI-powered trending offers" href="/dashboard/opportunities" />
       </div>
 
       {/* Summary */}
