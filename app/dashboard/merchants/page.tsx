@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import React from "react";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 
 type MerchantDTO = {
   id: string;
@@ -58,8 +58,41 @@ function getBaseUrl() {
   return `${proto}://${host}`;
 }
 
+function readMarketFromCookies(store: ReturnType<typeof cookies>) {
+  const raw =
+    store.get("market")?.value ||
+    store.get("lm_market")?.value ||
+    store.get("mkt")?.value ||
+    "US";
+  const v = raw.toUpperCase();
+  return v === "PH" ? "PH" : "US";
+}
+
+function userCanSeeMerchant(m: MerchantDTO, market: "US" | "PH") {
+  // Must be active for regular users
+  if (!m.active) return false;
+
+  // Geo rules via notes
+  const geo = parseGeoFromNotes(m.notes ?? undefined);
+  if (geo.allow && geo.allow.length > 0 && !geo.allow.includes(market)) {
+    return false;
+  }
+  if (geo.block && geo.block.includes(market)) {
+    return false;
+  }
+
+  // Otherwise allowed
+  return true;
+}
+
 export default async function MerchantsPage() {
   const baseUrl = getBaseUrl();
+
+  // Read role/market from cookies
+  const store = cookies();
+  const role = (store.get("role")?.value || "user").toLowerCase();
+  const market = readMarketFromCookies(store);
+
   let data: ListResponse | null = null;
 
   try {
@@ -83,13 +116,20 @@ export default async function MerchantsPage() {
     );
   }
 
-  const merchants = data.merchants;
+  // Server-side filtering: admin sees all; users see only allowed + active for their market
+  const all = data.merchants;
+  const merchants =
+    role === "admin" ? all : all.filter((m) => userCanSeeMerchant(m, market));
 
   return (
     <div className="p-6">
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-2xl font-semibold">Merchants</h1>
-        <div className="text-sm text-gray-500">Total: {merchants.length.toLocaleString()}</div>
+        <div className="text-sm text-gray-500">
+          {role === "admin"
+            ? `Admin view · US + PH · Total: ${merchants.length.toLocaleString()}`
+            : `Your market: ${market} · Approved/active only · Total: ${merchants.length.toLocaleString()}`}
+        </div>
       </div>
 
       <div className="overflow-x-auto border rounded-xl">
