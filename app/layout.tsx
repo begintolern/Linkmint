@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import MarketSwitcher from "./components/MarketSwitcher";
+import { prisma } from "@/lib/db"; // ⬅️ NEW: read role from DB
 
 export const metadata: Metadata = {
   title: "linkmint.co",
@@ -12,21 +13,34 @@ export const metadata: Metadata = {
     "Share real deals. Get real payouts. Linkmint connects you with approved merchants who pay when your friends buy.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Read cookies server-side (set by your login route)
   const store = cookies();
-  const email = store.get("email")?.value || null; // presence means "logged in"
-  const roleCookie = store.get("role")?.value ?? "user";
-  const role = roleCookie.toLowerCase(); // normalize to avoid case mismatch
+  const email = store.get("email")?.value || null;
+
+  // Start with cookie, then override with DB truth
+  let role = (store.get("role")?.value ?? "user").toLowerCase();
+  if (email) {
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { email },
+        select: { role: true },
+      });
+      if (dbUser?.role) {
+        role = String(dbUser.role).toLowerCase();
+      }
+    } catch {
+      // best-effort; if DB fails, fall back to cookie role
+    }
+  }
 
   return (
     <html lang="en">
       <body className="bg-white text-gray-900">
-        {/* Market switcher banner (cookie override for PH/US) */}
+        {/* Market switcher banner */}
         <MarketSwitcher />
 
         <Header isLoggedIn={!!email} isAdmin={role === "admin"} />
@@ -87,24 +101,16 @@ function Header({
 
 function Footer() {
   return (
-    <footer className="mt-16 border-t bg-white">
+    <footer className="border-t bg-white">
       <div className="mx-auto max-w-6xl px-4 py-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600">
         <p className="leading-tight">
           © {new Date().getFullYear()} linkmint.co · All rights reserved.
         </p>
         <div className="flex items-center gap-4">
-          <nav className="flex items-center gap-4">
-            <Link href="/terms" className="hover:underline">
-              Terms of Service
-            </Link>
-            <Link href="/privacy" className="hover:underline">
-              Privacy Policy
-            </Link>
-            <Link href="/disclosure" className="hover:underline">
-              Affiliate Disclosure
-            </Link>
-          </nav>
-          <span className="hidden sm:inline text-gray-400">·</span>
+          <Link href="/tos" className="hover:underline">
+            Terms of Service
+          </Link>
+          <span className="text-gray-400">·</span>
           <span className="leading-tight">
             Payouts are released only after merchants pay Linkmint. Voided
             commissions are not payable. Expect up to 90 days.
