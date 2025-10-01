@@ -1,11 +1,15 @@
 // app/layout.tsx
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import "@/lib/ops/initWatchdog";
 import "./globals.css";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import MarketSwitcher from "./components/MarketSwitcher";
-import { prisma } from "@/lib/db"; // ⬅️ NEW: read role from DB
+import { prisma } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "linkmint.co",
@@ -19,22 +23,33 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const store = cookies();
-  const email = store.get("email")?.value || null;
 
-  // Start with cookie, then override with DB truth
+  // Session markers (best effort)
+  const email = store.get("email")?.value || null;
+  const uid =
+    store.get("uid")?.value ||
+    store.get("userId")?.value ||
+    null;
+
+  // Start with cookie role, then override with DB truth
   let role = (store.get("role")?.value ?? "user").toLowerCase();
-  if (email) {
-    try {
-      const dbUser = await prisma.user.findUnique({
+
+  try {
+    if (uid) {
+      const u = await prisma.user.findUnique({
+        where: { id: uid },
+        select: { role: true },
+      });
+      if (u?.role) role = String(u.role).toLowerCase();
+    } else if (email) {
+      const u = await prisma.user.findUnique({
         where: { email },
         select: { role: true },
       });
-      if (dbUser?.role) {
-        role = String(dbUser.role).toLowerCase();
-      }
-    } catch {
-      // best-effort; if DB fails, fall back to cookie role
+      if (u?.role) role = String(u.role).toLowerCase();
     }
+  } catch {
+    // If DB is unavailable, fall back to cookie role
   }
 
   return (
@@ -43,7 +58,7 @@ export default async function RootLayout({
         {/* Market switcher banner */}
         <MarketSwitcher />
 
-        <Header isLoggedIn={!!email} isAdmin={role === "admin"} />
+        <Header isLoggedIn={!!(email || uid)} isAdmin={role === "admin"} />
         <div className="min-h-[76vh]">{children}</div>
         <Footer />
       </body>
