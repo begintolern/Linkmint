@@ -18,7 +18,7 @@ type MerchantDTO = {
   cookieWindowDays: number | null;
   payoutDelayDays: number | null;
   baseCommissionBps: number | null;
-  notes: string | null;
+  notes: string | null; // <-- we will parse mkt:US / mkt:PH here
 };
 
 type ListResponse = {
@@ -38,19 +38,6 @@ function joinOrDash(arr: string[] | null) {
   return arr.join(", ");
 }
 
-// Parse geo rules from notes, e.g. `geo:allow=US,PH; geo:block=CN`
-function parseGeoFromNotes(notes?: string | null): { allow?: string[]; block?: string[] } {
-  if (!notes) return {};
-  const allowMatch = notes.match(/geo:allow=([A-Z,\s]+)/i);
-  const blockMatch = notes.match(/geo:block=([A-Z,\s]+)/i);
-  const toList = (s: string) =>
-    s.split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
-  return {
-    allow: allowMatch ? toList(allowMatch[1]) : undefined,
-    block: blockMatch ? toList(blockMatch[1]) : undefined,
-  };
-}
-
 function getBaseUrl() {
   const h = headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
@@ -68,21 +55,26 @@ function readMarketFromCookies(store: ReturnType<typeof cookies>) {
   return v === "PH" ? "PH" : "US";
 }
 
-function userCanSeeMerchant(m: MerchantDTO, market: "US" | "PH") {
-  // Must be active for regular users
+/** Extract explicit market tag from notes, e.g.:
+ *   notes: "mkt:US; geo:allow=US; ..."
+ *   notes: "mkt:PH ..."
+ * Returns "US" | "PH" | null if not tagged.
+ */
+function parseMarketFromNotes(notes?: string | null): "US" | "PH" | null {
+  if (!notes) return null;
+  const m = notes.match(/mkt\s*:\s*(US|PH)\b/i);
+  if (!m) return null;
+  return m[1].toUpperCase() as "US" | "PH";
+}
+
+// Strict user filter:
+// - must be active
+// - must have explicit mkt: tag that matches user's market
+function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
   if (!m.active) return false;
-
-  // Geo rules via notes
-  const geo = parseGeoFromNotes(m.notes ?? undefined);
-  if (geo.allow && geo.allow.length > 0 && !geo.allow.includes(market)) {
-    return false;
-  }
-  if (geo.block && geo.block.includes(market)) {
-    return false;
-  }
-
-  // Otherwise allowed
-  return true;
+  const tag = parseMarketFromNotes(m.notes ?? undefined);
+  if (!tag) return false;            // STRICT: hide if merchant not tagged with mkt:
+  return tag === userMarket;
 }
 
 export default async function MerchantsPage() {
@@ -116,10 +108,9 @@ export default async function MerchantsPage() {
     );
   }
 
-  // Server-side filtering: admin sees all; users see only allowed + active for their market
   const all = data.merchants;
   const merchants =
-    role === "admin" ? all : all.filter((m) => userCanSeeMerchant(m, market));
+    role === "admin" ? all : all.filter((m) => userCanSeeMerchantStrict(m, market));
 
   return (
     <div className="p-6">
@@ -128,7 +119,7 @@ export default async function MerchantsPage() {
         <div className="text-sm text-gray-500">
           {role === "admin"
             ? `Admin view · US + PH · Total: ${merchants.length.toLocaleString()}`
-            : `Your market: ${market} · Approved/active only · Total: ${merchants.length.toLocaleString()}`}
+            : `Your market: ${market} · Strict region filter (mkt:${market}) · Total: ${merchants.length.toLocaleString()}`}
         </div>
       </div>
 
@@ -140,7 +131,7 @@ export default async function MerchantsPage() {
               <th className="px-4 py-3">Active</th>
               <th className="px-4 py-3">Network</th>
               <th className="px-4 py-3">Domain</th>
-              <th className="px-4 py-3">Geo</th>
+              <th className="px-4 py-3">Market (from notes)</th>
               <th className="px-4 py-3">Allowed</th>
               <th className="px-4 py-3">Disallowed</th>
               <th className="px-4 py-3">Cookie</th>
@@ -151,17 +142,7 @@ export default async function MerchantsPage() {
           </thead>
           <tbody>
             {merchants.map((m) => {
-              const parsed = parseGeoFromNotes(m.notes ?? undefined);
-              const allowed = parsed.allow ?? [];
-              const blocked = parsed.block ?? [];
-              const geo =
-                allowed.length && blocked.length
-                  ? `Allow: ${allowed.join(", ")} | Block: ${blocked.join(", ")}`
-                  : allowed.length
-                  ? `Allow: ${allowed.join(", ")}`
-                  : blocked.length
-                  ? `Block: ${blocked.join(", ")}`
-                  : "—";
+              const tag = parseMarketFromNotes(m.notes ?? undefined) || "—";
 
               return (
                 <tr key={m.id} className="border-t">
@@ -178,11 +159,15 @@ export default async function MerchantsPage() {
                   </td>
                   <td className="px-4 py-3">{m.network ?? "—"}</td>
                   <td className="px-4 py-3">{m.domainPattern ?? "—"}</td>
-                  <td className="px-4 py-3">{geo}</td>
+                  <td className="px-4 py-3">{tag}</td>
                   <td className="px-4 py-3">{joinOrDash(m.allowedSources)}</td>
                   <td className="px-4 py-3">{joinOrDash(m.disallowedSources)}</td>
-                  <td className="px-4 py-3">{m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}</td>
-                  <td className="px-4 py-3">{m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}</td>
+                  <td className="px-4 py-3">
+                    {m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}
+                  </td>
                   <td className="px-4 py-3">{fmtPercentFromBps(m.baseCommissionBps)}</td>
                   <td className="px-4 py-3 max-w-[24rem]">
                     <div className="truncate" title={m.notes ?? ""}>
@@ -196,13 +181,20 @@ export default async function MerchantsPage() {
             {merchants.length === 0 && (
               <tr>
                 <td className="px-4 py-6 text-center text-gray-500" colSpan={11}>
-                  No merchants yet.
+                  No merchants for your region yet. (Ask admin to add <code>mkt:{market}</code> in Notes.)
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {role !== "admin" && (
+        <p className="mt-3 text-xs text-gray-500">
+          Strict region filter is enabled for users. To list a merchant, add <code>mkt:US</code> or{" "}
+          <code>mkt:PH</code> in the merchant’s Notes.
+        </p>
+      )}
     </div>
   );
 }
