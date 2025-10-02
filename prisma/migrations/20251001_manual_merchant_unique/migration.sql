@@ -1,0 +1,2 @@
+-- Manual migration applied directly in DB 
+-- ALTER TABLE public."MerchantRule" ADD CONSTRAINT merchant_market_unique UNIQUE ("merchantName","market"); 

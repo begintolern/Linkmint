@@ -3,9 +3,9 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import DashboardPageHeader from "@/components/DashboardPageHeader";
-import Link from "next/link";
 import { cookies } from "next/headers";
 import HealthStatusCard from "@/components/HealthStatusCard";
+import DashboardCard from "@/components/DashboardCard";
 
 export default async function DashboardPage() {
   const store = cookies();
@@ -15,22 +15,49 @@ export default async function DashboardPage() {
   const role = roleCookie.toLowerCase();
 
   return (
-    <>
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+      {/* Header */}
       <DashboardPageHeader
         title="Overview"
         subtitle={`Welcome back, ${name}`}
       />
 
-      {/* Tiles */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Tile title="Smart Links" desc="Create and manage links" href="/dashboard/links" />
-        <Tile title="Referrals" desc="Invite and track bonuses" href="/dashboard/referrals" />
-        <Tile title="Earnings" desc="Commissions and status" href="/dashboard/earnings" />
-        <Tile title="Payouts" desc="History and accounts" href="/dashboard/payouts" />
-        <Tile title="Opportunities" desc="AI-powered trending offers" href="/dashboard/opportunities" />
+      {/* Tools Grid */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <DashboardCard
+          href="/dashboard/links"
+          title="Smart Links"
+          subtitle="Create and manage links"
+        />
+        <DashboardCard
+          href="/dashboard/referrals"
+          title="Referrals"
+          subtitle="Invite and track bonuses"
+          badge="5% Bonus"
+        />
+        <DashboardCard
+          href="/dashboard/earnings"
+          title="Earnings"
+          subtitle="Commissions and status"
+        />
+        <DashboardCard
+          href="/dashboard/payouts"
+          title="Payouts"
+          subtitle="History and accounts"
+        />
+        <DashboardCard
+          href="/dashboard/opportunities"
+          title="Opportunities"
+          subtitle="AI-powered trending offers"
+        />
+        <DashboardCard
+          href="/dashboard/settings"
+          title="Settings"
+          subtitle="Manage your account"
+        />
       </div>
 
-      {/* Summary */}
+      {/* Earnings Summary */}
       <section className="mb-8 rounded-2xl border p-4 sm:p-5">
         <h2 className="text-base sm:text-lg font-medium mb-2">🪙 Earnings Summary</h2>
         <div className="flex items-center justify-between">
@@ -50,21 +77,6 @@ export default async function DashboardPage() {
           <HealthStatusCard />
         </section>
       )}
-    </>
-  );
-}
-
-function Tile({ title, desc, href }: { title: string; desc: string; href: string }) {
-  return (
-    <Link
-      href={href}
-      role="button"
-      aria-label={`${title} — ${desc}`}
-      className="rounded-2xl border p-4 sm:p-5 hover:bg-gray-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 min-h-[84px] flex flex-col justify-center"
-    >
-      <p className="text-[11px] sm:text-xs font-semibold text-gray-500 mb-1">TOOLS</p>
-      <h3 className="text-base sm:text-lg font-medium leading-tight">{title}</h3>
-      <p className="text-sm text-gray-600 mt-0.5">{desc}</p>
-    </Link>
+    </div>
   );
 }

@@ -34,6 +34,7 @@ model User {
   bonusEligibleUntil     DateTime?
   bonusTier              Int                  @default(0)
   countryCode            String               @default("PH") @db.VarChar(2)
+
   commissions            Commission[]
   eventLogs              EventLog[]
   commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
@@ -49,16 +50,25 @@ model User {
   referralGroup          ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
-  verificationTokens     VerificationToken[]
+
+  verificationTokens     VerificationToken[]  @relation("UserToVerificationTokens")
+
   totalReferrals         Int @default(0)
   permanentOverrideBps   Int @default(0) // 100 bps = 1%
-
 
   // Geo gating (ISO-3166-1 alpha-2 codes like "US","PH")
   allowedCountries String[] @default([])
   blockedCountries String[] @default([])
 
   @@index([deletedAt])
+}
+
+model VerificationToken {
+  id      String   @id @default(cuid())
+  token   String   @unique
+  expires DateTime
+  userId  String
+  user    User     @relation("UserToVerificationTokens", fields: [userId], references: [id])
 }
 
 model ReferralGroup {
@@ -91,7 +101,7 @@ model EventLog {
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
   severity  Int      @default(1) // 1=info, 2=warn, 3=error, 4=critical
-  
+
   @@index([userId, createdAt])
 }
 
@@ -206,45 +216,66 @@ model NetworkAccount {
 model MerchantRule {
   id               String         @id @default(cuid())
   active           Boolean        @default(true)
+
   merchantName     String
   network          String?
   domainPattern    String?
+
+  // Optional link params/templates
   paramKey         String?
   paramValue       String?
   linkTemplate     String?
+
+  // Windows
   cookieWindowDays Int?
   payoutDelayDays  Int?
+
+  // Commission (your existing enum + numeric fields)
   commissionType   CommissionCalc @default(PERCENT)
   commissionRate   Decimal?
   calc             String?
   rate             Float?
+
+  // Admin / notes
   notes            String?
   importMethod     ImportMethod   @default(MANUAL)
   apiBaseUrl       String?
   apiAuthType      String?
   apiKeyRef        String?
   lastImportedAt   DateTime?
+
+  // System timestamps
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
+
+  // Operational
   status           String         @default("PENDING")
-  allowedRegions   String[]
   inactiveReason   String?
-  market           String         @default("US")
-  disallowed       Json?
-  allowedSources   Json?
-  commissions      Commission[]
-  smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
+
+  // Region & gating
+  market           String         @default("US") // trusted region field
+  allowedRegions   String[]
   // Geo gating (ISO-3166-1 alpha-2 codes like "US","PH")
   allowedCountries String[]       @default([])
   blockedCountries String[]       @default([])
-}
 
-model VerificationToken {
-  token   String   @unique
-  expires DateTime
-  id      String   @id @default(cuid())
-  userId  String
-  user    User     @relation(fields: [userId], references: [id])
+  // Misc JSON config
+  disallowed       Json?
+  allowedSources   Json?
+
+  // Relations
+  commissions      Commission[]
+  smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
+
+  // ---------- Indexes / Constraints ----------
+  /// Prevent duplicates for same merchant within the same market (US/PH/GLOBAL, etc.)
+  @@unique([merchantName, market], name: "merchant_market_unique")
+
+  /// Fast lookups by domain
+  @@index([domainPattern], map: "merchant_domain_idx")
+
+  /// Fast filtering by market & activity in dashboards
+  @@index([market, active], map: "merchant_market_active_idx")
 }
 
 model PayoutLog {
