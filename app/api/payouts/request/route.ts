@@ -7,26 +7,35 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-type Provider = "PAYPAL"; // <-- Only PayPal
+type SessionLike = {
+  user?: {
+    id?: string | null;
+    email?: string | null;
+  };
+} | null;
 
 function isValidPaypalEmail(email?: string) {
   if (!email) return false;
-  // Basic sanity: PayPal requires a valid email; you likely have deeper checks elsewhere.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const session = (await getServerSession(authOptions)) as SessionLike;
+    const userId = session?.user?.id ?? null;
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const body = await req.json();
-    const provider: Provider = "PAYPAL"; // <-- Force PAYPAL no matter what
-    const destination: string | undefined = body?.destination ?? body?.receiverEmail;
+    const body = await req.json().catch(() => ({} as any));
 
-    // Validate PayPal destination
+    // Force PayPal-only
+    const destination: string | undefined =
+      body?.destination ?? body?.receiverEmail;
+
     if (!isValidPaypalEmail(destination)) {
       return NextResponse.json(
         { success: false, error: "A valid PayPal email is required." },
@@ -34,34 +43,42 @@ export async function POST(req: Request) {
       );
     }
 
-    // You may already compute gross/net; keep your existing logic
-    const grossUSD: number = Number(body?.grossUSD ?? 0);
-    if (!Number.isFinite(grossUSD) || grossUSD <= 0) {
-      return NextResponse.json({ success: false, error: "Invalid payout amount." }, { status: 400 });
+    const grossUSDNum = Number(body?.grossUSD ?? 0);
+    if (!Number.isFinite(grossUSDNum) || grossUSDNum <= 0) {
+      return NextResponse.json(
+        { success: false, error: "Invalid payout amount." },
+        { status: 400 }
+      );
     }
 
-    // Create payout record as usual
+    const amountCents = Math.round(grossUSDNum * 100);
+
+    // IMPORTANT: No enum imports — use string literals to match String fields
     const payout = await prisma.payout.create({
       data: {
-        userId: session.user.id,
-        provider: "PAYPAL",
-        statusEnum: "PENDING",
-        netCents: Math.round(grossUSD * 100),
-        receiverEmail: destination,
+        userId,
+        amount: amountCents,          // required by your schema
+        method: "PAYPAL",             // String in schema
+        status: "PENDING",            // String in schema
+        provider: "PAYPAL",           // keep if your model has this (String)
+        netCents: amountCents,        // keep if exists
+        receiverEmail: destination!,  // required email
       },
     });
 
-    // (If you have a job/queue, enqueue here)
     return NextResponse.json({
       success: true,
       requestId: payout.id,
       provider: "PAYPAL",
       destination,
-      grossUSD,
-      netUSD: grossUSD,
+      grossUSD: grossUSDNum,
+      netUSD: grossUSDNum,
       status: "PENDING",
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err?.message ?? "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: err?.message ?? "Server error" },
+      { status: 500 }
+    );
   }
 }
