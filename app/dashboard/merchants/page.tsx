@@ -1,3 +1,4 @@
+// app/dashboard/merchants/page.tsx
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -15,20 +16,13 @@ type MerchantDTO = {
   active: boolean;
   network: string | null;
   domainPattern: string | null;
-
   allowedSources: string[] | null;
   disallowedSources: string[] | null;
-
   cookieWindowDays: number | null;
   payoutDelayDays: number | null;
-
-  commissionType?: string | null;
-  commissionRate?: string | null;
   baseCommissionBps: number | null;
-
-  market?: string | null; // trusted source
+  market?: string | null;
   status?: string | null;
-
   notes: string | null;
 };
 
@@ -45,17 +39,7 @@ function fmtPercentFromBps(bps: number | null) {
 }
 
 function renderCommission(m: MerchantDTO) {
-  const type = (m.commissionType || "").toUpperCase();
-  const rate = m.commissionRate;
-
-  if (type && rate) {
-    if (type === "PERCENT") {
-      const pct = Number(rate) * 100;
-      if (Number.isFinite(pct)) return `${pct.toFixed(pct % 1 === 0 ? 0 : 1)}%`;
-      return `${rate} (percent)`;
-    }
-    return `${rate} ${type}`;
-  }
+  // Prefer baseCommissionBps if set; otherwise, show "—"
   return fmtPercentFromBps(m.baseCommissionBps);
 }
 
@@ -76,15 +60,14 @@ function readMarketFromCookies(store: ReturnType<typeof cookies>) {
     store.get("market")?.value ||
     store.get("lm_market")?.value ||
     store.get("mkt")?.value ||
-    "US";
+    "PH"; // default PH-first now
   const v = raw.toUpperCase();
   return v === "PH" ? "PH" : "US";
 }
 
 /** Defensive region resolver:
  *  1) Trust `market` if US/PH/GLOBAL
- *  2) Fallback: if domain ends with .ph/.com.ph -> PH
- *  3) Else GLOBAL
+ *  2) Fallback by domain: .ph/.com.ph -> PH; otherwise GLOBAL
  */
 function resolveRegion(m: MerchantDTO): "US" | "PH" | "GLOBAL" {
   const mk = (m.market || "").toUpperCase();
@@ -94,7 +77,7 @@ function resolveRegion(m: MerchantDTO): "US" | "PH" | "GLOBAL" {
   return "GLOBAL";
 }
 
-// Strict filter now uses resolved region (GLOBAL visible to all)
+// Strict filter for non-admin: only active + region matches (GLOBAL visible to all)
 function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
   if (!m.active) return false;
   const region = resolveRegion(m);
@@ -102,7 +85,7 @@ function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
   return region === userMarket;
 }
 
-// Admin detection (same as used in other pages)
+// Robust admin detection
 async function isAdmin(store: ReturnType<typeof cookies>): Promise<boolean> {
   const cookieRole = (store.get("role")?.value ?? "").toLowerCase();
   if (cookieRole === "admin") return true;
@@ -175,85 +158,96 @@ export default async function MerchantsPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto border rounded-xl">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr className="text-left">
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Active</th>
-              <th className="px-4 py-3">Network</th>
-              <th className="px-4 py-3">Domain</th>
-              <th className="px-4 py-3">Region</th>
-              <th className="px-4 py-3">Cookie</th>
-              <th className="px-4 py-3">Payout Delay</th>
-              <th className="px-4 py-3">Commission</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Allowed</th>
-              <th className="px-4 py-3">Disallowed</th>
-              <th className="px-4 py-3">Notes</th>
-              {admin && <th className="px-4 py-3 text-right">Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {merchants.map((m) => {
-              const region = resolveRegion(m);
-              return (
-                <tr key={m.id} className="border-t align-top">
-                  <td className="px-4 py-3 font-medium">{m.merchantName}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={
-                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs " +
-                        (m.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600")
-                      }
-                    >
-                      {m.active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{m.network ?? "—"}</td>
-                  <td className="px-4 py-3">{m.domainPattern ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <MarketBadge region={region} />
-                  </td>
-                  <td className="px-4 py-3">
-                    {m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}
-                  </td>
-                  <td className="px-4 py-3">{renderCommission(m)}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs">
-                      {m.status ?? "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">{joinOrDash(m.allowedSources)}</td>
-                  <td className="px-4 py-3">{joinOrDash(m.disallowedSources)}</td>
-                  <td className="px-4 py-3 max-w-[24rem]">
-                    <div className="truncate" title={m.notes ?? ""}>
-                      {m.notes ?? "—"}
-                    </div>
-                  </td>
+      <section className="rounded-xl border bg-white">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
+          <h2 className="text-sm sm:text-base font-medium">Catalog</h2>
+          {!admin && (
+            <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] text-gray-700">
+              Region: {market}
+            </span>
+          )}
+        </div>
 
-                  {admin && (
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <AdminDeleteMerchantButton id={m.id} name={m.merchantName} />
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-
-            {merchants.length === 0 && (
-              <tr>
-                <td className="px-4 py-6 text-center text-gray-500" colSpan={admin ? 13 : 12}>
-                  No merchants for your region yet.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="sticky top-0 bg-gray-50 text-left z-10">
+              <tr className="text-left">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Region</th>
+                <th className="px-4 py-3 hidden sm:table-cell">Network</th>
+                <th className="px-4 py-3 hidden md:table-cell">Domain</th>
+                <th className="px-4 py-3 hidden md:table-cell">Cookie</th>
+                <th className="px-4 py-3 hidden lg:table-cell">Payout Delay</th>
+                <th className="px-4 py-3">Commission</th>
+                <th className="px-4 py-3 hidden lg:table-cell">Status</th>
+                <th className="px-4 py-3 hidden xl:table-cell">Allowed</th>
+                <th className="px-4 py-3 hidden xl:table-cell">Disallowed</th>
+                <th className="px-4 py-3 hidden 2xl:table-cell">Notes</th>
+                {admin && <th className="px-4 py-3 text-right">Actions</th>}
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {merchants.length ? (
+                merchants.map((m) => {
+                  const region = resolveRegion(m);
+                  return (
+                    <tr key={m.id} className="border-t align-top">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{m.merchantName}</div>
+                        {/* Mobile-only extras */}
+                        <div className="sm:hidden text-xs text-gray-500 mt-0.5">
+                          {m.network ?? "—"} · {m.domainPattern ?? "—"}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <MarketBadge region={region} />
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">{m.network ?? "—"}</td>
+                      <td className="px-4 py-3 hidden md:table-cell">{m.domainPattern ?? "—"}</td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}
+                      </td>
+                      <td className="px-4 py-3">{renderCommission(m)}</td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs">
+                          {m.status ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden xl:table-cell">{joinOrDash(m.allowedSources)}</td>
+                      <td className="px-4 py-3 hidden xl:table-cell">{joinOrDash(m.disallowedSources)}</td>
+                      <td className="px-4 py-3 hidden 2xl:table-cell max-w-[24rem]">
+                        <div className="truncate" title={m.notes ?? ""}>
+                          {m.notes ?? "—"}
+                        </div>
+                      </td>
+                      {admin && (
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <AdminDeleteMerchantButton id={m.id} name={m.merchantName} />
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td className="px-4 py-6 text-center text-gray-500" colSpan={admin ? 12 : 11}>
+                    No merchants for your region yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {!admin && (
+        <p className="mt-3 text-xs text-gray-500">
+          Market filter is active. Switch markets in the header to view other regions.
+        </p>
+      )}
     </div>
   );
 }

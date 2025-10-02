@@ -1,214 +1,208 @@
 // app/dashboard/trust-center/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
 import Link from "next/link";
 
 export default function TrustCenterPage() {
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <section className="bg-white/70 dark:bg-zinc-900/70 rounded-2xl shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800 p-6">
-      <h2 className="text-xl font-semibold mb-3">{title}</h2>
-      <div className="text-sm leading-6 text-zinc-700 dark:text-zinc-300">{children}</div>
-    </section>
-  );
-
-  const Item = ({ k, v }: { k: string; v: string }) => (
-    <div className="flex justify-between gap-4 py-1">
-      <span className="text-zinc-500">{k}</span>
-      <span className="font-medium">{v}</span>
-    </div>
-  );
+  const lastUpdated = new Date().toLocaleDateString();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 space-y-8">
-      <header className="flex items-start justify-between gap-4">
+    <main className="space-y-6">
+      <header className="flex items-baseline justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Trust Center</h1>
-          <p className="text-zinc-600 dark:text-zinc-300 mt-1">
-            How payouts work, when funds clear, and what we log for transparency.
+          <h1 className="text-2xl font-semibold">Trust Center</h1>
+          <p className="text-sm text-gray-600">
+            How commissions are verified, when payouts are released, and what we do to keep things fair.
           </p>
         </div>
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center rounded-xl px-3 py-2 text-sm font-medium ring-1 ring-zinc-300 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-        >
-          ← Back to Dashboard
-        </Link>
+        <span className="hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs text-gray-700">
+          Last updated: {lastUpdated}
+        </span>
       </header>
 
-      {/* Snapshot */}
-      <section className="grid md:grid-cols-3 gap-4">
-        <div className="rounded-2xl bg-gradient-to-b from-emerald-50 to-white dark:from-emerald-950/30 dark:to-zinc-900 p-5 ring-1 ring-emerald-200/70 dark:ring-emerald-900/50">
-          <div className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Policy</div>
-          <div className="text-lg font-semibold mt-1">Affiliate-Cleared Payouts</div>
-          <p className="text-sm mt-2 text-emerald-900/80 dark:text-emerald-200/80">
-            We only pay out after the affiliate network clears funds to Linkmint.
+      {/* Policy cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card
+          title="Payout method (current)"
+          body={
+            <>
+              <p className="text-gray-700">
+                Linkmint currently supports payouts via <strong>PayPal</strong> only.
+                Other methods (e.g., GCash, bank, Paymaya) may be added later.
+              </p>
+              <ul className="mt-3 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                <li>Payouts are sent to your verified PayPal email.</li>
+                <li>Fees, if any, are shown before you confirm a payout request.</li>
+                <li>Minimum payout threshold applies (see Payouts page).</li>
+              </ul>
+            </>
+          }
+        />
+
+        <Card
+          title="Commission approval flow"
+          body={
+            <>
+              <ol className="list-decimal pl-5 text-sm text-gray-700 space-y-2">
+                <li>
+                  <strong>Tracked:</strong> a click or order is attributed to your smart link.
+                </li>
+                <li>
+                  <strong>Pending:</strong> the merchant/network confirms the order but hasn’t approved it yet.
+                </li>
+                <li>
+                  <strong>Approved:</strong> the merchant/network approves and funds are scheduled for release.
+                </li>
+                <li>
+                  <strong>Payable:</strong> after the network’s clearance/hold window, funds become available to request.
+                </li>
+              </ol>
+              <p className="mt-3 text-sm text-gray-600">
+                We only pay out <em>after</em> networks mark commissions <strong>Approved</strong> and funds clear to Linkmint.
+              </p>
+            </>
+          }
+        />
+
+        <Card
+          title="Cookie window & hold periods"
+          body={
+            <>
+              <p className="text-gray-700">
+                Each merchant/network defines a <strong>cookie window</strong> (attribution period) and a{" "}
+                <strong>payout delay</strong> (clearance/hold time). Examples:
+              </p>
+              <ul className="mt-3 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                <li>Cookie window: 7–30 days typical</li>
+                <li>Payout delay: 30–90 days typical after approval</li>
+              </ul>
+              <p className="mt-3 text-sm text-gray-600">
+                See exact values per merchant in <Link className="underline" href="/dashboard/merchants">Merchants</Link>.
+              </p>
+            </>
+          }
+        />
+
+        <Card
+          title="Fair use & fraud protections"
+          body={
+            <>
+              <p className="text-gray-700">
+                We protect advertisers and creators with automated checks:
+              </p>
+              <ul className="mt-3 list-disc pl-5 text-sm text-gray-700 space-y-1">
+                <li>Pattern checks on abnormal click/convert rates</li>
+                <li>Self-purchase and incentive abuse detection</li>
+                <li>Network dispute handling (chargebacks, cancellations)</li>
+              </ul>
+              <p className="mt-3 text-sm text-gray-600">
+                If a commission is reversed by a network, it won’t be payable.
+              </p>
+            </>
+          }
+        />
+      </div>
+
+      {/* FAQ */}
+      <section className="rounded-2xl border bg-white p-4 sm:p-5">
+        <h2 className="text-base sm:text-lg font-medium mb-2">FAQs</h2>
+        <div className="divide-y">
+          <Faq
+            q="When exactly do I get paid?"
+            a={
+              <>
+                After a commission is <strong>Approved</strong> by the affiliate network and the network’s{" "}
+                clearance period ends. Once it shows as <strong>Payable</strong> in your dashboard, you can request a payout.
+              </>
+            }
+          />
+          <Faq
+            q="Do you pay for cancelled or refunded orders?"
+            a="No. If the network reverses an order, it won’t be payable."
+          />
+          <Faq
+            q="Do you allow incentivized clicks?"
+            a="No. Merchants often mark incentivized traffic invalid. Use honest recommendations and disclosures."
+          />
+          <Faq
+            q="What happens if my PayPal email is wrong?"
+            a={
+              <>
+                Update it in <Link className="underline" href="/dashboard/settings">Settings</Link> before requesting payout.  
+                If a sent payout fails, we’ll show a retry or return the funds to your balance.
+              </>
+            }
+          />
+          <Faq
+            q="Can I see each merchant’s cookie window?"
+            a={
+              <>
+                Yes — open <Link className="underline" href="/dashboard/merchants">Merchants</Link>.  
+                Cookie window and payout delay are listed per merchant (where known).
+              </>
+            }
+          />
+        </div>
+      </section>
+
+      {/* Status + Contact */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-2xl border bg-white p-4 sm:p-5">
+          <h3 className="text-sm font-medium mb-2">System status</h3>
+          <ul className="text-sm text-gray-700 space-y-1">
+            <li>Tracking: <StatusDot ok /> Normal</li>
+            <li>Payouts: <StatusDot ok /> Operational</li>
+            <li>Networks sync: <StatusDot ok /> Normal</li>
+          </ul>
+          <p className="text-xs text-gray-500 mt-3">
+            If you suspect a delay, check your merchant’s hold window first.
           </p>
         </div>
-        <div className="rounded-2xl bg-gradient-to-b from-amber-50 to-white dark:from-amber-950/30 dark:to-zinc-900 p-5 ring-1 ring-amber-200/70 dark:ring-amber-900/50">
-          <div className="text-xs uppercase tracking-wide text-amber-700 dark:text-amber-300">Window</div>
-          <div className="text-lg font-semibold mt-1">Typical 30–90 Days</div>
-          <p className="text-sm mt-2 text-amber-900/80 dark:text-amber-200/80">
-            Networks may reverse fraud/returns; we mirror their clearance period.
+
+        <div className="rounded-2xl border bg-white p-4 sm:p-5 md:col-span-2">
+          <h3 className="text-sm font-medium mb-2">Need help?</h3>
+          <p className="text-sm text-gray-700">
+            Email <a className="underline" href="mailto:admin@linkmint.co">admin@linkmint.co</a> with your user ID,
+            the merchant, and the order details. We’ll investigate with the network if needed.
           </p>
-        </div>
-        <div className="rounded-2xl bg-gradient-to-b from-sky-50 to-white dark:from-sky-950/30 dark:to-zinc-900 p-5 ring-1 ring-sky-200/70 dark:ring-sky-900/50">
-          <div className="text-xs uppercase tracking-wide text-sky-700 dark:text-sky-300">Transparency</div>
-          <div className="text-lg font-semibold mt-1">Event Logs</div>
-          <p className="text-sm mt-2 text-sky-900/80 dark:text-sky-200/80">
-            Every commission, referral batch, and payout is logged in EventLog.
+          <p className="text-xs text-gray-500 mt-2">
+            Response times may vary based on the advertiser/network’s SLA.
           </p>
         </div>
       </section>
 
-      {/* Payout Policy */}
-      <Section title="Payout Policy">
-        <ul className="list-disc pl-5 space-y-2">
-          <li>
-            <span className="font-medium">Affiliate-Cleared Only:</span> We release user payouts only after the
-            affiliate network settles funds to Linkmint. If they hold or reverse, we follow suit.
-          </li>
-          <li>
-            <span className="font-medium">Clearance Window:</span> Expect <span className="font-semibold">30–90 days</span>{" "}
-            from purchase to payout depending on the partner’s policy (fraud checks, returns, and network accounting).
-          </li>
-          <li>
-            <span className="font-medium">Pending → Approved → Paid:</span> Commissions start as{" "}
-            <code className="px-1 rounded bg-zinc-100 dark:bg-zinc-800">Pending</code>, move to{" "}
-            <code className="px-1 rounded bg-zinc-100 dark:bg-zinc-800">Approved</code> once cleared, then{" "}
-            <code className="px-1 rounded bg-zinc-100 dark:bg-zinc-800">Paid</code> when funds are sent to you.
-          </li>
-          <li>
-            <span className="font-medium">Zero “float risk” for users:</span> we don’t front-run network payouts. This
-            keeps balances accurate and prevents clawbacks.
-          </li>
-        </ul>
-      </Section>
-
-      {/* Commission Lifecycle */}
-      <Section title="Commission Lifecycle">
-        <ol className="list-decimal pl-5 space-y-2">
-          <li>User clicks a tracked link and completes a purchase.</li>
-          <li>Network attributes commission to Linkmint; we record it as <strong>Pending</strong>.</li>
-          <li>Network clears funds (after returns/fraud windows).</li>
-          <li>We mark commission <strong>Approved</strong> and prepare payout.</li>
-          <li>We disburse and mark <strong>Paid</strong>. EventLog records every state change.</li>
-        </ol>
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-          <div className="p-3 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
-            <Item k="Start State" v="Pending" />
-          </div>
-          <div className="p-3 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
-            <Item k="Cleared" v="Approved" />
-          </div>
-          <div className="p-3 rounded-xl ring-1 ring-zinc-200 dark:ring-zinc-800">
-            <Item k="Final" v="Paid" />
-          </div>
-        </div>
-      </Section>
-
-      {/* Referrals & Overrides */}
-      <Section title="Referrals & Overrides (Fair Use)">
-        <ul className="list-disc pl-5 space-y-2">
-          <li>
-            <span className="font-medium">3-Invite Batch:</span> when you invite 3 verified friends, a referral batch is
-            created and logged.
-          </li>
-          <li>
-            <span className="font-medium">Override Window:</span> inviter may earn a small percentage from invitee
-            purchases for a limited window (e.g. 90 days), capped and logged for transparency.
-          </li>
-          <li>
-            <span className="font-medium">No Multi-Level Payouts:</span> overrides are single-level and time-limited.
-          </li>
-        </ul>
-        <p className="mt-3 text-xs text-zinc-500">
-          Note: Exact percentages and windows can vary by program and are always compliant with affiliate terms.
-        </p>
-      </Section>
-
-      {/* Transparency & Logs */}
-      <Section title="Transparency & Logs">
-        <p>
-          We maintain an immutable audit trail in <code>EventLog</code> for audits and support:
-        </p>
-        <ul className="list-disc pl-5 mt-2 space-y-1">
-          <li>commission: created/approved/paid transitions</li>
-          <li>referral: batch creation, badge updates</li>
-          <li>payout: disbursement attempts and results</li>
-        </ul>
-        <div className="mt-4 flex gap-3">
-          <Link
-            href="/admin/logs?type=commission"
-            className="rounded-lg px-3 py-2 ring-1 ring-zinc-300 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm"
-          >
-            View Commission Logs (Admin)
-          </Link>
-          <Link
-            href="/admin/logs?type=referral"
-            className="rounded-lg px-3 py-2 ring-1 ring-zinc-300 dark:ring-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-sm"
-          >
-            View Referral Logs (Admin)
-          </Link>
-        </div>
-      </Section>
-
-      {/* Market Access & VPNs */}
-      <Section title="Market Access & VPNs">
-        <ul className="list-disc pl-5 space-y-2">
-          <li>
-            <span className="font-medium">Account Country = Your Market:</span> The country you select at signup (e.g.,
-            <strong> Philippines</strong> or <strong>United States</strong>) determines which merchants you can promote
-            and earn from.
-          </li>
-          <li>
-            <span className="font-medium">VPNs Don’t Change Your Market:</span> Using a VPN won’t switch your earning
-            market. A PH account on a US VPN is still treated as PH; a US account on a PH VPN is still US.
-          </li>
-          <li>
-            <span className="font-medium">Travel Override (24h):</span> If you are traveling, you may temporarily switch
-            via the “Switch Market” banner. This sets a 24-hour cookie so you can browse local offers while away. It
-            does not bypass merchant geo rules.
-          </li>
-          <li>
-            <span className="font-medium">Compliance & Brand Safety:</span> Geo rules are enforced at click time. If a
-            merchant is PH-only, US traffic is blocked (and vice-versa). This protects programs and keeps your account
-            in good standing.
-          </li>
-          <li>
-            <span className="font-medium">Examples:</span> PH account + PH market → allowed on PH-only links. PH account
-            + US market override → blocked on PH-only links; allowed on dual-market links if rules include US.
-          </li>
-        </ul>
-      </Section>
-
-      {/* FAQs */}
-      <Section title="FAQs">
-        <div className="space-y-3">
-          <div>
-            <div className="font-medium">When do I get paid?</div>
-            <div>
-              After the affiliate network clears funds to Linkmint. This typically takes 30–90 days depending on the
-              program (to account for returns and fraud checks).
-            </div>
-          </div>
-          <div>
-            <div className="font-medium">Why does my commission show as Pending?</div>
-            <div>
-              All commissions start Pending. They move to Approved once the network confirms and settles the amount,
-              then to Paid when we disburse.
-            </div>
-          </div>
-          <div>
-            <div className="font-medium">Can commissions be reversed?</div>
-            <div>
-              Yes—if the network reverses for returns or fraud. Our balances mirror the network; we don’t pay early to
-              avoid clawbacks.
-            </div>
-          </div>
-        </div>
-      </Section>
+      {/* Mobile last-updated */}
+      <div className="sm:hidden text-xs text-gray-500">
+        Last updated: {lastUpdated}
+      </div>
     </main>
   );
+}
+
+/* ---------- small components ---------- */
+
+function Card({ title, body }: { title: string; body: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border bg-white p-4 sm:p-5">
+      <h2 className="text-sm sm:text-base font-medium">{title}</h2>
+      <div className="mt-2 text-sm">{body}</div>
+    </section>
+  );
+}
+
+function Faq({ q, a }: { q: string; a: React.ReactNode }) {
+  return (
+    <details className="py-3">
+      <summary className="cursor-pointer select-none text-sm font-medium text-gray-900">
+        {q}
+      </summary>
+      <div className="mt-2 text-sm text-gray-700">{a}</div>
+    </details>
+  );
+}
+
+function StatusDot({ ok }: { ok?: boolean }) {
+  const tone = ok ? "bg-emerald-500" : "bg-amber-500";
+  return <span className={`inline-block h-2.5 w-2.5 rounded-full ${tone} align-middle mr-2`} />;
 }
