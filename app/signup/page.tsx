@@ -96,6 +96,13 @@ export default function SignupPage() {
           .
         </p>
 
+        {/* PayPal-only payout disclaimer */}
+        <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+          💳 Payouts are currently available via{" "}
+          <span className="font-semibold">PayPal (USD)</span> only. Other payout
+          methods (e.g., GCash, Maya/PayMaya, bank transfer) are not supported yet.
+        </div>
+
         {error && (
           <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
             {error}
@@ -173,7 +180,7 @@ export default function SignupPage() {
             <span>I am 18 years of age or older.</span>
           </label>
 
-          {/* NEW: Terms of Service + Privacy Policy agreement */}
+          {/* Terms of Service + Privacy Policy agreement */}
           <label className="flex gap-2 items-start text-sm select-none">
             <input
               type="checkbox"

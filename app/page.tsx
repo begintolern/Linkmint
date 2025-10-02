@@ -37,6 +37,16 @@ export default function HomePage() {
               </Link>
             </div>
 
+            {/* PayPal-only payout notice */}
+            <section className="mt-6">
+              <p className="text-sm text-gray-600">
+                💳 Payouts are currently available via{" "}
+                <span className="font-semibold">PayPal (USD)</span> only. Other
+                payout methods (e.g., GCash, Maya/PayMaya, bank transfer) are
+                not supported yet.
+              </p>
+            </section>
+
             <p className="mt-3 text-sm text-gray-500">
               Already have an account?{" "}
               <Link className="underline" href="/login">

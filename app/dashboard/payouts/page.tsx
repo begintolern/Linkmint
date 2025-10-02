@@ -39,6 +39,13 @@ export default function DashboardPayoutsPage() {
         <p className="text-sm text-gray-600">
           Request payouts and view your payout history.
         </p>
+
+        {/* PayPal-only payout disclaimer */}
+        <div className="mt-3 rounded-md bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+          💳 Payouts are currently available via{" "}
+          <span className="font-semibold">PayPal (USD)</span> only. Other payout
+          methods (e.g., GCash, Maya/PayMaya, bank transfer) are not supported yet.
+        </div>
       </header>
 
       {/* Request payout + balance info */}
