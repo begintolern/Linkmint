@@ -1,4 +1,3 @@
-// app/dashboard/merchants/page.tsx
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -6,6 +5,7 @@ export const fetchCache = "force-no-store";
 import React from "react";
 import { headers, cookies } from "next/headers";
 import { prisma } from "@/lib/db";
+import AdminDeleteMerchantButton from "@/components/AdminDeleteMerchantButton";
 
 type MerchantDTO = {
   id: string;
@@ -26,7 +26,7 @@ type MerchantDTO = {
   commissionRate?: string | null;
   baseCommissionBps: number | null;
 
-  market?: string | null; // <- trusted source
+  market?: string | null; // trusted source
   status?: string | null;
 
   notes: string | null;
@@ -82,18 +82,15 @@ function readMarketFromCookies(store: ReturnType<typeof cookies>) {
 }
 
 /** Defensive region resolver:
- *  1) Trust `market` if it's US/PH/GLOBAL
- *  2) Fallback: if domain ends with .ph or .com.ph -> PH
- *  3) Else default to US for filtering, GLOBAL for badge if null
+ *  1) Trust `market` if US/PH/GLOBAL
+ *  2) Fallback: if domain ends with .ph/.com.ph -> PH
+ *  3) Else GLOBAL
  */
 function resolveRegion(m: MerchantDTO): "US" | "PH" | "GLOBAL" {
   const mk = (m.market || "").toUpperCase();
   if (mk === "US" || mk === "PH" || mk === "GLOBAL") return mk as any;
-
   const d = (m.domainPattern || "").toLowerCase();
   if (d.endsWith(".ph") || d.endsWith(".com.ph")) return "PH";
-
-  // If truly unknown, treat as GLOBAL in display; filtering will use cookie default
   return "GLOBAL";
 }
 
@@ -105,7 +102,7 @@ function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
   return region === userMarket;
 }
 
-// Robust admin detection
+// Admin detection (same as used in other pages)
 async function isAdmin(store: ReturnType<typeof cookies>): Promise<boolean> {
   const cookieRole = (store.get("role")?.value ?? "").toLowerCase();
   if (cookieRole === "admin") return true;
@@ -131,9 +128,7 @@ async function isAdmin(store: ReturnType<typeof cookies>): Promise<boolean> {
       const u = await prisma.user.findUnique({ where: { email }, select: { role: true } });
       if (u?.role && String(u.role).toLowerCase() === "admin") return true;
     }
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
 
   return false;
 }
@@ -196,6 +191,7 @@ export default async function MerchantsPage() {
               <th className="px-4 py-3">Allowed</th>
               <th className="px-4 py-3">Disallowed</th>
               <th className="px-4 py-3">Notes</th>
+              {admin && <th className="px-4 py-3 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -238,13 +234,19 @@ export default async function MerchantsPage() {
                       {m.notes ?? "—"}
                     </div>
                   </td>
+
+                  {admin && (
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <AdminDeleteMerchantButton id={m.id} name={m.merchantName} />
+                    </td>
+                  )}
                 </tr>
               );
             })}
 
             {merchants.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-gray-500" colSpan={12}>
+                <td className="px-4 py-6 text-center text-gray-500" colSpan={admin ? 13 : 12}>
                   No merchants for your region yet.
                 </td>
               </tr>
@@ -252,12 +254,6 @@ export default async function MerchantsPage() {
           </tbody>
         </table>
       </div>
-
-      {!admin && (
-        <p className="mt-3 text-xs text-gray-500">
-          Region logic: we trust the <code>market</code> field and fall back to the domain (.ph =&gt; PH) if missing.
-        </p>
-      )}
     </div>
   );
 }
