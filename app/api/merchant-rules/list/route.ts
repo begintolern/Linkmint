@@ -8,38 +8,48 @@ import { prisma } from "@/lib/db";
 // Helper: normalize Prisma JsonValue to string[] | null
 function toStringArray(value: unknown): string[] | null {
   if (value == null) return null;
-  // If it's already an array, stringify elements
   if (Array.isArray(value)) return value.map((v) => String(v));
-  // Single string (DB may have old data)
   if (typeof value === "string") return [value];
-  // Anything else (object/number/bool) → null to be safe
   return null;
 }
 
 export async function GET() {
   try {
-    // Avoid 'select' so this won't type-error if a field is absent in some schema versions
+    // Use no 'select' so we don't crash if a field is missing in some schema/version
     const rows = await prisma.merchantRule.findMany({
-      orderBy: { merchantName: "asc" },
+      orderBy: { merchantName: "asc" }, // safe ordering across versions
     });
 
     const merchants = rows.map((r: any) => ({
+      // Core identifiers/timestamps
       id: r.id,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
+
+      // Core display fields
+      active: !!r.active,
       merchantName: r.merchantName,
-      active: r.active,
       network: r.network ?? null,
       domainPattern: r.domainPattern ?? null,
 
-      // IMPORTANT: normalize JSON → string[] | null
-      allowedSources: toStringArray(r.allowedSources),
-      // Some repos don’t have this column yet; handle gracefully
-      disallowedSources: toStringArray((r as any).disallowedSources),
+      // Region / status (may be null on older rows)
+      market: r.market ?? null,      // e.g., "PH", "US", "GLOBAL"
+      status: r.status ?? null,      // e.g., "PENDING", "ACTIVE"
 
+      // Rules
       cookieWindowDays: r.cookieWindowDays ?? null,
       payoutDelayDays: r.payoutDelayDays ?? null,
-      baseCommissionBps: r.baseCommissionBps ?? null,
+
+      // Commission (support both percent-string style and bps fallback)
+      commissionType: r.commissionType ?? null, // e.g., "PERCENT"
+      commissionRate: r.commissionRate ?? null, // e.g., "0.06"
+      baseCommissionBps: r.baseCommissionBps ?? null, // optional legacy/fallback
+
+      // Sources (JSON arrays in some schemas)
+      allowedSources: toStringArray(r.allowedSources),
+      disallowedSources: toStringArray((r as any).disallowedSources),
+
+      // Notes
       notes: r.notes ?? null,
     }));
 
