@@ -15,41 +15,36 @@ function toStringArray(value: unknown): string[] | null {
 
 export async function GET() {
   try {
-    // Use no 'select' so we don't crash if a field is missing in some schema/version
     const rows = await prisma.merchantRule.findMany({
-      orderBy: { merchantName: "asc" }, // safe ordering across versions
+      orderBy: { merchantName: "asc" },
     });
 
     const merchants = rows.map((r: any) => ({
-      // Core identifiers/timestamps
       id: r.id,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
 
-      // Core display fields
       active: !!r.active,
       merchantName: r.merchantName,
       network: r.network ?? null,
       domainPattern: r.domainPattern ?? null,
 
-      // Region / status (may be null on older rows)
-      market: r.market ?? null,      // e.g., "PH", "US", "GLOBAL"
-      status: r.status ?? null,      // e.g., "PENDING", "ACTIVE"
+      // ✅ always include market & status
+      market: r.market ?? null,
+      status: r.status ?? null,
 
-      // Rules
       cookieWindowDays: r.cookieWindowDays ?? null,
       payoutDelayDays: r.payoutDelayDays ?? null,
 
-      // Commission (support both percent-string style and bps fallback)
-      commissionType: r.commissionType ?? null, // e.g., "PERCENT"
-      commissionRate: r.commissionRate ?? null, // e.g., "0.06"
-      baseCommissionBps: r.baseCommissionBps ?? null, // optional legacy/fallback
+      // Commission (new style + legacy fallback)
+      commissionType: r.commissionType ?? null,
+      commissionRate: r.commissionRate ?? null,
+      baseCommissionBps: r.baseCommissionBps ?? null,
 
-      // Sources (JSON arrays in some schemas)
+      // Sources (optional JSON[] in some schemas)
       allowedSources: toStringArray(r.allowedSources),
       disallowedSources: toStringArray((r as any).disallowedSources),
 
-      // Notes
       notes: r.notes ?? null,
     }));
 
