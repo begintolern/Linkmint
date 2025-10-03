@@ -2,13 +2,11 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { authOptions } from "@/lib/auth/options";
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { prisma } from "@/lib/db";
 import { ensureBatchesFor } from "@/lib/referrals/createReferralBatch";
 import { syncTrustFromReferrals } from "@/lib/referrals/syncTrustFromReferrals";
-import { prisma } from "@/lib/db";
 
 function daysLeft(until: Date | null | undefined) {
   if (!until) return null;
@@ -29,27 +27,46 @@ type Group = {
   users: GroupUser[];
 };
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const session = (await getServerSession(authOptions)) as Session | null;
-    if (!session || !session.user?.id) {
+    // 1) JWT from cookie (works for API routes)
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+    // 2) Try to determine inviterId
+    let inviterId: string | undefined =
+      (token?.sub as string | undefined) ?? undefined;
+
+    // Optional cookie hints (your app already sets some cookies sometimes)
+    if (!inviterId) {
+      inviterId =
+        req.cookies.get("uid")?.value ||
+        req.cookies.get("userId")?.value ||
+        undefined;
+    }
+
+    // 3) Fallback: look up user by email if we still don't have id
+    if (!inviterId && token?.email) {
+      const u = await prisma.user.findUnique({
+        where: { email: token.email },
+        select: { id: true },
+      });
+      inviterId = u?.id;
+    }
+
+    if (!inviterId) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const inviterId = session.user.id;
-
-    // Form any full groups and get current state
+    // Ensure any full groups and get current state
     const ensured = (await ensureBatchesFor(inviterId)) as {
       groups: Group[];
       ungroupedCount: number;
     };
-    const groups = ensured.groups;
-    const ungroupedCount = ensured.ungroupedCount;
 
-    // TrustScore sync (idempotent) + read back current value for debug
+    // Idempotent trust sync + current state
     const trustSync = await syncTrustFromReferrals(inviterId);
     const me = await prisma.user.findUnique({
       where: { id: inviterId },
@@ -61,7 +78,7 @@ export async function GET() {
       },
     });
 
-    const result = groups.map((g: Group) => {
+    const result = ensured.groups.map((g: Group) => {
       const status = computeStatus(g.expiresAt);
       return {
         id: g.id,
@@ -75,12 +92,10 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      ungroupedInvitees: ungroupedCount,
+      ungroupedInvitees: ensured.ungroupedCount,
       groups: result,
       badge: me?.referralBadge ?? null,
       referralCode: me?.referralCode ?? null,
-
-      // ----- Debug fields (safe to keep for now) -----
       debug: {
         inviterId,
         inviterEmail: me?.email ?? null,
