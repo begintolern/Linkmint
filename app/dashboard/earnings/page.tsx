@@ -5,46 +5,42 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { useEffect, useMemo, useState } from "react";
-import StatusBadge from "@/components/StatusBadge";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
+import StatusBadge from "@/components/StatusBadge";
 
-type Commission = {
-  id: string;
-  createdAt: string;
-  merchantName?: string | null;
-  status?: string;        // UNVERIFIED | PENDING | APPROVED | PAID
-  amount?: number | null; // dollars
-  amountCents?: number | null; // optional: some APIs return cents
-  description?: string | null;
+// Shape returned by /api/user/commissions/summary
+type SummaryOk = {
+  pending: number;
+  approved: number;
+  processing: number;
+  paid: number;
+  failed: number;
+  bonus: {
+    cents: number;
+    usd: number;
+    tier: number;
+    eligibleUntil: string | null;
+    remainingDays: number | null;
+    active: boolean;
+  };
 };
-
-type ApiResponse =
-  | { ok: true; commissions: Commission[] }
-  | { ok: false; error?: string };
+type SummaryResp = SummaryOk | { error: string };
 
 export default function EarningsPage() {
-  const [rows, setRows] = useState<Commission[]>([]);
+  const [summary, setSummary] = useState<SummaryOk | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        // Try canonical endpoint first; fall back to a legacy one if needed
-        let res = await fetch("/api/commissions/list", { cache: "no-store" });
-        if (!res.ok) {
-          // fallback: some repos use /api/earnings/list
-          const alt = await fetch("/api/earnings/list", { cache: "no-store" });
-          res = alt;
-        }
-        const json: ApiResponse = await res.json();
-        if (!("ok" in json) || !json.ok) {
-          throw new Error((json as any)?.error || "Failed to load commissions.");
-        }
-        setRows(json.commissions ?? []);
+        const res = await fetch("/api/user/commissions/summary", { cache: "no-store" });
+        const json: SummaryResp = await res.json();
+
+        if ("error" in json) throw new Error(json.error || "Failed to load.");
+        setSummary(json);
       } catch (e: any) {
-        setErr(e?.message || "Failed to load commissions.");
-        setRows([]);
+        setErr(e?.message || "Failed to load earnings summary.");
       } finally {
         setLoading(false);
       }
@@ -52,23 +48,15 @@ export default function EarningsPage() {
   }, []);
 
   const totals = useMemo(() => {
-    const toUsd = (r: Commission) =>
-      typeof r.amountCents === "number"
-        ? r.amountCents / 100
-        : typeof r.amount === "number"
-        ? r.amount
-        : 0;
-
-    const sum = (flt?: (r: Commission) => boolean) =>
-      rows.filter(flt || (() => true)).reduce((a, r) => a + toUsd(r), 0);
-
+    if (!summary) return { all: 0, pending: 0, approved: 0, paid: 0 };
+    const all = summary.pending + summary.approved + summary.processing + summary.paid;
     return {
-      all: sum(),
-      approved: sum((r) => (r.status || "").toUpperCase() === "APPROVED"),
-      pending: sum((r) => (r.status || "").toUpperCase() === "PENDING"),
-      paid: sum((r) => (r.status || "").toUpperCase() === "PAID"),
+      all,
+      pending: summary.pending,
+      approved: summary.approved,
+      paid: summary.paid,
     };
-  }, [rows]);
+  }, [summary]);
 
   return (
     <main className="space-y-6">
@@ -93,14 +81,14 @@ export default function EarningsPage() {
         <Badge block label="Paid" value={totals.paid} />
       </div>
 
-      {/* Alert */}
+      {/* Alert (only if the summary call failed) */}
       {err && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm">
           {err} — showing empty results.
         </div>
       )}
 
-      {/* Table */}
+      {/* Recent commissions table (placeholder until list endpoint is added) */}
       <section className="rounded-xl border bg-white">
         <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
           <h2 className="text-sm sm:text-base font-medium">Recent Commissions</h2>
@@ -113,10 +101,10 @@ export default function EarningsPage() {
           <table className="min-w-full text-sm">
             <thead className="sticky top-0 bg-gray-50 text-left z-10">
               <tr>
-                <th className="p-3 sm:p-3">Date</th>
-                <th className="p-3 sm:p-3">Amount</th>
-                <th className="p-3 sm:p-3 hidden sm:table-cell">Merchant</th>
-                <th className="p-3 sm:p-3">Status</th>
+                <th className="p-3">Date</th>
+                <th className="p-3">Amount</th>
+                <th className="p-3 hidden sm:table-cell">Merchant</th>
+                <th className="p-3">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -126,34 +114,6 @@ export default function EarningsPage() {
                     Loading…
                   </td>
                 </tr>
-              ) : rows.length ? (
-                rows.map((r) => {
-                  const d = new Date(r.createdAt).toLocaleString();
-                  const amt =
-                    typeof r.amountCents === "number"
-                      ? (r.amountCents / 100).toFixed(r.amountCents % 100 === 0 ? 0 : 2)
-                      : typeof r.amount === "number"
-                      ? r.amount.toFixed(Number.isInteger(r.amount) ? 0 : 2)
-                      : "0.00";
-                  const status = (r.status || "UNVERIFIED").toUpperCase();
-
-                  return (
-                    <tr key={r.id} className="border-t align-middle">
-                      <td className="p-3">
-                        <div className="whitespace-nowrap">{d}</div>
-                        {/* Mobile-only: show merchant below date */}
-                        <div className="mt-0.5 text-xs text-gray-500 sm:hidden">
-                          {r.merchantName ?? "—"}
-                        </div>
-                      </td>
-                      <td className="p-3 font-medium">${amt}</td>
-                      <td className="p-3 hidden sm:table-cell">{r.merchantName ?? "—"}</td>
-                      <td className="p-3">
-                        <StatusBadge status={status as any} />
-                      </td>
-                    </tr>
-                  );
-                })
               ) : (
                 <tr>
                   <td className="p-6 text-gray-500" colSpan={4}>
