@@ -7,6 +7,7 @@ import React from "react";
 import { headers, cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import AdminDeleteMerchantButton from "@/components/AdminDeleteMerchantButton";
+import DashboardPageHeader from "@/components/DashboardPageHeader";
 
 type MerchantDTO = {
   id: string;
@@ -39,7 +40,6 @@ function fmtPercentFromBps(bps: number | null) {
 }
 
 function renderCommission(m: MerchantDTO) {
-  // Prefer baseCommissionBps if set; otherwise, show "—"
   return fmtPercentFromBps(m.baseCommissionBps);
 }
 
@@ -65,10 +65,7 @@ function readMarketFromCookies(store: ReturnType<typeof cookies>) {
   return v === "PH" ? "PH" : "US";
 }
 
-/** Defensive region resolver:
- *  1) Trust `market` if US/PH/GLOBAL
- *  2) Fallback by domain: .ph/.com.ph -> PH; otherwise GLOBAL
- */
+/** Defensive region resolver */
 function resolveRegion(m: MerchantDTO): "US" | "PH" | "GLOBAL" {
   const mk = (m.market || "").toUpperCase();
   if (mk === "US" || mk === "PH" || mk === "GLOBAL") return mk as any;
@@ -77,7 +74,6 @@ function resolveRegion(m: MerchantDTO): "US" | "PH" | "GLOBAL" {
   return "GLOBAL";
 }
 
-// Strict filter for non-admin: only active + region matches (GLOBAL visible to all)
 function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
   if (!m.active) return false;
   const region = resolveRegion(m);
@@ -85,7 +81,6 @@ function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
   return region === userMarket;
 }
 
-// Robust admin detection
 async function isAdmin(store: ReturnType<typeof cookies>): Promise<boolean> {
   const cookieRole = (store.get("role")?.value ?? "").toLowerCase();
   if (cookieRole === "admin") return true;
@@ -148,15 +143,16 @@ export default async function MerchantsPage() {
   const merchants = admin ? all : all.filter((m) => userCanSeeMerchantStrict(m, market));
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Merchants</h1>
-        <div className="text-sm text-gray-500">
-          {admin
-            ? `Admin view · All regions · Total: ${merchants.length.toLocaleString()}`
-            : `Your market: ${market} · Region-filtered · Total: ${merchants.length.toLocaleString()}`}
-        </div>
-      </div>
+    <div className="p-6 space-y-6">
+      <DashboardPageHeader
+        title="Merchants"
+        subtitle={admin ? "Admin view · All regions" : `Your market: ${market} · Region-filtered`}
+        rightSlot={
+          <span className="hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs text-gray-700">
+            Total: {merchants.length.toLocaleString()}
+          </span>
+        }
+      />
 
       <section className="rounded-xl border bg-white">
         <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
@@ -194,7 +190,6 @@ export default async function MerchantsPage() {
                     <tr key={m.id} className="border-t align-top">
                       <td className="px-4 py-3">
                         <div className="font-medium">{m.merchantName}</div>
-                        {/* Mobile-only extras */}
                         <div className="sm:hidden text-xs text-gray-500 mt-0.5">
                           {m.network ?? "—"} · {m.domainPattern ?? "—"}
                         </div>

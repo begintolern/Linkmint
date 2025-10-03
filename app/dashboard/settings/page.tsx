@@ -6,6 +6,7 @@ export const fetchCache = "force-no-store";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import DashboardPageHeader from "@/components/DashboardPageHeader";
 
 type UserResponse =
   | {
@@ -117,12 +118,10 @@ export default function SettingsPage() {
 
   return (
     <main className="space-y-6">
-      <header className="flex items-baseline justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Settings</h1>
-          <p className="text-sm text-gray-600">Manage your profile, payout email, and preferences.</p>
-        </div>
-      </header>
+      <DashboardPageHeader
+        title="Settings"
+        subtitle="Manage your profile, payout email, and preferences."
+      />
 
       {err && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm">
@@ -144,19 +143,22 @@ export default function SettingsPage() {
 
         <form onSubmit={saveProfile} className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
           <div className="sm:col-span-1">
-            <label className="block text-sm mb-1">Display name</label>
+            <label className="block text-sm mb-1" htmlFor="displayName">Display name</label>
             <input
+              id="displayName"
               disabled={loading}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
               placeholder="Your name"
+              aria-label="Display name"
             />
           </div>
 
           <div className="sm:col-span-1">
-            <label className="block text-sm mb-1">PayPal email</label>
+            <label className="block text-sm mb-1" htmlFor="paypalEmail">PayPal email</label>
             <input
+              id="paypalEmail"
               disabled={loading}
               value={paypalEmail}
               onChange={(e) => setPaypalEmail(e.target.value)}
@@ -164,16 +166,19 @@ export default function SettingsPage() {
               type="email"
               placeholder="your-paypal@example.com"
               autoComplete="email"
+              aria-label="PayPal email"
             />
           </div>
 
           <div className="sm:col-span-1">
             <label className="block text-sm mb-1">Preferred market</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2" role="group" aria-label="Preferred market">
               <button
                 type="button"
                 onClick={() => setMarket("PH")}
                 className={`rounded-md border px-3 py-1.5 text-sm ${market === "PH" ? "bg-indigo-600 text-white border-indigo-600" : "hover:bg-gray-50"}`}
+                aria-pressed={market === "PH"}
+                aria-label="Set market to PH"
               >
                 PH
               </button>
@@ -181,6 +186,8 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => setMarket("US")}
                 className={`rounded-md border px-3 py-1.5 text-sm ${market === "US" ? "bg-indigo-600 text-white border-indigo-600" : "hover:bg-gray-50"}`}
+                aria-pressed={market === "US"}
+                aria-label="Set market to US"
               >
                 US
               </button>
@@ -195,6 +202,7 @@ export default function SettingsPage() {
               type="submit"
               disabled={saving || loading}
               className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${saving || loading ? "bg-gray-400" : "bg-teal-600 hover:bg-teal-700"}`}
+              aria-label="Save settings"
             >
               {saving ? "Saving…" : "Save settings"}
             </button>
@@ -207,31 +215,36 @@ export default function SettingsPage() {
         <h2 className="text-sm sm:text-base font-medium">Change password</h2>
         <form onSubmit={changePassword} className="mt-4 grid grid-cols-1 gap-3 sm:gap-4 sm:max-w-md">
           <div>
-            <label className="block text-sm mb-1">New password</label>
+            <label className="block text-sm mb-1" htmlFor="newPassword">New password</label>
             <input
+              id="newPassword"
               value={pw1}
               onChange={(e) => setPw1(e.target.value)}
               className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
               type="password"
               placeholder="At least 8 characters"
               minLength={8}
+              aria-label="New password"
             />
           </div>
           <div>
-            <label className="block text-sm mb-1">Confirm password</label>
+            <label className="block text-sm mb-1" htmlFor="confirmPassword">Confirm password</label>
             <input
+              id="confirmPassword"
               value={pw2}
               onChange={(e) => setPw2(e.target.value)}
               className="w-full rounded-lg border px-3 py-2 text-sm outline-none focus:ring-2"
               type="password"
               placeholder="Re-enter your password"
               minLength={8}
+              aria-label="Confirm password"
             />
           </div>
           <div>
             <button
               type="submit"
               className="rounded-lg bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 text-sm font-medium"
+              aria-label="Update password"
             >
               Update password
             </button>
@@ -243,17 +256,18 @@ export default function SettingsPage() {
       <section className="rounded-2xl border bg-white p-4 sm:p-5">
         <h2 className="text-sm sm:text-base font-medium">Privacy & account</h2>
         <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-          <Link href="/privacy" className="text-sm underline">
+          <Link href="/privacy" className="text-sm underline" aria-label="Open Privacy Policy">
             Privacy Policy
           </Link>
-          <span className="hidden sm:inline text-gray-300">•</span>
-          <Link href="/terms" className="text-sm underline">
+          <span className="hidden sm:inline text-gray-300" aria-hidden="true">•</span>
+          <Link href="/terms" className="text-sm underline" aria-label="Open Terms of Service">
             Terms of Service
           </Link>
-          <span className="hidden sm:inline text-gray-300">•</span>
+          <span className="hidden sm:inline text-gray-300" aria-hidden="true">•</span>
           <Link
             href="/logout"
             className="text-sm rounded-md border px-3 py-1.5 hover:bg-gray-50 w-fit"
+            aria-label="Sign out"
           >
             Sign out
           </Link>

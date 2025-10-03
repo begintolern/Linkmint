@@ -1,8 +1,12 @@
 // app/dashboard/earnings/page.tsx
 "use client";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { useEffect, useMemo, useState } from "react";
 import StatusBadge from "@/components/StatusBadge";
+import DashboardPageHeader from "@/components/DashboardPageHeader";
 
 type Commission = {
   id: string;
@@ -68,20 +72,18 @@ export default function EarningsPage() {
 
   return (
     <main className="space-y-6">
-      <header className="flex items-baseline justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Earnings</h1>
-          <p className="text-sm text-gray-600">
-            Commissions across merchants and statuses.
-          </p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 text-xs">
-          <Badge label="Total" value={totals.all} />
-          <Badge label="Pending" value={totals.pending} />
-          <Badge label="Approved" value={totals.approved} />
-          <Badge label="Paid" value={totals.paid} />
-        </div>
-      </header>
+      <DashboardPageHeader
+        title="Earnings"
+        subtitle="Commissions across merchants and statuses."
+        rightSlot={
+          <div className="hidden sm:flex items-center gap-2 text-xs">
+            <Badge label="Total" value={totals.all} />
+            <Badge label="Pending" value={totals.pending} />
+            <Badge label="Approved" value={totals.approved} />
+            <Badge label="Paid" value={totals.paid} />
+          </div>
+        }
+      />
 
       {/* Mobile totals */}
       <div className="sm:hidden grid grid-cols-2 gap-2">

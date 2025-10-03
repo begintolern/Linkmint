@@ -1,7 +1,11 @@
 // app/dashboard/payouts/page.tsx
 "use client";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { useEffect, useMemo, useState } from "react";
+import DashboardPageHeader from "@/components/DashboardPageHeader";
 import PayoutInfoCard from "@/components/dashboard/PayoutInfoCard";
 import StatusBadge from "@/components/StatusBadge";
 
@@ -17,6 +21,7 @@ type Payout = {
 export default function DashboardPayoutsPage() {
   const [rows, setRows] = useState<Payout[]>([]);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -24,7 +29,8 @@ export default function DashboardPayoutsPage() {
         const res = await fetch("/api/payouts/list", { cache: "no-store" });
         const json = await res.json();
         setRows(json?.payouts ?? []);
-      } catch {
+      } catch (e: any) {
+        setErr(e?.message || "Failed to load payouts.");
         setRows([]);
       } finally {
         setLoading(false);
@@ -42,23 +48,28 @@ export default function DashboardPayoutsPage() {
 
   return (
     <main className="space-y-6">
-      <header className="flex items-baseline justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Payouts</h1>
-          <p className="text-sm text-gray-600">
-            Request payouts and view your payout history.
-          </p>
+      <DashboardPageHeader
+        title="Payouts"
+        subtitle="Request payouts and view your payout history."
+        rightSlot={
+          <span className="hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs text-gray-700">
+            Total paid: ${totalPaid.toFixed(2)}
+          </span>
+        }
+      />
+
+      {/* Inline alert if fetch failed */}
+      {err && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm">
+          {err} — showing empty results.
         </div>
-        <span className="hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs text-gray-700">
-          Total paid: ${totalPaid.toFixed(2)}
-        </span>
-      </header>
+      )}
 
       {/* Request payout + balance info */}
-      {/* Replace 56.78 with a real approved balance from API later */}
+      {/* Replace 56.78 with a real approved balance from API when ready */}
       <PayoutInfoCard approvedTotal={56.78} threshold={5} />
 
-      {/* Payout history */}
+      {/* History */}
       <section className="rounded-xl border bg-white">
         <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
           <h2 className="text-sm sm:text-base font-medium">History</h2>
@@ -92,7 +103,7 @@ export default function DashboardPayoutsPage() {
                       <div className="whitespace-nowrap">
                         {new Date(p.createdAt).toLocaleString()}
                       </div>
-                      {/* Mobile-only: show destination under date */}
+                      {/* Mobile-only: provider + destination below date */}
                       <div className="mt-0.5 text-xs text-gray-500 sm:hidden">
                         {p.provider} · {p.receiverEmail ?? "—"}
                       </div>
@@ -123,14 +134,13 @@ export default function DashboardPayoutsPage() {
         </div>
       </section>
 
-      {/* Sticky request action on small screens */}
+      {/* Sticky request action on small screens (optional helper) */}
       <div className="md:hidden fixed inset-x-0 bottom-0 z-30">
         <div className="mx-auto max-w-xl px-4 pb-4">
           <div className="rounded-2xl bg-white/80 backdrop-blur border shadow p-3">
             <button
               className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-medium py-3"
               onClick={() => {
-                // Optional: route to /dashboard/payouts#request or open a modal
                 const el = document.getElementById("payout-request");
                 if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
                 else window.location.hash = "request";
@@ -146,5 +156,5 @@ export default function DashboardPayoutsPage() {
 }
 
 function formatMoney(cents: number) {
-  return (cents / 100).toFixed((cents % 100 === 0 ? 0 : 2));
+  return (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
 }
