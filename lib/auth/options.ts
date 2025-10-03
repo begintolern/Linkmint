@@ -134,7 +134,10 @@ export const authOptions: any = {
     async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
       if (user) {
         token.sub = (user.id ?? token.sub) as string;
-        (token as any).email = user.email ?? (token as any).email;
+        token.email = (user.email ?? token.email) as string; // keep email sticky on sign-in
+      } else {
+        // ensure email stays sticky on subsequent calls
+        token.email = (token.email ?? (token as any).email) as string;
       }
 
       const userId = (user?.id ?? token.sub) as string | undefined;
@@ -159,6 +162,7 @@ export const authOptions: any = {
     async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       if (session?.user) {
         (session.user as any).id = (token.sub ?? "") as string;
+        (session.user as any).email = (token.email ?? session.user.email ?? null) as string | null; // ← NEW: ensure email always present
         (session.user as any).role = ((token as any).role ?? "USER") as string;
         (session.user as any).referralCode = ((token as any).referralCode ?? null) as string | null;
         (session.user as any).disabled = Boolean((token as any).deletedAt ?? false);

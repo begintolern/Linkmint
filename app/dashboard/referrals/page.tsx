@@ -29,7 +29,6 @@ export default function ReferralsPage() {
   const [data, setData] = useState<ApiOk | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [lastStatus, setLastStatus] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,12 +37,10 @@ export default function ReferralsPage() {
       try {
         const res = await fetch("/api/referrals", {
           cache: "no-store",
-          credentials: "include", // be explicit about cookies
+          credentials: "include",
         });
 
         if (cancelled) return;
-
-        setLastStatus(res.status);
 
         let json: ApiResp | null = null;
         try {
@@ -52,13 +49,21 @@ export default function ReferralsPage() {
           json = null;
         }
 
-        // Show Unauthorized ONLY when it's actually a 401
+        // If 401, DO NOT show an error; treat as empty state so the page stays clean
         if (!res.ok) {
-          const message =
-            res.status === 401
-              ? "Unauthorized — please log in again."
-              : (json as ApiErr)?.error || "Failed to load referrals.";
-          setErr(message);
+          if (res.status === 401) {
+            setData({
+              success: true,
+              ungroupedInvitees: 0,
+              groups: [],
+              badge: null,
+              referralCode: null,
+            } as ApiOk);
+            setErr(null);
+            return;
+          }
+          // Only show an error for real failures (5xx, etc.)
+          setErr((json as ApiErr)?.error || "Failed to load referrals.");
           setData(null);
           return;
         }
@@ -70,7 +75,7 @@ export default function ReferralsPage() {
           return;
         }
 
-        // 200 OK but no success:true — treat as empty, not an error
+        // 200 OK but unexpected shape — fall back to empty
         setData({
           success: true,
           ungroupedInvitees: 0,
@@ -81,6 +86,7 @@ export default function ReferralsPage() {
         setErr(null);
       } catch (e: any) {
         if (cancelled) return;
+        // Network-level failure — show a generic message
         setErr(e?.message || "Failed to load referrals.");
         setData(null);
       } finally {
@@ -113,7 +119,7 @@ export default function ReferralsPage() {
   return (
     <main className="space-y-6">
       <DashboardPageHeader
-        title="Referrals 5% Bonus · v2"
+        title="Referrals 5% Bonus"
         subtitle="Invite friends, form batches of 3, and earn 5% bonus commissions for 90 days."
         rightSlot={
           <div className="hidden sm:flex items-center gap-2 text-xs">
@@ -123,15 +129,14 @@ export default function ReferralsPage() {
         }
       />
 
+      {/* Only show a banner for real failures, not 401 */}
       {err && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm">
           {err} — showing empty results.
-          {lastStatus !== null && (
-            <span className="ml-2 opacity-70">(status {lastStatus})</span>
-          )}
         </div>
       )}
 
+      {/* Referral link */}
       <section className="rounded-2xl border bg-white p-4 sm:p-5 space-y-3">
         <h2 className="text-sm sm:text-base font-medium">Your referral link</h2>
         {data?.referralCode ? (
@@ -153,6 +158,7 @@ export default function ReferralsPage() {
         )}
       </section>
 
+      {/* Groups table */}
       <section className="rounded-2xl border bg-white">
         <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
           <h2 className="text-sm sm:text-base font-medium">Your Groups</h2>

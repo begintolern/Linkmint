@@ -1,4 +1,3 @@
-// app/api/referrals/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -36,7 +35,7 @@ export async function GET(req: NextRequest) {
     let inviterId: string | undefined =
       (token?.sub as string | undefined) ?? undefined;
 
-    // Optional cookie hints (your app already sets some cookies sometimes)
+    // Try uid cookies your app sometimes sets
     if (!inviterId) {
       inviterId =
         req.cookies.get("uid")?.value ||
@@ -44,10 +43,16 @@ export async function GET(req: NextRequest) {
         undefined;
     }
 
-    // 3) Fallback: look up user by email if we still don't have id
-    if (!inviterId && token?.email) {
+    // 3) Fallback: look up user by email
+    //    (use JWT email first, then 'email' cookie your app sets)
+    let emailForLookup: string | undefined =
+      (token?.email as string | undefined) ||
+      req.cookies.get("email")?.value ||
+      undefined;
+
+    if (!inviterId && emailForLookup) {
       const u = await prisma.user.findUnique({
-        where: { email: token.email },
+        where: { email: emailForLookup },
         select: { id: true },
       });
       inviterId = u?.id;
