@@ -155,10 +155,19 @@ export default function PayoutMethodsPage() {
           {/* Promo SMS opt-in */}
           <div className="mt-4 rounded-xl border p-3">
             <div className="text-xs font-medium mb-2">Promo SMS opt-in</div>
+
             {promoAuthNeeded ? (
-              <p className="text-xs text-muted-foreground">
-                Please sign in to manage promo SMS preferences.
-              </p>
+              <div className="text-xs">
+                <p className="text-muted-foreground">
+                  Please sign in to manage promo SMS preferences.
+                </p>
+                <a
+                  href="/api/auth/signin"
+                  className="mt-2 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-muted"
+                >
+                  Sign in to update preferences
+                </a>
+              </div>
             ) : (
               <>
                 <label className="inline-flex items-center gap-2 text-sm">
@@ -180,11 +189,11 @@ export default function PayoutMethodsPage() {
                 >
                   {optInLoading ? "Saving…" : "Save promo preference"}
                 </button>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  We’ll use this for merchant promos, payout updates, and special offers. You can opt out anytime.
+                </p>
               </>
             )}
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              We’ll use this for merchant promos, payout updates, and special offers. You can opt out anytime.
-            </p>
           </div>
 
           {/* Simulator */}
