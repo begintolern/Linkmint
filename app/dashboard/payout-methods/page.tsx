@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
 
 type GCashHealth = { ok: boolean; provider: string; ready: boolean; missingEnv: string[] };
 type SimResult = {
@@ -143,7 +142,7 @@ export default function PayoutMethodsPage() {
             Pre-provisioned. Will activate after PH corporate + banking verification.
           </p>
 
-        {/* Readiness */}
+          {/* Readiness */}
           <div className="mt-3">
             {gcashLoading ? (
               <span className="text-xs text-muted-foreground">Checking status…</span>
@@ -153,10 +152,14 @@ export default function PayoutMethodsPage() {
                   Status:{" "}
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 ${
-                      gcash.ready ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                      gcash.ready
+                        ? "bg-green-100 text-green-700"
+                        : "bg-amber-100 text-amber-700"
                     }`}
                   >
-                    {gcash.ready ? "Ready (credentials present)" : "Simulated (credentials missing)"}
+                    {gcash.ready
+                      ? "Ready (credentials present)"
+                      : "Simulated (credentials missing)"}
                   </span>
                 </div>
                 {!gcash.ready && gcash.missingEnv?.length > 0 && (
@@ -169,7 +172,9 @@ export default function PayoutMethodsPage() {
                 )}
               </div>
             ) : (
-              <span className="text-xs text-red-600">Unable to check GCash status.</span>
+              <span className="text-xs text-red-600">
+                Unable to check GCash status.
+              </span>
             )}
           </div>
 
@@ -184,18 +189,12 @@ export default function PayoutMethodsPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={async () => {
-                    // Use redirect:false so the promise resolves; then force the target URL.
+                  onClick={() => {
                     const target = `${window.location.origin}/dashboard/payout-methods`;
-                    try {
-                      await signIn(undefined, {
-                        callbackUrl: target,
-                        redirect: false,
-                      });
-                    } finally {
-                      // Ensure we end up back on payout-methods regardless of provider defaults
-                      window.location.href = target;
-                    }
+                    // Force navigation to NextAuth sign-in with a callback back to this page
+                    window.location.href = `/api/auth/signin?callbackUrl=${encodeURIComponent(
+                      target
+                    )}`;
                   }}
                   className="mt-2 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-muted"
                 >
