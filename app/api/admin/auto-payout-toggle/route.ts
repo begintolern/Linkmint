@@ -6,7 +6,7 @@ export const revalidate = 0;
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { adminGuardFromReq } from "@/lib/utils/adminGuardReq";
-import { runAutoPayoutEngine } from "@/lib/engines/autoPayoutEngine"; // optional immediate run
+import { runAutoPayoutEngine } from "@/lib/payouts/autoPayoutEngine"; // <- correct named export
 
 // Accept POST as an alias for PATCH (some clients/pages may still send POST)
 export async function POST(req: NextRequest) {
@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest) {
     where: { key: KEY },
     create: { key: KEY, value: nextVal },
     update: { value: nextVal },
-    select: { key: true, value: true }, // no updatedAt
+    select: { key: true, value: true },
   });
 
   // optional audit log
@@ -78,14 +78,17 @@ export async function PATCH(req: NextRequest) {
   let triggered = false;
   if (body.enabled) {
     try {
-      await runAutoPayoutEngine();
+      await runAutoPayoutEngine(); // <- correct call
       triggered = true;
       await prisma.eventLog.create({
         data: { type: "payout", message: "Auto-payout immediate run triggered" },
       });
     } catch (e) {
       await prisma.eventLog.create({
-        data: { type: "error", message: `Auto-payout immediate run failed: ${String(e)}` },
+        data: {
+          type: "error",
+          message: `Auto-payout immediate run failed: ${String(e)}`,
+        },
       });
     }
   }
@@ -95,5 +98,4 @@ export async function PATCH(req: NextRequest) {
     enabled: body.enabled,
     triggered,
   });
-  
 }

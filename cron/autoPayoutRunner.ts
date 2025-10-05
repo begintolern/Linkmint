@@ -1,5 +1,5 @@
 // cron/autoPayoutRunner.ts
-import { runAutoPayoutEngine } from "@/lib/engines/autoPayoutEngine";
+import { runAutoPayoutEngine } from "@/lib/payouts/autoPayoutEngine";
 
 export async function run() {
   console.log("⏰ Auto payout cron triggered...");
