@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { signIn } from "next-auth/react";
 
 type GCashHealth = { ok: boolean; provider: string; ready: boolean; missingEnv: string[] };
 type SimResult = {
@@ -64,7 +65,7 @@ export default function PayoutMethodsPage() {
           setPromoNumber(pf.number || "");
         }
       } catch {
-        // ignore
+        // non-blocking
       } finally {
         if (alive) setOptInLoading(false);
       }
@@ -187,14 +188,13 @@ export default function PayoutMethodsPage() {
                 <p className="text-muted-foreground">
                   Please sign in to manage promo SMS preferences.
                 </p>
-                <a
-                  href={`/api/auth/signin?callbackUrl=${encodeURIComponent(
-                    "/dashboard/payout-methods"
-                  )}`}
+                <button
+                  type="button"
+                  onClick={() => signIn(undefined, { callbackUrl: "/dashboard/payout-methods" })}
                   className="mt-2 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-muted"
                 >
                   Sign in to update preferences
-                </a>
+                </button>
               </div>
             ) : (
               <>
@@ -232,7 +232,7 @@ export default function PayoutMethodsPage() {
           </div>
 
           {/* Simulator */}
-          <div className="mt-4 rounded-xl border p-3">
+          <div className="mt-4 rounded-XL border p-3">
             <div className="text-xs font-medium mb-2">Simulate GCash payout</div>
             <label className="block text-xs text-muted-foreground">
               GCash number (not saved)
