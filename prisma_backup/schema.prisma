@@ -35,6 +35,12 @@ model User {
   bonusTier          Int       @default(0)
   countryCode        String    @default("PH") @db.VarChar(2)
 
+  // ---- PH payout defaults (new) ----
+  defaultPayoutMethod      PayoutMethod?
+  defaultGcashNumber       String?       @db.VarChar(20)
+  defaultBankName          String?       @db.VarChar(80)
+  defaultBankAccountNumber String?       @db.VarChar(40)
+
   commissions            Commission[]
   eventLogs              EventLog[]
   commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
@@ -50,49 +56,20 @@ model User {
   referralGroup          ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
-  verificationTokens     VerificationToken[]  @relation("UserToVerificationTokens")
+
+  verificationTokens VerificationToken[] @relation("UserToVerificationTokens")
+
+  // ---- New relation: user has many payout requests (manual/automated) ----
+  payoutRequests PayoutRequest[]
 
   totalReferrals       Int @default(0)
   permanentOverrideBps Int @default(0) // 100 bps = 1%
 
-  // Geo gating
+  // Geo gating (ISO-3166-1 alpha-2 codes like "US","PH")
   allowedCountries String[] @default([])
   blockedCountries String[] @default([])
 
-  // --- PH payout defaults ---
-  defaultPayoutMethod      PayoutMethod?
-  defaultGcashNumber       String?       @db.VarChar(20)
-  defaultBankName          String?       @db.VarChar(80)
-  defaultBankAccountNumber String?       @db.VarChar(40)
-
-  // relation: user has many payout requests
-  payoutRequests PayoutRequest[]
-
   @@index([deletedAt])
-}
-
-model PayoutRequest {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  amountPhp         Int
-  method            PayoutMethod
-  gcashNumber       String?      @db.VarChar(20)
-  bankName          String?      @db.VarChar(80)
-  bankAccountNumber String?      @db.VarChar(40)
-
-  status        PayoutStatus   @default(PENDING)
-  provider      PayoutProvider @default(MANUAL)
-  requestedAt   DateTime       @default(now())
-  processedAt   DateTime?
-  processorNote String?        @db.VarChar(255)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId, status, requestedAt])
-  @@index([status, requestedAt])
 }
 
 model VerificationToken {
@@ -132,7 +109,7 @@ model EventLog {
   message   String?
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
-  severity  Int      @default(1)
+  severity  Int      @default(1) // 1=info, 2=warn, 3=error, 4=critical
 
   @@index([userId, createdAt])
 }
@@ -246,41 +223,65 @@ model NetworkAccount {
 }
 
 model MerchantRule {
-  id               String         @id @default(cuid())
-  active           Boolean        @default(true)
-  merchantName     String
-  network          String?
-  domainPattern    String?
-  paramKey         String?
-  paramValue       String?
-  linkTemplate     String?
+  id     String  @id @default(cuid())
+  active Boolean @default(true)
+
+  merchantName  String
+  network       String?
+  domainPattern String?
+
+  // Optional link params/templates
+  paramKey     String?
+  paramValue   String?
+  linkTemplate String?
+
+  // Windows
   cookieWindowDays Int?
   payoutDelayDays  Int?
-  commissionType   CommissionCalc @default(PERCENT)
-  commissionRate   Decimal?
-  calc             String?
-  rate             Float?
-  notes            String?
-  importMethod     ImportMethod   @default(MANUAL)
-  apiBaseUrl       String?
-  apiAuthType      String?
-  apiKeyRef        String?
-  lastImportedAt   DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  status           String         @default("PENDING")
-  inactiveReason   String?
-  market           String         @default("US")
-  allowedRegions   String[]
-  allowedCountries String[]       @default([])
-  blockedCountries String[]       @default([])
-  disallowed       Json?
-  allowedSources   Json?
-  commissions      Commission[]
-  smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
 
+  // Commission (your existing enum + numeric fields)
+  commissionType CommissionCalc @default(PERCENT)
+  commissionRate Decimal?
+  calc           String?
+  rate           Float?
+
+  // Admin / notes
+  notes          String?
+  importMethod   ImportMethod @default(MANUAL)
+  apiBaseUrl     String?
+  apiAuthType    String?
+  apiKeyRef      String?
+  lastImportedAt DateTime?
+
+  // System timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Operational
+  status         String  @default("PENDING")
+  inactiveReason String?
+
+  // Region & gating
+  market           String   @default("US") // trusted region field
+  allowedRegions   String[]
+  // Geo gating (ISO-3166-1 alpha-2 codes like "US","PH")
+  allowedCountries String[] @default([])
+  blockedCountries String[] @default([])
+
+  // Misc JSON config
+  disallowed     Json?
+  allowedSources Json?
+
+  // Relations
+  commissions Commission[]
+  smartLinks  SmartLink[]  @relation("MerchantRuleToSmartLink")
+
+  // ---------- Indexes / Constraints ----------
+  /// Prevent duplicates for same merchant within the same market (US/PH/GLOBAL, etc.)
   @@unique([merchantName, market], name: "merchant_market_unique")
+  /// Fast lookups by domain
   @@index([domainPattern], map: "merchant_domain_idx")
+  /// Fast filtering by market & activity in dashboards
   @@index([market, active], map: "merchant_market_active_idx")
 }
 
@@ -322,24 +323,26 @@ model PinCredential {
   pinHash    String
   lastUsedAt DateTime?
   createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   user       User      @relation("UserPinCredentials", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, deviceId])
 }
 
 model SmartLink {
-  id               String        @id @default(cuid())
-  userId           String
-  merchantRuleId   String?
-  merchantName     String
-  merchantDomain   String?
-  originalUrl      String
-  shortUrl         String
-  label            String?
-  createdAt        DateTime      @default(now())
-  merchantRule     MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
-  user             User          @relation("UserToSmartLink", fields: [userId], references: [id])
+  id             String        @id @default(cuid())
+  userId         String
+  merchantRuleId String?
+  merchantName   String
+  merchantDomain String?
+  originalUrl    String
+  shortUrl       String
+  label          String?
+  createdAt      DateTime      @default(now())
+  merchantRule   MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
+  user           User          @relation("UserToSmartLink", fields: [userId], references: [id])
+
+  // NEW: per-market destinations (e.g., {"PH":"…","US":"…"})
   destinationsJson Json?
 }
 
@@ -369,7 +372,7 @@ model ComplianceEvent {
 model UserFlag {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   userId    String
   reason    String
   status    String   @default("OPEN")
@@ -415,12 +418,14 @@ model ClickEvent {
   @@index([source, createdAt])
 }
 
+// ---------- Enums ----------
+
 enum PayoutProvider {
   PAYPAL
   PAYONEER
-  MANUAL
-  XENDIT
-  PAYMONGO
+  MANUAL // NEW: manual bank/GCash via InstaPay/PESONet
+  XENDIT // NEW: aggregator path
+  PAYMONGO // NEW: aggregator path
 }
 
 enum PayoutStatus {
@@ -428,11 +433,6 @@ enum PayoutStatus {
   PROCESSING
   PAID
   FAILED
-}
-
-enum PayoutMethod {
-  GCASH
-  BANK
 }
 
 enum MerchantStatus {
@@ -472,4 +472,36 @@ enum ImportMethod {
 enum CommissionCalc {
   PERCENT
   FIXED
+}
+
+// NEW: PH payout methods for requests & defaults
+enum PayoutMethod {
+  GCASH
+  BANK
+}
+
+// ---------- NEW MODEL: PayoutRequest (manual MVP + future automation) ----------
+
+model PayoutRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  amountPhp         Int
+  method            PayoutMethod
+  gcashNumber       String?      @db.VarChar(20)
+  bankName          String?      @db.VarChar(80)
+  bankAccountNumber String?      @db.VarChar(40)
+
+  status        PayoutStatus   @default(PENDING)
+  provider      PayoutProvider @default(MANUAL)
+  requestedAt   DateTime       @default(now())
+  processedAt   DateTime?
+  processorNote String?        @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status, requestedAt])
+  @@index([status, requestedAt])
 }

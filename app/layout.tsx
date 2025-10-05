@@ -24,14 +24,12 @@ export default async function RootLayout({
 }) {
   const store = cookies();
 
-  // Session markers (best effort)
   const email = store.get("email")?.value || null;
   const uid =
     store.get("uid")?.value ||
     store.get("userId")?.value ||
     null;
 
-  // Start with cookie role, then override with DB truth
   let role = (store.get("role")?.value ?? "user").toLowerCase();
 
   try {
@@ -49,15 +47,13 @@ export default async function RootLayout({
       if (u?.role) role = String(u.role).toLowerCase();
     }
   } catch {
-    // If DB is unavailable, fall back to cookie role
+    // Fallback to cookie role if DB unavailable
   }
 
   return (
     <html lang="en">
       <body className="bg-white text-gray-900">
-        {/* Market switcher banner */}
         <MarketSwitcher />
-
         <Header isLoggedIn={!!(email || uid)} isAdmin={role === "admin"} />
         <div className="min-h-[76vh]">{children}</div>
         <Footer />
@@ -74,7 +70,7 @@ function Header({
   isAdmin: boolean;
 }) {
   return (
-    <header className="border-b bg-white">
+    <header className="border-b bg-white sticky top-0 z-50">
       <div className="mx-auto max-w-6xl px-4 py-3 flex justify-between items-center">
         <Link href="/" className="font-bold text-xl text-teal-700">
           linkmint.co
@@ -117,20 +113,37 @@ function Header({
 function Footer() {
   return (
     <footer className="border-t bg-white">
-      <div className="mx-auto max-w-6xl px-4 py-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600">
+      <div className="mx-auto max-w-6xl px-4 py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-sm text-gray-600">
         <p className="leading-tight">
           © {new Date().getFullYear()} linkmint.co · All rights reserved.
         </p>
-        <div className="flex items-center gap-4">
-          <Link href="/tos" className="hover:underline">
-            Terms of Service
-          </Link>
-          <span className="text-gray-400">·</span>
-          <span className="leading-tight">
-            Payouts are released only after merchants pay Linkmint. Voided
-            commissions are not payable. Expect up to 90 days.
-          </span>
+
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:gap-4">
+          {/* English links */}
+          <div className="flex items-center gap-3">
+            <a href="/tos" className="hover:underline">Terms</a>
+            <span className="text-gray-400">·</span>
+            <a href="/privacy" className="hover:underline">Privacy</a>
+            <span className="text-gray-400">·</span>
+            <a href="/dashboard/trust-center" className="hover:underline">Trust Center</a>
+          </div>
+
+          {/* Tagalog links */}
+          <div className="flex items-center gap-2 text-gray-500">
+            <span className="text-gray-400 hidden sm:inline">|</span>
+            <span className="text-gray-500">🇵🇭</span>
+            <a href="/tos/tl" className="hover:underline">Mga Tuntunin</a>
+            <span className="text-gray-400">·</span>
+            <a href="/privacy/tl" className="hover:underline">Privacy (TL)</a>
+            <span className="text-gray-400">·</span>
+            <a href="/dashboard/trust-center/tl" className="hover:underline">Sentro ng Tiwala</a>
+          </div>
         </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 pb-6 text-xs text-gray-500">
+        Payouts are released only after merchants pay Linkmint. Voided commissions are not
+        payable. Expect up to 90 days.
       </div>
     </footer>
   );

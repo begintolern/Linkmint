@@ -1,160 +1,133 @@
 // app/dashboard/payouts/page.tsx
 "use client";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-import { useEffect, useMemo, useState } from "react";
-import DashboardPageHeader from "@/components/DashboardPageHeader";
-import PayoutInfoCard from "@/components/dashboard/PayoutInfoCard";
-import StatusBadge from "@/components/StatusBadge";
-
-type Payout = {
+type Row = {
   id: string;
-  createdAt: string;
-  provider: "PAYPAL" | "PAYONEER";
-  statusEnum: string;
-  netCents: number;
-  receiverEmail: string | null;
+  amountPhp: number;
+  method: "GCASH" | "BANK";
+  status: "PENDING" | "PROCESSING" | "PAID" | "FAILED";
+  requestedAt: string;
+  processedAt: string | null;
+  processorNote: string | null;
 };
 
-export default function DashboardPayoutsPage() {
-  const [rows, setRows] = useState<Payout[]>([]);
+export default function PayoutsPage() {
+  const [items, setItems] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/payouts/list", { cache: "no-store" });
-        const json = await res.json();
-        setRows(json?.payouts ?? []);
-      } catch (e: any) {
-        setErr(e?.message || "Failed to load payouts.");
-        setRows([]);
-      } finally {
-        setLoading(false);
+  async function load() {
+    setLoading(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/payouts/mine", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load");
       }
-    })();
+      setItems(data.items || []);
+    } catch (e: any) {
+      setErr(e?.message || "Error loading payouts");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
-  const totalPaid = useMemo(
-    () =>
-      rows
-        .filter((r) => r.statusEnum === "PAID")
-        .reduce((acc, r) => acc + r.netCents, 0) / 100,
-    [rows]
-  );
-
   return (
-    <main className="space-y-6">
-      <DashboardPageHeader
-        title="Payouts"
-        subtitle="Request payouts and view your payout history."
-        rightSlot={
-          <span className="hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs text-gray-700">
-            Total paid: ${totalPaid.toFixed(2)}
-          </span>
-        }
-      />
-
-      {/* Inline alert if fetch failed */}
-      {err && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 text-amber-800 p-3 text-sm">
-          {err} — showing empty results.
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold">Payouts</h1>
+          <p className="text-sm text-gray-600">Your payout requests and status</p>
         </div>
-      )}
+        <Link
+          href="/dashboard"
+          className="px-3 py-2 rounded-lg border text-sm hover:bg-gray-50"
+        >
+          ← Back to Overview
+        </Link>
+      </div>
 
-      {/* Request payout + balance info */}
-      {/* Replace 56.78 with a real approved balance from API when ready */}
-      <PayoutInfoCard approvedTotal={56.78} threshold={5} />
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={load}
+          className="px-3 py-2 rounded-lg border text-sm"
+        >
+          Refresh
+        </button>
+        <span className="text-xs text-gray-600">
+          New payout? Use the <strong>Request Payout</strong> button on the Overview page.
+        </span>
+      </div>
 
-      {/* History */}
-      <section className="rounded-xl border bg-white">
-        <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
-          <h2 className="text-sm sm:text-base font-medium">History</h2>
-          <span className="sm:hidden inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] text-gray-700">
-            Paid: ${totalPaid.toFixed(2)}
-          </span>
+      {/* Table / states */}
+      {loading ? (
+        <div className="rounded-2xl border p-6 text-sm text-gray-600">Loading…</div>
+      ) : err ? (
+        <div className="rounded-2xl border p-6 text-sm text-red-600">{err}</div>
+      ) : items.length === 0 ? (
+        <div className="rounded-2xl border p-6 text-sm text-gray-600">
+          No payout requests yet.
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 text-left z-10">
+      ) : (
+        <div className="rounded-2xl border overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="p-3 sm:p-3">Date</th>
-                <th className="p-3 sm:p-3">Amount</th>
-                <th className="p-3 sm:p-3 hidden sm:table-cell">Provider</th>
-                <th className="p-3 sm:p-3 hidden md:table-cell">Destination</th>
-                <th className="p-3 sm:p-3">Status</th>
+                <th className="text-left p-3">Requested</th>
+                <th className="text-left p-3">Amount (₱)</th>
+                <th className="text-left p-3">Method</th>
+                <th className="text-left p-3">Status</th>
+                <th className="text-left p-3">Processed</th>
+                <th className="text-left p-3">Note</th>
+                <th className="text-left p-3">ID</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr>
-                  <td className="p-6 text-gray-500" colSpan={5}>
-                    Loading…
+              {items.map((r) => (
+                <tr key={r.id} className="border-t">
+                  <td className="p-3">
+                    {new Date(r.requestedAt).toLocaleString()}
                   </td>
-                </tr>
-              ) : rows.length ? (
-                rows.map((p) => (
-                  <tr key={p.id} className="border-t">
-                    <td className="p-3 align-middle">
-                      <div className="whitespace-nowrap">
-                        {new Date(p.createdAt).toLocaleString()}
-                      </div>
-                      {/* Mobile-only: provider + destination below date */}
-                      <div className="mt-0.5 text-xs text-gray-500 sm:hidden">
-                        {p.provider} · {p.receiverEmail ?? "—"}
-                      </div>
-                    </td>
-                    <td className="p-3 align-middle font-medium">
-                      ${formatMoney(p.netCents)}
-                    </td>
-                    <td className="p-3 align-middle hidden sm:table-cell">
-                      {p.provider}
-                    </td>
-                    <td className="p-3 align-middle hidden md:table-cell">
-                      {p.receiverEmail ?? "—"}
-                    </td>
-                    <td className="p-3 align-middle">
-                      <StatusBadge status={p.statusEnum as any} />
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td className="p-6 text-gray-500" colSpan={5}>
-                    No payouts yet.
+                  <td className="p-3 font-medium">{r.amountPhp.toLocaleString()}</td>
+                  <td className="p-3">{r.method}</td>
+                  <td className="p-3">
+                    <StatusBadge status={r.status} />
                   </td>
+                  <td className="p-3">
+                    {r.processedAt ? new Date(r.processedAt).toLocaleString() : "—"}
+                  </td>
+                  <td className="p-3">{r.processorNote ?? "—"}</td>
+                  <td className="p-3 text-[11px] text-gray-600">{r.id}</td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
-      </section>
-
-      {/* Sticky request action on small screens (optional helper) */}
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-30">
-        <div className="mx-auto max-w-xl px-4 pb-4">
-          <div className="rounded-2xl bg-white/80 backdrop-blur border shadow p-3">
-            <button
-              className="w-full rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-medium py-3"
-              onClick={() => {
-                const el = document.getElementById("payout-request");
-                if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                else window.location.hash = "request";
-              }}
-            >
-              Request Payout
-            </button>
-          </div>
-        </div>
-      </div>
-    </main>
+      )}
+    </div>
   );
 }
 
-function formatMoney(cents: number) {
-  return (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
+function StatusBadge({ status }: { status: Row["status"] }) {
+  const styles: Record<Row["status"], string> = {
+    PENDING: "bg-yellow-100 text-yellow-800 border-yellow-300",
+    PROCESSING: "bg-blue-100 text-blue-800 border-blue-300",
+    PAID: "bg-green-100 text-green-800 border-green-300",
+    FAILED: "bg-red-100 text-red-800 border-red-300",
+  };
+  return (
+    <span className={`px-2 py-1 rounded-full border text-xs ${styles[status]}`}>
+      {status}
+    </span>
+  );
 }

@@ -6,15 +6,8 @@ export const fetchCache = "force-no-store";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import MobileNav from "@/components/MobileNav";
 
-function Item({
-  href,
-  label,
-}: {
-  href: string;
-  label: string;
-}) {
+function Item({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
   const active = pathname === href;
   return (
@@ -31,11 +24,7 @@ function Item({
   );
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex">
       {/* Desktop sidebar (≥ md) */}
@@ -60,13 +49,8 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Mobile nav (＜ md) — sits BELOW global header */}
-      <div className="md:hidden fixed inset-x-0 top-14 z-40">
-        <MobileNav />
-      </div>
-
-      {/* Main content: add margin so it clears the header + nav on mobile */}
-      <main className="flex-1 px-4 md:px-6 py-6 md:pt-6 mt-28 md:mt-0">
+      {/* Main content */}
+      <main className="flex-1 px-4 md:px-6 py-6">
         {children}
       </main>
     </div>

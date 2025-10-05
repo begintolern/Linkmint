@@ -1,84 +1,117 @@
-// app/api/payouts/request/route.ts
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/options";
-import { prisma } from "@/lib/db";
+import { PrismaClient, PayoutMethod, PayoutProvider, PayoutStatus } from "@prisma/client";
+import { sendAlert } from "@/lib/telegram/sendAlert";
+import { logPayoutEvent } from "@/lib/audit/logPayoutEvent";
 
-type SessionLike = {
-  user?: {
-    id?: string | null;
-    email?: string | null;
-  };
-} | null;
+const prisma = new PrismaClient();
 
-function isValidPaypalEmail(email?: string) {
-  if (!email) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+// TEMP AUTH — for dev/testing
+async function getUserIdFromRequest(req: Request): Promise<string | null> {
+  const fromHeader = req.headers.get("x-user-id");
+  if (fromHeader && fromHeader.trim().length > 0) return fromHeader.trim();
+
+  const cookie = req.headers.get("cookie") || "";
+  const match = cookie.match(/(?:^|;)\s*userId=([^;]+)/);
+  if (match?.[1]) return decodeURIComponent(match[1]);
+
+  return null;
 }
 
 export async function POST(req: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as SessionLike;
-    const userId = session?.user?.id ?? null;
+    const userId = await getUserIdFromRequest(req);
     if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => ({} as any));
+    const body = await req.json();
+    const { amountPhp, method, gcashNumber, bankName, bankAccountNumber } = body ?? {};
 
-    // Force PayPal-only
-    const destination: string | undefined =
-      body?.destination ?? body?.receiverEmail;
-
-    if (!isValidPaypalEmail(destination)) {
+    // Basic input validation
+    if (!Number.isInteger(amountPhp) || amountPhp < 500) {
       return NextResponse.json(
-        { success: false, error: "A valid PayPal email is required." },
+        { error: "Minimum payout is ₱500 (amountPhp must be an integer)" },
         { status: 400 }
       );
     }
 
-    const grossUSDNum = Number(body?.grossUSD ?? 0);
-    if (!Number.isFinite(grossUSDNum) || grossUSDNum <= 0) {
-      return NextResponse.json(
-        { success: false, error: "Invalid payout amount." },
-        { status: 400 }
-      );
+    if (method !== "GCASH" && method !== "BANK") {
+      return NextResponse.json({ error: "method must be 'GCASH' or 'BANK'" }, { status: 400 });
     }
 
-    const amountCents = Math.round(grossUSDNum * 100);
+    if (method === "GCASH") {
+      if (!gcashNumber || typeof gcashNumber !== "string" || gcashNumber.length !== 11) {
+        return NextResponse.json(
+          { error: "Valid gcashNumber (11 digits) is required for GCASH payouts" },
+          { status: 400 }
+        );
+      }
+    } else if (method === "BANK") {
+      if (!bankName || !bankAccountNumber) {
+        return NextResponse.json(
+          { error: "bankName and bankAccountNumber are required for BANK payouts" },
+          { status: 400 }
+        );
+      }
+    }
 
-    // IMPORTANT: No enum imports — use string literals to match String fields
-    const payout = await prisma.payout.create({
+    // Fetch user for alert context
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true },
+    });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Create payout request
+    const created = await prisma.payoutRequest.create({
       data: {
         userId,
-        amount: amountCents,          // required by your schema
-        method: "PAYPAL",             // String in schema
-        status: "PENDING",            // String in schema
-        provider: "PAYPAL",           // keep if your model has this (String)
-        netCents: amountCents,        // keep if exists
-        receiverEmail: destination!,  // required email
+        amountPhp,
+        method: method as PayoutMethod,
+        gcashNumber: method === "GCASH" ? gcashNumber : null,
+        bankName: method === "BANK" ? bankName : null,
+        bankAccountNumber: method === "BANK" ? bankAccountNumber : null,
+        status: PayoutStatus.PENDING,
+        provider: PayoutProvider.MANUAL,
+      },
+      select: {
+        id: true,
+        amountPhp: true,
+        method: true,
+        status: true,
+        provider: true,
+        requestedAt: true,
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      requestId: payout.id,
-      provider: "PAYPAL",
-      destination,
-      grossUSD: grossUSDNum,
-      netUSD: grossUSDNum,
-      status: "PENDING",
+    // 🔹 Log payout request
+    await logPayoutEvent(prisma, {
+      userId,
+      payoutRequestId: created.id,
+      type: "PAYOUT_REQUESTED",
+      message: `Payout requested for ₱${created.amountPhp} via ${created.method}`,
+      severity: 1,
     });
+
+    // 🔹 Send Telegram alert (best-effort)
+    await sendAlert(
+      `💸 *New Payout Request*\n\n👤 ${user.email}\n₱${created.amountPhp.toLocaleString()} via ${created.method}\n\nID: \`${created.id}\``
+    ).catch((err) => console.warn("Telegram alert error:", err));
+
+    return NextResponse.json({ ok: true, payoutRequest: created }, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json(
-      { success: false, error: err?.message ?? "Server error" },
-      { status: 500 }
-    );
+    console.error("Create payout request error:", err);
+
+    // Log error
+    await logPayoutEvent(prisma, {
+      type: "PAYOUT_ERROR",
+      message: "Error creating payout request",
+      severity: 3,
+      meta: { error: err?.message },
+    });
+
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
