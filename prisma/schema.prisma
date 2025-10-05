@@ -51,6 +51,7 @@ model User {
   referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals              User[]               @relation("UserReferrals")
   verificationTokens     VerificationToken[]  @relation("UserToVerificationTokens")
+  gcashNumber            String?              @db.VarChar(32)
 
   totalReferrals       Int @default(0)
   permanentOverrideBps Int @default(0) // 100 bps = 1%
