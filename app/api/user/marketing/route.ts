@@ -67,6 +67,25 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  // ---- rate limit: 10 writes / hour / user ----
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const since = new Date(Date.now() - ONE_HOUR_MS);
+  const writesLastHour = await prisma.eventLog.count({
+    where: {
+      type: "marketing",
+      createdAt: { gte: since },
+      // optional: filter by subject string in detail (cheap contains)
+      detail: { contains: `"subject":"${session.subject}"` },
+    },
+  });
+  if (writesLastHour >= 10) {
+    return NextResponse.json(
+      { ok: false, error: "Too many updates. Try again later." },
+      { status: 429 }
+    );
+  }
+  // ---------------------------------------------
+
   let body: any = {};
   try {
     body = await req.json();
