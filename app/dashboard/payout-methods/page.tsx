@@ -9,9 +9,25 @@ type GCashHealth = {
   missingEnv: string[];
 };
 
+type SimResult = {
+  ok: boolean;
+  mode?: string;
+  provider?: string;
+  message?: string;
+  missingEnv?: string[];
+  echo?: { amountPhp?: number; gcashNumber?: string };
+  error?: string;
+};
+
 export default function PayoutMethodsPage() {
   const [gcash, setGcash] = useState<GCashHealth | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Simulate section state (no DB writes)
+  const [gcashNumber, setGcashNumber] = useState("09171234567");
+  const [amountPhp, setAmountPhp] = useState<number>(100);
+  const [simLoading, setSimLoading] = useState(false);
+  const [simResult, setSimResult] = useState<SimResult | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -30,6 +46,25 @@ export default function PayoutMethodsPage() {
       alive = false;
     };
   }, []);
+
+  async function simulateGCash() {
+    setSimLoading(true);
+    setSimResult(null);
+    try {
+      const res = await fetch("/api/payouts/gcash", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountPhp: Number(amountPhp || 0), gcashNumber }),
+        cache: "no-store",
+      });
+      const data = (await res.json()) as SimResult;
+      setSimResult(data);
+    } catch (e: any) {
+      setSimResult({ ok: false, error: String(e?.message ?? e) });
+    } finally {
+      setSimLoading(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -57,19 +92,7 @@ export default function PayoutMethodsPage() {
             Pre-provisioned. Will activate after PH corporate + banking verification.
           </p>
 
-          <div className="mt-3">
-            <label className="block text-xs text-muted-foreground">GCash number</label>
-            <input
-              type="tel"
-              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              placeholder="09XXXXXXXXX"
-              disabled
-            />
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Disabled until credentials are configured.
-            </p>
-          </div>
-
+          {/* Readiness indicator */}
           <div className="mt-3">
             {loading ? (
               <span className="text-xs text-muted-foreground">Checking status…</span>
@@ -99,6 +122,51 @@ export default function PayoutMethodsPage() {
             ) : (
               <span className="text-xs text-red-600">Unable to check GCash status.</span>
             )}
+          </div>
+
+          {/* Simulate payout (no DB writes) */}
+          <div className="mt-4 rounded-xl border p-3">
+            <div className="text-xs font-medium mb-2">Simulate GCash payout</div>
+            <label className="block text-xs text-muted-foreground">GCash number (not saved)</label>
+            <input
+              type="tel"
+              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              placeholder="09XXXXXXXXX"
+              value={gcashNumber}
+              onChange={(e) => setGcashNumber(e.target.value)}
+            />
+
+            <label className="mt-3 block text-xs text-muted-foreground">Amount (PHP)</label>
+            <input
+              type="number"
+              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              placeholder="100"
+              value={amountPhp}
+              onChange={(e) => setAmountPhp(Number(e.target.value))}
+              min={1}
+            />
+
+            <button
+              onClick={simulateGCash}
+              disabled={simLoading || !gcashNumber || Number(amountPhp) <= 0}
+              className="mt-3 w-full rounded-xl border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
+            >
+              {simLoading ? "Simulating…" : "Simulate GCash payout"}
+            </button>
+
+            {simResult && (
+              <div className="mt-3 rounded-lg border p-2 text-xs">
+                <div className="font-medium mb-1">Result</div>
+                <pre className="whitespace-pre-wrap break-words">
+                  {JSON.stringify(simResult, null, 2)}
+                </pre>
+              </div>
+            )}
+
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              This tool sends a request to <code>/api/payouts/gcash</code>. It does not save your number
+              or transfer funds. Live transfers will only be enabled after credentials are configured.
+            </p>
           </div>
         </div>
 
