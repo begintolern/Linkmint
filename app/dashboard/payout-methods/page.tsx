@@ -1,14 +1,18 @@
+// app/dashboard/payout-methods/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 
 type GCashHealth = { ok: boolean; provider: string; ready: boolean; missingEnv: string[] };
-type SimResult = { ok: boolean; mode?: string; provider?: string; message?: string; missingEnv?: string[]; echo?: { amountPhp?: number; gcashNumber?: string }; error?: string };
+type SimResult = {
+  ok: boolean; mode?: string; provider?: string; message?: string;
+  missingEnv?: string[]; echo?: { amountPhp?: number; gcashNumber?: string }; error?: string
+};
 type Prefs = { ok: boolean; optIn: boolean; number: string };
 
 export default function PayoutMethodsPage() {
   const [gcash, setGcash] = useState<GCashHealth | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [gcashLoading, setGcashLoading] = useState(true);
 
   // Simulator
   const [gcashNumber, setGcashNumber] = useState("09171234567");
@@ -20,32 +24,47 @@ export default function PayoutMethodsPage() {
   const [optInLoading, setOptInLoading] = useState(true);
   const [optIn, setOptIn] = useState(false);
   const [promoNumber, setPromoNumber] = useState("");
+  const [promoAuthNeeded, setPromoAuthNeeded] = useState(false);
 
   useEffect(() => {
     let alive = true;
+
+    // Fetch GCash health (independent)
     (async () => {
       try {
-        const [gc, pf] = await Promise.all([
-          fetch("/api/payouts/gcash", { cache: "no-store" }).then((r) => r.json()),
-          fetch("/api/user/marketing", { cache: "no-store" }).then((r) => r.json()),
-        ]);
-        if (alive) {
-          setGcash(gc);
-          if ((pf as Prefs).ok) {
-            const prefs = pf as Prefs;
-            setOptIn(prefs.optIn);
-            setPromoNumber(prefs.number || "");
-          }
-        }
+        const res = await fetch("/api/payouts/gcash", { cache: "no-store" });
+        const data = (await res.json()) as GCashHealth;
+        if (alive) setGcash(data);
       } catch {
-        // ignore
+        if (alive) setGcash(null);
       } finally {
-        if (alive) {
-          setLoading(false);
-          setOptInLoading(false);
-        }
+        if (alive) setGcashLoading(false);
       }
     })();
+
+    // Fetch promo prefs (independent; auth may be required)
+    (async () => {
+      try {
+        const res = await fetch("/api/user/marketing", { cache: "no-store" });
+        if (res.status === 401) {
+          if (alive) {
+            setPromoAuthNeeded(true);
+            setOptInLoading(false);
+          }
+          return;
+        }
+        const pf = (await res.json()) as Prefs;
+        if (alive && pf?.ok) {
+          setOptIn(pf.optIn);
+          setPromoNumber(pf.number || "");
+        }
+      } catch {
+        // non-blocking
+      } finally {
+        if (alive) setOptInLoading(false);
+      }
+    })();
+
     return () => {
       alive = false;
     };
@@ -79,6 +98,10 @@ export default function PayoutMethodsPage() {
         body: JSON.stringify({ optIn, number: promoNumber }),
         cache: "no-store",
       });
+      if (res.status === 401) {
+        setPromoAuthNeeded(true);
+        return;
+      }
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error || "Save failed");
     } catch (e) {
@@ -108,7 +131,7 @@ export default function PayoutMethodsPage() {
 
           {/* Readiness */}
           <div className="mt-3">
-            {loading ? (
+            {gcashLoading ? (
               <span className="text-xs text-muted-foreground">Checking status…</span>
             ) : gcash ? (
               <div className="text-xs">
@@ -132,35 +155,39 @@ export default function PayoutMethodsPage() {
           {/* Promo SMS opt-in */}
           <div className="mt-4 rounded-xl border p-3">
             <div className="text-xs font-medium mb-2">Promo SMS opt-in</div>
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={!!optIn}
-                onChange={(e) => setOptIn(e.target.checked)}
-              />
-              I want to receive future promo alerts via SMS.
-            </label>
-            <label className="mt-3 block text-xs text-muted-foreground">Phone number for promos</label>
-            <input
-              type="tel"
-              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-              placeholder="09XXXXXXXXX or +63…"
-              value={promoNumber}
-              onChange={(e) => setPromoNumber(e.target.value)}
-            />
-            <button
-              onClick={savePromoPrefs}
-              disabled={optInLoading}
-              className="mt-3 w-full rounded-xl border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
-            >
-              {optInLoading ? "Saving…" : "Save promo preference"}
-            </button>
+            {promoAuthNeeded ? (
+              <p className="text-xs text-muted-foreground">
+                Please sign in to manage promo SMS preferences.
+              </p>
+            ) : (
+              <>
+                <label className="inline-flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={!!optIn} onChange={(e) => setOptIn(e.target.checked)} />
+                  I want to receive future promo alerts via SMS.
+                </label>
+                <label className="mt-3 block text-xs text-muted-foreground">Phone number for promos</label>
+                <input
+                  type="tel"
+                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+                  placeholder="09XXXXXXXXX or +63…"
+                  value={promoNumber}
+                  onChange={(e) => setPromoNumber(e.target.value)}
+                />
+                <button
+                  onClick={savePromoPrefs}
+                  disabled={optInLoading}
+                  className="mt-3 w-full rounded-xl border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
+                >
+                  {optInLoading ? "Saving…" : "Save promo preference"}
+                </button>
+              </>
+            )}
             <p className="mt-2 text-[11px] text-muted-foreground">
-              This only saves your preference and number. We’ll use this for merchant promos, payout updates, and special offers. You can opt out anytime.
+              We’ll use this for merchant promos, payout updates, and special offers. You can opt out anytime.
             </p>
           </div>
 
-          {/* Simulator (unchanged) */}
+          {/* Simulator */}
           <div className="mt-4 rounded-xl border p-3">
             <div className="text-xs font-medium mb-2">Simulate GCash payout</div>
             <label className="block text-xs text-muted-foreground">GCash number (not saved)</label>
