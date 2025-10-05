@@ -65,7 +65,7 @@ export default function PayoutMethodsPage() {
           setPromoNumber(pf.number || "");
         }
       } catch {
-        // non-blocking
+        // ignore
       } finally {
         if (alive) setOptInLoading(false);
       }
@@ -190,7 +190,12 @@ export default function PayoutMethodsPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => signIn(undefined, { callbackUrl: "/dashboard/payout-methods" })}
+                  onClick={() =>
+                    signIn(undefined, {
+                      callbackUrl: `${window.location.origin}/dashboard/payout-methods`,
+                      redirect: true,
+                    })
+                  }
                   className="mt-2 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-muted"
                 >
                   Sign in to update preferences
@@ -232,7 +237,7 @@ export default function PayoutMethodsPage() {
           </div>
 
           {/* Simulator */}
-          <div className="mt-4 rounded-XL border p-3">
+          <div className="mt-4 rounded-xl border p-3">
             <div className="text-xs font-medium mb-2">Simulate GCash payout</div>
             <label className="block text-xs text-muted-foreground">
               GCash number (not saved)
