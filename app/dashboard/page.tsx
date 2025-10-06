@@ -22,6 +22,21 @@ async function getFinderRecommendations() {
   }
 }
 
+async function createSmartLink(url: string) {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/smart-links/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.link || data?.shortUrl || null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function DashboardPage() {
   const store = cookies();
   const email = store.get("email")?.value ?? "";
@@ -65,10 +80,7 @@ export default async function DashboardPage() {
       <section className="mb-8 rounded-2xl border p-4 sm:p-5 bg-white shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base sm:text-lg font-medium">🛍️ Trending Products to Share</h2>
-          <Link
-            href="/dashboard/finder"
-            className="text-sm text-blue-600 hover:underline"
-          >
+          <Link href="/dashboard/finder" className="text-sm text-blue-600 hover:underline">
             View More →
           </Link>
         </div>
@@ -92,6 +104,22 @@ export default async function DashboardPage() {
                   ₱{Intl.NumberFormat("en-PH").format(item.price)} ·{" "}
                   {item.merchant === "LAZADA_PH" ? "Lazada" : "Shopee"}
                 </div>
+
+                {/* New SmartLink Button */}
+                <form
+                  action={async () => {
+                    "use server";
+                    const link = await createSmartLink(item.url);
+                    console.log("Generated SmartLink:", link);
+                  }}
+                >
+                  <button
+                    type="submit"
+                    className="mt-3 w-full rounded-lg border bg-black text-white text-sm py-2 hover:bg-gray-800 transition"
+                  >
+                    Get Smartlink
+                  </button>
+                </form>
               </div>
             ))}
           </div>
