@@ -6,10 +6,10 @@ export type MerchantDef = {
   key: MerchantKey;
   label: string;
   country: "PH";
-  // env var names required for live mode
   requiredEnv: string[];
-  // docs link or note (optional)
   note?: string;
+  // simple domain matchers for identify endpoint
+  domains: string[];
 };
 
 export const MERCHANTS: MerchantDef[] = [
@@ -17,9 +17,9 @@ export const MERCHANTS: MerchantDef[] = [
     key: "SHOPEE_PH",
     label: "Shopee PH",
     country: "PH",
-    // adjust names later if your provider uses different ones
     requiredEnv: ["SHOPEE_PARTNER_ID", "SHOPEE_PARTNER_KEY", "SHOPEE_SHOP_ID"],
     note: "Provisioned only. Live access requires partner keys.",
+    domains: ["shopee.ph", "shopee.com", "shopee.sg"], // include common variants
   },
   {
     key: "LAZADA_PH",
@@ -27,11 +27,11 @@ export const MERCHANTS: MerchantDef[] = [
     country: "PH",
     requiredEnv: ["LAZADA_APP_KEY", "LAZADA_APP_SECRET"],
     note: "Provisioned only. Live access requires app credentials.",
+    domains: ["lazada.com.ph", "lazada.com"],
   },
 ];
 
 export function getEnv(key: string) {
-  // centralize for easier mocking/tests later
   return process.env[key];
 }
 
@@ -49,4 +49,30 @@ export function merchantHealth() {
       mode: ready ? "LIVE_READY" : "PROVISIONED",
     };
   });
+}
+
+/** Best-effort merchant detection from product/store URL. */
+export function matchMerchantFromUrl(raw: string) {
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.toLowerCase();
+    const found = MERCHANTS.find((m) => m.domains.some((d) => host === d || host.endsWith(`.${d}`)));
+    if (!found) return null;
+
+    const missingEnv = found.requiredEnv.filter((e) => !getEnv(e));
+    const ready = missingEnv.length === 0;
+
+    return {
+      key: found.key,
+      label: found.label,
+      country: found.country,
+      ready,
+      missingEnv,
+      note: found.note ?? "",
+      normalizedUrl: u.toString(),
+      host,
+    };
+  } catch {
+    return null;
+  }
 }
