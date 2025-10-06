@@ -14,10 +14,32 @@ type Item = {
 };
 type Health = { ok: boolean; region: string; items: Item[] };
 
+type IdentifyResp =
+  | { ok: true; match: null; message?: string }
+  | {
+      ok: true;
+      match: {
+        key: string;
+        label: string;
+        country: string;
+        ready: boolean;
+        missingEnv: string[];
+        note?: string;
+        normalizedUrl: string;
+        host: string;
+      };
+    }
+  | { ok: false; error: string };
+
 export default function AdminMerchantsPage() {
   const [data, setData] = useState<Health | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+
+  // quick-check widget
+  const [url, setUrl] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<IdentifyResp | null>(null);
 
   async function load() {
     setLoading(true);
@@ -30,6 +52,24 @@ export default function AdminMerchantsPage() {
       setErr(String(e?.message ?? e));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function checkUrl() {
+    if (!url.trim()) return;
+    setChecking(true);
+    setCheckResult(null);
+    try {
+      const res = await fetch(
+        `/api/merchants/identify?url=${encodeURIComponent(url.trim())}`,
+        { cache: "no-store" }
+      );
+      const json = (await res.json()) as IdentifyResp;
+      setCheckResult(json);
+    } catch (e: any) {
+      setCheckResult({ ok: false, error: String(e?.message ?? e) });
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -52,6 +92,74 @@ export default function AdminMerchantsPage() {
       <p className="mt-2 text-sm text-muted-foreground">
         Live readiness of PH marketplace connectors (env presence only).
       </p>
+
+      {/* Quick URL checker */}
+      <div className="mt-4 rounded-2xl border p-4">
+        <div className="text-sm font-medium">Quick check a product/store URL</div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Paste a Shopee/Lazada link to see which connector it maps to and whether it’s ready.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="url"
+            className="w-full rounded-xl border px-3 py-2 text-sm"
+            placeholder="https://shopee.ph/… or https://www.lazada.com.ph/…"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <button
+            onClick={checkUrl}
+            disabled={checking || !url.trim()}
+            className="shrink-0 rounded-xl border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
+          >
+            {checking ? "Checking…" : "Check"}
+          </button>
+        </div>
+
+        {/* Result */}
+        {checkResult && (
+          <div className="mt-3 rounded-xl border p-3 text-sm">
+            {checkResult.ok && checkResult.match ? (
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="font-medium">
+                    {checkResult.match.label}{" "}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {checkResult.match.host}
+                    </span>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
+                      checkResult.match.ready
+                        ? "bg-green-100 text-green-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {checkResult.match.ready ? "Ready" : "Provisioned"}
+                  </span>
+                </div>
+                {!checkResult.match.ready && checkResult.match.missingEnv.length > 0 && (
+                  <div className="mt-2 text-xs">
+                    Missing env:{" "}
+                    <code className="rounded bg-muted px-1.5 py-0.5">
+                      {checkResult.match.missingEnv.join(", ")}
+                    </code>
+                  </div>
+                )}
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {checkResult.match.note || "—"}
+                </div>
+              </div>
+            ) : checkResult.ok && !checkResult.match ? (
+              <div className="text-sm">No supported merchant detected from URL.</div>
+            ) : (
+              <div className="text-sm text-red-600">
+                {(checkResult as any).error || "Check failed."}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {err && (
         <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
