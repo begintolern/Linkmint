@@ -13,7 +13,6 @@ type SimResult = {
   echo?: { amountPhp?: number; gcashNumber?: string };
   error?: string;
 };
-type Prefs = { ok: boolean; optIn: boolean; number: string };
 
 export default function PayoutMethodsPage() {
   const [gcash, setGcash] = useState<GCashHealth | null>(null);
@@ -24,12 +23,6 @@ export default function PayoutMethodsPage() {
   const [amountPhp, setAmountPhp] = useState<number>(100);
   const [simLoading, setSimLoading] = useState(false);
   const [simResult, setSimResult] = useState<SimResult | null>(null);
-
-  // Promo prefs
-  const [optInLoading, setOptInLoading] = useState(true);
-  const [optIn, setOptIn] = useState(false);
-  const [promoNumber, setPromoNumber] = useState("");
-  const [promoAuthNeeded, setPromoAuthNeeded] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -44,29 +37,6 @@ export default function PayoutMethodsPage() {
         if (alive) setGcash(null);
       } finally {
         if (alive) setGcashLoading(false);
-      }
-    })();
-
-    // Fetch promo prefs (auth may be required)
-    (async () => {
-      try {
-        const res = await fetch("/api/user/marketing", { cache: "no-store" });
-        if (res.status === 401) {
-          if (alive) {
-            setPromoAuthNeeded(true);
-            setOptInLoading(false);
-          }
-          return;
-        }
-        const pf = (await res.json()) as Prefs;
-        if (alive && pf?.ok) {
-          setOptIn(pf.optIn);
-          setPromoNumber(pf.number || "");
-        }
-      } catch {
-        // ignore
-      } finally {
-        if (alive) setOptInLoading(false);
       }
     })();
 
@@ -91,28 +61,6 @@ export default function PayoutMethodsPage() {
       setSimResult({ ok: false, error: String(e?.message ?? e) });
     } finally {
       setSimLoading(false);
-    }
-  }
-
-  async function savePromoPrefs() {
-    setOptInLoading(true);
-    try {
-      const res = await fetch("/api/user/marketing", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ optIn, number: promoNumber }),
-        cache: "no-store",
-      });
-      if (res.status === 401) {
-        setPromoAuthNeeded(true);
-        return;
-      }
-      const data = await res.json();
-      if (!data?.ok) throw new Error(data?.error || "Save failed");
-    } catch (e) {
-      alert(`Save failed: ${String((e as any)?.message ?? e)}`);
-    } finally {
-      setOptInLoading(false);
     }
   }
 
@@ -178,62 +126,16 @@ export default function PayoutMethodsPage() {
             )}
           </div>
 
-          {/* Promo SMS opt-in */}
+          {/* Promo SMS opt-in (temporarily informational) */}
           <div className="mt-4 rounded-xl border p-3">
             <div className="text-xs font-medium mb-2">Promo SMS opt-in</div>
-
-            {promoAuthNeeded ? (
-              <div className="text-xs">
-                <p className="text-muted-foreground">
-                  Please sign in to manage promo SMS preferences.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const target = `${window.location.origin}/dashboard/payout-methods`;
-                    // Force navigation to NextAuth sign-in with a callback back to this page
-                    window.location.href = `/api/auth/signin?callbackUrl=${encodeURIComponent(
-                      target
-                    )}`;
-                  }}
-                  className="mt-2 inline-flex w-full items-center justify-center rounded-xl border px-3 py-2 text-sm hover:bg-muted"
-                >
-                  Sign in to update preferences
-                </button>
-              </div>
-            ) : (
-              <>
-                <label className="inline-flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={!!optIn}
-                    onChange={(e) => setOptIn(e.target.checked)}
-                  />
-                  I want to receive future promo alerts via SMS.
-                </label>
-                <label className="mt-3 block text-xs text-muted-foreground">
-                  Phone number for promos
-                </label>
-                <input
-                  type="tel"
-                  className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-                  placeholder="09XXXXXXXXX or +63…"
-                  value={promoNumber}
-                  onChange={(e) => setPromoNumber(e.target.value)}
-                />
-                <button
-                  onClick={savePromoPrefs}
-                  disabled={optInLoading}
-                  className="mt-3 w-full rounded-xl border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
-                >
-                  {optInLoading ? "Saving…" : "Save promo preference"}
-                </button>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  We’ll use this for merchant promos, payout updates, and special offers.
-                  You can opt out anytime.
-                </p>
-              </>
-            )}
+            <p className="text-xs text-muted-foreground">
+              You’ll soon be able to opt in to SMS updates for merchant promos and payout notices.
+              This feature will connect directly with your existing account — no extra login required.
+            </p>
+            <div className="mt-3 inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+              Coming soon
+            </div>
           </div>
 
           {/* Simulator */}

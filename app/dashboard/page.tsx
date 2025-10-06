@@ -26,7 +26,12 @@ export default async function DashboardPage() {
         <DashboardCard href="/dashboard/referrals" title="Referrals" subtitle="Invite and track bonuses" badge="5% Bonus" />
         <DashboardCard href="/dashboard/earnings" title="Earnings" subtitle="Commissions and status" />
         <DashboardCard href="/dashboard/payouts" title="Payouts" subtitle="History and accounts" />
-        <DashboardCard href="/dashboard/opportunities" title="Opportunities" subtitle="AI-powered trending offers" />
+        {/* Finder entry (replaces Opportunities) */}
+        <DashboardCard
+          href="/dashboard/finder"
+          title="Find Products"
+          subtitle="Discover trending items and generate smart links"
+        />
         <DashboardCard href="/dashboard/settings" title="Settings" subtitle="Manage your account" />
       </div>
 

@@ -89,23 +89,28 @@ export default function SmartLinkGenerator() {
   }
 
   return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
-      <form onSubmit={handleGenerate} className="space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+      <h2 className="text-lg font-semibold">SmartLink Tools</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Convert product URLs into earning links. Or discover trending items to share.
+      </p>
+
+      <form onSubmit={handleGenerate} className="mt-4 space-y-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
-            <label className="text-sm block mb-1">Merchant name</label>
+            <label className="mb-1 block text-sm">Merchant name</label>
             <input
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="e.g., The Original Muck Boot Company"
+              className="w-full rounded-lg border px-3 py-2"
+              placeholder="e.g., Shopee PH or Lazada PH"
               value={merchantName}
               onChange={(e) => setMerchantName(e.target.value)}
             />
           </div>
           <div>
-            <label className="text-sm block mb-1">Product / merchant URL</label>
+            <label className="mb-1 block text-sm">Product / merchant URL</label>
             <input
-              className="w-full border rounded-lg px-3 py-2"
-              placeholder="Paste a URL to convert"
+              className="w-full rounded-lg border px-3 py-2"
+              placeholder="Paste a product page URL to convert"
               value={rawUrl}
               onChange={(e) => setRawUrl(e.target.value)}
             />
@@ -113,29 +118,46 @@ export default function SmartLinkGenerator() {
         </div>
 
         {err && (
-          <div className="text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {err}
           </div>
         )}
 
         {resultUrl && (
-          <div className="text-sm text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg break-all">
-            Link created: <a className="underline" href={resultUrl}>{resultUrl}</a>
+          <div className="break-all rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+            Link created:{" "}
+            <a className="underline" href={resultUrl} target="_blank" rel="noopener noreferrer">
+              {resultUrl}
+            </a>
           </div>
         )}
 
-        <div>
+        <div className="flex flex-col gap-2 sm:flex-row">
           <button
             type="submit"
             disabled={loading}
-            className={`px-4 py-2 rounded-lg border ${
+            className={`rounded-lg border px-4 py-2 ${
               loading ? "bg-gray-200 text-gray-500" : "bg-black text-white hover:bg-gray-800"
             }`}
           >
             {loading ? "Generating..." : "Generate Smart Link"}
           </button>
+
+          {/* Secondary action: jump to Finder */}
+          <a
+            href="/dashboard/finder"
+            className="inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm hover:bg-muted"
+            title="Discover trending products to share"
+          >
+            🔍 Find Products
+          </a>
         </div>
       </form>
+
+      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+        💡 Tip: You can earn even from your own purchases (cashback for self-buys).{" "}
+        <span className="font-medium">Coming soon.</span>
+      </div>
     </div>
   );
 }
