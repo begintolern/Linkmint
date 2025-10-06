@@ -12,54 +12,11 @@ type Item = {
   url: string;
   rating?: number;
   reviews?: number;
+  tags?: string[];
 };
-
 type ApiResp = { ok: boolean; items: Item[] };
 
-const MOCK: Item[] = [
-  {
-    id: "lz-1",
-    title: "USB-C Desk Lamp with Touch Dimmer",
-    merchant: "LAZADA_PH",
-    price: 349,
-    image: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=600&q=60",
-    url: "https://www.lazada.com.ph/products/abc",
-    rating: 4.7,
-    reviews: 2150,
-  },
-  {
-    id: "sp-1",
-    title: "Mini Tripod for Phones (Flexible Grip)",
-    merchant: "SHOPEE_PH",
-    price: 129,
-    image: "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?w=600&q=60",
-    url: "https://shopee.ph/product/12345",
-    rating: 4.6,
-    reviews: 980,
-  },
-  {
-    id: "lz-2",
-    title: "Bluetooth Earbuds w/ ENC Mic",
-    merchant: "LAZADA_PH",
-    price: 599,
-    image: "https://images.unsplash.com/photo-1518443780060-5cea188e8d8d?w=600&q=60",
-    url: "https://www.lazada.com.ph/products/xyz",
-    rating: 4.5,
-    reviews: 3200,
-  },
-  {
-    id: "sp-2",
-    title: "Cable Organizer Clips (10-Pack)",
-    merchant: "SHOPEE_PH",
-    price: 89,
-    image: "https://images.unsplash.com/photo-1587825140400-7d8d4634cd87?w=600&q=60",
-    url: "https://shopee.ph/product/67890",
-    rating: 4.8,
-    reviews: 540,
-  },
-];
-
-function clsx(...parts: (string | false | undefined)[]) {
+function clsx(...parts: (string | false | null | undefined)[]) {
   return parts.filter(Boolean).join(" ");
 }
 
@@ -78,85 +35,81 @@ async function copy(text: string) {
   }
 }
 
+/** Try common shortlink endpoints; fallback to original URL if none. */
 async function tryCreateSmartlink(originalUrl: string): Promise<string | null> {
   const candidates = [
     "/api/links/create",
     "/api/smartlinks/create",
     "/api/linkmint/shorten",
+    "/api/smart-links/generate",
   ];
-
   for (const ep of candidates) {
     try {
       const res = await fetch(ep, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: originalUrl }),
+        body: JSON.stringify({ url: originalUrl, merchantUrl: originalUrl }),
       });
       if (!res.ok) continue;
       const j = await res.json();
       const short =
-        j?.shortUrl || j?.url || j?.data?.shortUrl || j?.data?.url || null;
+        j?.shortUrl || j?.url || j?.data?.shortUrl || j?.data?.url || j?.link || null;
       if (short && typeof short === "string") return short;
     } catch {
-      /* try next */
+      /* next */
     }
   }
   return null;
 }
 
 export default function FinderPage() {
-  const [merchant, setMerchant] = useState<"ALL" | "LAZADA_PH" | "SHOPEE_PH">(
-    "ALL"
-  );
+  const [merchant, setMerchant] = useState<"ALL" | "LAZADA_PH" | "SHOPEE_PH">("ALL");
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Item[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
+  const [err, setErr] = useState<string | null>(null);
 
+  // tiny toast
+  const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   function toast(msg: string) {
-    const id = Date.now();
+    const id = Date.now() + Math.floor(Math.random() * 1000);
     setToasts((t) => [...t, { id, msg }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
   }
 
   async function load() {
     setLoading(true);
-    setError(null);
+    setErr(null);
     try {
       const params = new URLSearchParams();
       if (merchant !== "ALL") params.set("merchant", merchant);
       if (maxPrice) params.set("maxPrice", String(maxPrice));
       if (q.trim()) params.set("q", q.trim());
-      const res = await fetch(`/api/finder/products?${params.toString()}`, {
-        cache: "no-store",
-      });
+
+      const res = await fetch(`/api/finder/products?${params.toString()}`, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as ApiResp;
-      const list = Array.isArray(data?.items) ? data.items : [];
-      setItems(list.length ? list : MOCK);
-    } catch {
-      setItems(MOCK);
-      setError(
-        "Finder API not available yet. Showing curated trending items (provision mode)."
-      );
+      setItems(Array.isArray(data?.items) ? data.items : []);
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to load products.");
+      setItems([]);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
+    // initial load
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
     return items
       .filter((it) => (merchant === "ALL" ? true : it.merchant === merchant))
       .filter((it) => (maxPrice ? it.price <= maxPrice : true))
-      .filter((it) =>
-        q.trim() ? it.title.toLowerCase().includes(q.toLowerCase()) : true
-      );
+      .filter((it) => (q.trim() ? it.title.toLowerCase().includes(q.toLowerCase()) : true));
   }, [items, merchant, maxPrice, q]);
 
   async function handleSmartlink(it: Item) {
@@ -168,13 +121,10 @@ export default function FinderPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      {/* ephemeral toasts */}
+      {/* toasts */}
       <div className="fixed right-4 top-16 z-50 space-y-2">
         {toasts.map((t) => (
-          <div
-            key={t.id}
-            className="rounded-xl border bg-white px-3 py-2 text-sm shadow"
-          >
+          <div key={t.id} className="rounded-xl border bg-white px-3 py-2 text-sm shadow">
             {t.msg}
           </div>
         ))}
@@ -182,22 +132,11 @@ export default function FinderPage() {
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Smart Product Finder
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Smart Product Finder</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Discover trending products and generate a shareable smart link.
-            (Provision mode)
+            Discover trending products from Shopee & Lazada. Generate a shareable smart link in one click.
           </p>
-
-          {/* Coming Soon bilingual banner */}
-          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            🚧 <strong>Coming Soon / Paparating na!</strong> — The Smart Product
-            Finder is currently in beta. Product data and live updates will be
-            added in the next release.
-          </div>
         </div>
-
         <div className="flex gap-2">
           <button
             onClick={load}
@@ -243,23 +182,25 @@ export default function FinderPage() {
             className="mt-1 rounded-xl border px-3 py-2 text-sm"
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") load();
+            }}
           />
         </div>
       </div>
 
-      {error && (
+      {/* Error */}
+      {err && (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          {error}
+          {err}
         </div>
       )}
 
+      {/* Grid */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading &&
           Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-48 animate-pulse rounded-2xl border bg-muted/30"
-            />
+            <div key={i} className="h-48 animate-pulse rounded-2xl border bg-muted/30" />
           ))}
 
         {!loading &&
@@ -277,9 +218,7 @@ export default function FinderPage() {
                 ) : null}
               </div>
 
-              <div className="mt-3 text-sm font-medium line-clamp-2">
-                {it.title}
-              </div>
+              <div className="mt-3 text-sm font-medium line-clamp-2">{it.title}</div>
 
               <div className="mt-1 flex items-center justify-between text-xs">
                 <div className="text-muted-foreground">
@@ -303,9 +242,7 @@ export default function FinderPage() {
               {(it.rating || it.reviews) && (
                 <div className="mt-1 text-[11px] text-muted-foreground">
                   {it.rating ? `${it.rating.toFixed(1)}★` : ""}{" "}
-                  {it.reviews
-                    ? `· ${Intl.NumberFormat().format(it.reviews)} reviews`
-                    : ""}
+                  {it.reviews ? `· ${Intl.NumberFormat().format(it.reviews)} reviews` : ""}
                 </div>
               )}
 
@@ -329,8 +266,7 @@ export default function FinderPage() {
               </div>
 
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Tip: Share your smart link on FB, Messenger, TikTok. You may
-                earn when friends buy.
+                Tip: Share your smart link on FB, Messenger, TikTok. You may earn when friends buy.
               </p>
             </div>
           ))}
