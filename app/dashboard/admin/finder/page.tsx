@@ -3,12 +3,21 @@
 
 import { useEffect, useState } from "react";
 
+type Connector = {
+  ready: boolean;
+  missingEnv: string[];
+};
+
 type Health = {
   ok: boolean;
-  mode: "PROVISION" | "LIVE" | string;
+  mode: "PROVISION" | "LIVE_READY" | string;
   source: string;
   totalItems: number;
   lastUpdated: string;
+  connectors?: {
+    SHOPEE_PH?: Connector;
+    LAZADA_PH?: Connector;
+  };
 };
 
 export default function AdminFinderPage() {
@@ -38,7 +47,7 @@ export default function AdminFinderPage() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Finder Health</h1>
         <button
@@ -59,6 +68,7 @@ export default function AdminFinderPage() {
         </div>
       )}
 
+      {/* Overview cards */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border bg-white p-4">
           <div className="text-xs text-muted-foreground">Mode</div>
@@ -78,6 +88,9 @@ export default function AdminFinderPage() {
         <div className="rounded-2xl border bg-white p-4">
           <div className="text-xs text-muted-foreground">Source</div>
           <div className="mt-1 text-sm font-medium">{data?.source ?? "—"}</div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            Using curated items until live feeds are enabled.
+          </div>
         </div>
 
         <div className="rounded-2xl border bg-white p-4">
@@ -86,12 +99,46 @@ export default function AdminFinderPage() {
         </div>
       </div>
 
+      {/* Connector readiness */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {["SHOPEE_PH", "LAZADA_PH"].map((k) => {
+          const conn = (data as any)?.connectors?.[k];
+          return (
+            <div key={k} className="rounded-2xl border bg-white p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">
+                  {k === "SHOPEE_PH" ? "Shopee PH" : "Lazada PH"}
+                </div>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
+                    conn?.ready
+                      ? "bg-green-100 text-green-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {conn?.ready ? "Ready" : "Provisioned"}
+                </span>
+              </div>
+              {!conn?.ready && conn?.missingEnv?.length > 0 && (
+                <div className="mt-2 text-xs">
+                  Missing env:{" "}
+                  <code className="rounded bg-muted px-1.5 py-0.5">
+                    {conn.missingEnv.join(", ")}
+                  </code>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Last Updated */}
       <div className="mt-4 rounded-2xl border bg-white p-4">
         <div className="text-xs text-muted-foreground">Last Updated</div>
         <div className="mt-1 text-sm">{data?.lastUpdated ?? "—"}</div>
         <p className="mt-2 text-xs text-muted-foreground">
-          When you switch to live feeds (Shopee/Lazada adapters), this page will reflect
-          the live item counts and refresh timestamps.
+          When live feeds (Shopee/Lazada adapters) are connected, this page will display
+          live item counts and refresh timestamps.
         </p>
       </div>
     </div>
