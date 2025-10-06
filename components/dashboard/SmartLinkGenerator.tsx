@@ -1,7 +1,7 @@
 // components/dashboard/SmartLinkGenerator.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Merchant = {
   id: string;
@@ -25,12 +25,49 @@ async function getMerchantByName(name: string): Promise<Merchant | null> {
   }
 }
 
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
 export default function SmartLinkGenerator() {
   const [merchantName, setMerchantName] = useState("");
   const [rawUrl, setRawUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+
+  // simple toast system
+  const [toasts, setToasts] = useState<{ id: number; msg: string; tone?: "ok" | "err" }[]>([]);
+  function toast(msg: string, tone: "ok" | "err" = "ok") {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setToasts((t) => [...t, { id, msg, tone }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
+  }
+
+  // auto-copy when a new resultUrl appears
+  useEffect(() => {
+    (async () => {
+      if (!resultUrl) return;
+      const ok = await copyToClipboard(resultUrl);
+      toast(ok ? "Link copied to clipboard ✅" : "Link created. Copy failed — please copy manually.", ok ? "ok" : "err");
+    })();
+    // only when resultUrl changes
+  }, [resultUrl]);
 
   async function handleGenerate(e: React.FormEvent) {
     e.preventDefault();
@@ -80,7 +117,12 @@ export default function SmartLinkGenerator() {
         throw new Error(text || "Failed to generate link");
       }
       const json = await res.json();
-      setResultUrl(json?.link ?? null);
+      const link = json?.link ?? null;
+      setResultUrl(link);
+
+      if (!link) {
+        toast("Link generated but missing URL in response.", "err");
+      }
     } catch (e: any) {
       setErr(e?.message ?? "Something went wrong");
     } finally {
@@ -89,7 +131,23 @@ export default function SmartLinkGenerator() {
   }
 
   return (
-    <div className="rounded-2xl border bg-white p-5 shadow-sm">
+    <div className="relative rounded-2xl border bg-white p-5 shadow-sm">
+      {/* toasts (top-right of this card) */}
+      <div className="pointer-events-none absolute right-3 top-3 z-10 space-y-2">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className={`pointer-events-auto rounded-lg border px-3 py-2 text-sm shadow ${
+              t.tone === "ok"
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {t.msg}
+          </div>
+        ))}
+      </div>
+
       <h2 className="text-lg font-semibold">SmartLink Tools</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Convert product URLs into earning links. Or discover trending items to share.
@@ -125,10 +183,11 @@ export default function SmartLinkGenerator() {
 
         {resultUrl && (
           <div className="break-all rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
-            Link created:{" "}
+            Link created:&nbsp;
             <a className="underline" href={resultUrl} target="_blank" rel="noopener noreferrer">
               {resultUrl}
             </a>
+            <span className="ml-1 text-green-700/80">(auto-copied)</span>
           </div>
         )}
 
