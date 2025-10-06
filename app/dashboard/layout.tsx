@@ -33,6 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="px-3 space-y-1">
           <Item href="/dashboard" label="Overview" />
           <Item href="/dashboard/links" label="Smart Links" />
+          <Item href="/dashboard/finder" label="Find Products" />
           <Item href="/dashboard/earnings" label="Earnings" />
           <Item href="/dashboard/payouts" label="Payouts" />
           <Item href="/dashboard/referrals" label="Referrals 5% Bonus" />
@@ -50,9 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 px-4 md:px-6 py-6">
-        {children}
-      </main>
+      <main className="flex-1 px-4 md:px-6 py-6">{children}</main>
     </div>
   );
 }
