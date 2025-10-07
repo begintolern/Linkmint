@@ -33,7 +33,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="px-3 space-y-1">
           <Item href="/dashboard" label="Overview" />
           <Item href="/dashboard/links" label="Smart Links" />
-          <Item href="/dashboard/finder" label="Find Products" />
           <Item href="/dashboard/earnings" label="Earnings" />
           <Item href="/dashboard/payouts" label="Payouts" />
           <Item href="/dashboard/referrals" label="Referrals 5% Bonus" />
@@ -50,8 +49,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 px-4 md:px-6 py-6">{children}</main>
+      {/* Main content + footer */}
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 px-4 md:px-6 py-6">{children}</main>
+        <footer className="px-4 md:px-6 pb-6">
+          <p className="text-center text-xs text-gray-400">
+            Powered by Linkmint.co · © 2025 Golden Twin Ventures Inc.
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }
