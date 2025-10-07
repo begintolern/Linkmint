@@ -14,6 +14,7 @@ export default function TrustCenterPage() {
         </p>
       </header>
 
+      {/* 💸 How Payouts Work */}
       <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-5">
         <h2 className="text-lg sm:text-xl font-medium text-gray-900">
           💸 How Payouts Work
@@ -24,6 +25,11 @@ export default function TrustCenterPage() {
           fraudulent or premature withdrawals. Even if your TrustScore is high,
           payouts will not be released until affiliate payments are cleared.
         </p>
+        <p className="text-sm sm:text-base text-gray-700 leading-relaxed italic text-gray-600">
+          🇵🇭 Ang bayad ay ipoproseso kapag natanggap na ng Linkmint ang komisyon
+          mula sa partner merchant. Tinitiyak nito ang pagiging patas at ligtas
+          sa lahat ng user.
+        </p>
         <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
           PayPal and GCash transactions include applicable fees, which are
           automatically deducted during payout. This ensures fairness and
@@ -31,6 +37,7 @@ export default function TrustCenterPage() {
         </p>
       </section>
 
+      {/* 🛡️ Your Data & Security */}
       <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-5">
         <h2 className="text-lg sm:text-xl font-medium text-gray-900">
           🛡️ Your Data & Security
@@ -42,6 +49,7 @@ export default function TrustCenterPage() {
         </p>
       </section>
 
+      {/* 🤝 Why Users Trust linkmint.co */}
       <section className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-4 sm:space-y-5">
         <h2 className="text-lg sm:text-xl font-medium text-gray-900">
           🤝 Why Users Trust linkmint.co
