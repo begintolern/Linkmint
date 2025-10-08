@@ -8,3 +8,4 @@ prisma/dev.db-journal
 ".env" 
 ".env.local" 
 .env.production
+tsconfig.tsbuildinfo
