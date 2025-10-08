@@ -1,3 +1,7 @@
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+// app/reset-password/page.tsx
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -6,7 +10,6 @@ import { useState } from "react";
 export default function ResetPasswordPage() {
   const params = useSearchParams();
   const token = params?.get("token") ?? "";
-
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -31,7 +34,10 @@ export default function ResetPasswordPage() {
         body: JSON.stringify({ token, password }),
       });
       const j = await r.json();
-      setMsg({ ok: r.ok, text: j?.message ?? (r.ok ? "Password updated." : "Reset failed.") });
+      setMsg({
+        ok: r.ok,
+        text: j?.message ?? (r.ok ? "Password updated." : "Reset failed."),
+      });
     } catch (e: any) {
       setMsg({ ok: false, text: e?.message ?? "Something went wrong." });
     } finally {
@@ -55,7 +61,9 @@ export default function ResetPasswordPage() {
           onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-md border px-3 py-2"
         />
-        <label className="block text-sm font-medium">Confirm new password</label>
+        <label className="block text-sm font-medium">
+          Confirm new password
+        </label>
         <input
           type="password"
           value={confirm}
@@ -70,7 +78,13 @@ export default function ResetPasswordPage() {
           {busy ? "Updating…" : "Update password"}
         </button>
         {msg && (
-          <p className={`text-sm ${msg.ok ? "text-green-600" : "text-red-600"}`}>{msg.text}</p>
+          <p
+            className={`text-sm ${
+              msg.ok ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {msg.text}
+          </p>
         )}
       </div>
     </main>
