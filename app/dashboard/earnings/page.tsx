@@ -66,7 +66,7 @@ export default function EarningsPage() {
         rightSlot={
           <div className="hidden sm:flex items-center gap-2 text-xs">
             <Badge label="Total" value={totals.all} />
-            <Badge label="Pending" value={totals.pending} />
+            <Badge block label="Pending approval" value={totals.pending} />
             <Badge label="Approved" value={totals.approved} />
             <Badge label="Paid" value={totals.paid} />
           </div>
