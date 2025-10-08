@@ -1,5 +1,5 @@
 // app/layout.tsx
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 const siteName = "linkmint.co";
@@ -47,11 +47,13 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
   },
   icons: {
-  icon: [{ url: "/favicon-2025.svg", type: "image/svg+xml" }],
-  shortcut: ["/favicon-2025.svg"],
-  apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-},
+    icon: [{ url: "/favicon-2025.svg", type: "image/svg+xml" }],
+    shortcut: ["/favicon-2025.svg"],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
+};
 
+export const viewport: Viewport = {
   themeColor: "#0ea5a4",
 };
 
