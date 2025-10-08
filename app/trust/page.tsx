@@ -1,67 +1,60 @@
-// app/trust/page.tsx
-import type { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Trust Center • Linkmint",
-  description:
-    "The Linkmint Trust Center: payout rules, platform margin, anti-fraud, and transparency to prove we're legit.",
-};
-
-export default function TrustPage() {
+export default function TrustCenterPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="text-3xl font-semibold">Trust Center</h1>
-      <p className="mt-2 text-sm text-slate-500">Transparency you can count on</p>
+    <main className="max-w-3xl mx-auto px-6 py-10 space-y-6">
+      <h1 className="text-3xl font-semibold text-gray-900">Trust Center</h1>
+      <p className="text-gray-600">
+        At <strong>linkmint.co</strong>, transparency isn’t optional — it’s the foundation of how we work.
+        This page explains exactly how earnings, payouts, and approvals happen, so you always know what to expect.
+      </p>
 
-      <section className="prose prose-slate mt-8">
-        <h2>How Payouts Work</h2>
-        <ul>
-          <li>
-            <strong>No early payouts until we receive funds</strong> from affiliate
-            networks. Even with high TrustScores, commissions are only eligible once the
-            network pays Linkmint.
-          </li>
-          <li>
-            Once approved and received, payouts move automatically from{" "}
-            <em>Approved → Paid</em>.
-          </li>
-          <li>Payouts are via PayPal only. PayPal transaction fees are deducted.</li>
-        </ul>
-
-        <h2>Our Margin</h2>
-        <p>
-          We keep a <strong>15% minimum platform margin</strong>. This covers:
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold text-gray-800">🧾 How payouts work</h2>
+        <p className="text-gray-700">
+          Linkmint processes commissions only after the affiliate network confirms payment to us.
+          This protects both users and the platform from fraud or chargebacks.
         </p>
-        <ul>
-          <li>PayPal fees (~3%).</li>
-          <li>Infrastructure and security costs.</li>
-          <li>Fraud protection and reserves.</li>
-          <li>Profit to sustain and grow the platform.</li>
-        </ul>
-        <p>
-          The rest (<strong>85%</strong>) goes back to our community — 80% to the earner,
-          5% to the inviter (for 90 days).
-        </p>
-
-        <h2>Anti-Fraud &amp; Fairness</h2>
-        <ul>
-          <li>We block spam, fake traffic, and duplicate accounts.</li>
-          <li>We follow affiliate networks’ placement rules strictly.</li>
-          <li>Fraudulent activity voids earnings and referrals.</li>
-        </ul>
-
-        <h2>Transparency Promise</h2>
-        <p>
-          Every payout, commission, and referral event is logged in your dashboard and in
-          our admin system. You’ll always know where your money stands.
-        </p>
-
-        <h2>Contact</h2>
-        <p>
-          Questions or concerns? Email{" "}
-          <a href="mailto:admin@linkmint.co">admin@linkmint.co</a>.
+        <p className="text-gray-700">
+          You’ll see commissions move through clear stages: <b>Pending → Approved → Paid</b>.
+          Even trusted users must wait for “Approved” status before payouts are eligible.
         </p>
       </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold text-gray-800">💰 When you’ll get paid</h2>
+        <p className="text-gray-700">
+          Every merchant pays on their own schedule. Once Linkmint receives the funds, your payout appears automatically
+          in your account balance and becomes available through PayPal.
+        </p>
+        <p className="text-gray-700">
+          During your first 30 days, payouts unlock only after funds are received (the “honeymoon period”).
+          This rule ensures fair play and keeps Linkmint sustainable for everyone.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold text-gray-800">🛡️ Why these rules exist</h2>
+        <p className="text-gray-700">
+          Affiliate networks require strict validation before funds are released.
+          By following these policies, Linkmint stays fully compliant and keeps your earnings safe from reversals or disputes.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold text-gray-800">🤝 Our promise</h2>
+        <p className="text-gray-700">
+          Linkmint will never hold your money longer than required by the networks themselves.
+          Once funds are approved and cleared, payouts move automatically — no manual requests or waiting games.
+        </p>
+        <p className="text-gray-700">
+          We believe in ethical affiliate marketing, fair payouts, and giving everyone a chance to earn honestly online.
+        </p>
+      </section>
+
+      <footer className="pt-8 text-center text-sm text-gray-500">
+        © {new Date().getFullYear()} linkmint.co — built for trust, transparency, and everyday earners.
+      </footer>
     </main>
   );
 }
