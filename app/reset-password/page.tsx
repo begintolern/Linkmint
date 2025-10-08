@@ -2,11 +2,19 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-// app/reset-password/page.tsx
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-600 text-sm">Loading…</div>}>
+      <ResetPasswordInner />
+    </Suspense>
+  );
+}
+
+function ResetPasswordInner() {
   const params = useSearchParams();
   const token = params?.get("token") ?? "";
 

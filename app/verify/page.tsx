@@ -2,11 +2,19 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-// app/verify/page.tsx
 import * as React from "react";
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 export default function VerifyPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-600 text-sm">Loading…</div>}>
+      <VerifyInner />
+    </Suspense>
+  );
+}
+
+function VerifyInner() {
   const router = useRouter();
 
   // Use optional chaining so TS doesn't complain about null

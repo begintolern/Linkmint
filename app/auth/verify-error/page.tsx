@@ -2,11 +2,19 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-// app/auth/verify-error/page.tsx
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function VerifyErrorPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-slate-600 text-sm">Loading…</div>}>
+      <VerifyErrorInner />
+    </Suspense>
+  );
+}
+
+function VerifyErrorInner() {
   const q = useSearchParams();
   const reason =
     q?.get("reason") ||
