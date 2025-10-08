@@ -1,63 +1,68 @@
-// app/dashboard/layout.tsx
 "use client";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
+import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import React from "react";
 
-function Item({ href, label }: { href: string; label: string }) {
-  const pathname = usePathname();
-  const active = pathname === href;
-  return (
-    <Link
-      href={href}
-      className={`block rounded px-3 py-2 text-sm transition-colors ${
-        active
-          ? "bg-teal-700 text-white"
-          : "text-teal-100 hover:bg-teal-800 hover:text-white"
-      }`}
-    >
-      {label}
-    </Link>
-  );
-}
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  async function handleLogout() {
+    await signOut({ redirect: false });
+    router.push("/logout");
+  }
+
   return (
-    <div className="min-h-screen flex">
-      {/* Desktop sidebar (≥ md) */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-teal-900 text-teal-100 flex-col border-r border-teal-800">
-        <div className="p-4 text-white font-semibold">Dashboard</div>
-        <nav className="px-3 space-y-1">
-          <Item href="/dashboard" label="Overview" />
-          <Item href="/dashboard/links" label="Smart Links" />
-          <Item href="/dashboard/earnings" label="Earnings" />
-          <Item href="/dashboard/payouts" label="Payouts" />
-          <Item href="/dashboard/referrals" label="Referrals 5% Bonus" />
-          <Item href="/dashboard/trust-center" label="Trust Center" />
-          <Item href="/dashboard/settings" label="Settings" />
-        </nav>
-        <div className="mt-auto p-4">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Top Header */}
+      <header className="flex items-center justify-between bg-white border-b border-gray-200 px-6 py-3 shadow-sm">
+        <Link href="/dashboard" className="text-lg font-semibold text-teal-700">
+          linkmint.co
+        </Link>
+
+        <nav className="flex items-center gap-6">
           <Link
-            href="/logout"
-            className="block w-full text-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+            href="/dashboard"
+            className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+          >
+            Overview
+          </Link>
+          <Link
+            href="/dashboard/earnings"
+            className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+          >
+            Earnings
+          </Link>
+          <Link
+            href="/dashboard/referrals"
+            className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+          >
+            Referrals
+          </Link>
+          <Link
+            href="/dashboard/payout-methods"
+            className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+          >
+            Payouts
+          </Link>
+
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
+            className="text-sm text-gray-500 hover:text-red-600 transition-colors"
           >
             Logout
-          </Link>
-        </div>
-      </aside>
+          </button>
+        </nav>
+      </header>
 
-      {/* Main content + footer */}
-      <div className="flex-1 flex flex-col">
-        <main className="flex-1 px-4 md:px-6 py-6">{children}</main>
-        <footer className="px-4 md:px-6 pb-6">
-          <p className="text-center text-xs text-gray-400">
-            Powered by Linkmint.co · © 2025 Golden Twin Ventures Inc.
-          </p>
-        </footer>
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 p-6">{children}</main>
     </div>
   );
 }
