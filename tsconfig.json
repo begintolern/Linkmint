@@ -16,7 +16,6 @@
     "jsx": "preserve",
     "incremental": true,
 
-    // ✅ Path alias support
     "baseUrl": ".",
     "paths": {
       "@/*": ["*"]
