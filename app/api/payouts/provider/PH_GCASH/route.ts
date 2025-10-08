@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/utils/cookieAuth";
+import { requireUser } from "../../../../../lib/utils/cookieAuth";
 export async function GET() {
   try {
     requireUser(); // blocks anonymous, allows any logged-in user
