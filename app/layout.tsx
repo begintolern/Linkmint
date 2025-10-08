@@ -47,12 +47,11 @@ export const metadata: Metadata = {
     images: ["/og-image.png"],
   },
   icons: {
-    icon: [
-      { url: "/favicon.svg?v=2", type: "image/svg+xml" },
-    ],
-    shortcut: ["/favicon.svg?v=2"],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-  },
+  icon: [{ url: "/favicon-2025.svg", type: "image/svg+xml" }],
+  shortcut: ["/favicon-2025.svg"],
+  apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+},
+
   themeColor: "#0ea5a4",
 };
 
