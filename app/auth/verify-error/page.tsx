@@ -1,64 +1,69 @@
+"use client";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-"use client";
-
+// app/auth/verify-error/page.tsx
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export default function VerifyErrorPage() {
   const q = useSearchParams();
-  const reason = q?.get("reason") ?? "";
-  const initialEmail = q?.get("email") ?? "";
+  const reason =
+    q?.get("reason") ||
+    "Verification failed or the link has expired. Please request a new one.";
 
-  const [email, setEmail] = useState(initialEmail);
-  const [status, setStatus] = useState<null | { ok: boolean; msg: string }>(null);
-  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [msg, setMsg] = useState<null | { ok: boolean; text: string }>(null);
 
   async function resend() {
-    setLoading(true);
-    setStatus(null);
+    setResending(true);
+    setMsg(null);
     try {
-      const r = await fetch("/api/auth/resend", {
+      const r = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({}),
       });
-      const j = await r.json();
-      setStatus({ ok: r.ok, msg: j?.message ?? (r.ok ? "Email sent." : "Failed to send.") });
-    } catch (e: any) {
-      setStatus({ ok: false, msg: e?.message ?? "Something went wrong." });
+      const j = await r.json().catch(() => ({} as any));
+      setMsg({
+        ok: r.ok,
+        text:
+          j?.message ||
+          (r.ok
+            ? "Verification email sent. Check your inbox."
+            : "Could not resend verification email."),
+      });
+    } catch {
+      setMsg({ ok: false, text: "Network error. Try again." });
     } finally {
-      setLoading(false);
+      setResending(false);
     }
   }
 
   return (
     <main className="mx-auto max-w-md p-6 space-y-4">
-      <h1 className="text-xl font-semibold">Verification issue</h1>
-      {reason ? (
-        <p className="text-sm text-gray-600">Reason: {reason}</p>
-      ) : (
-        <p className="text-sm text-gray-600">We couldn’t verify your sign-in link.</p>
-      )}
+      <h1 className="text-xl font-semibold">Verification error</h1>
+      <p className="text-sm text-gray-600">{reason}</p>
+
       <div className="space-y-2">
-        <label className="block text-sm font-medium">Resend link to</label>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          className="w-full rounded-md border px-3 py-2"
-        />
         <button
           onClick={resend}
-          disabled={loading || !email}
+          disabled={resending}
           className="rounded-md bg-black px-4 py-2 text-white disabled:opacity-60"
         >
-          {loading ? "Sending…" : "Resend verification email"}
+          {resending ? "Sending…" : "Resend verification email"}
         </button>
-        {status && (
-          <p className={`text-sm ${status.ok ? "text-green-600" : "text-red-600"}`}>{status.msg}</p>
+        {msg && (
+          <p className={`text-sm ${msg.ok ? "text-green-600" : "text-red-600"}`}>
+            {msg.text}
+          </p>
         )}
+      </div>
+
+      <div className="text-sm">
+        <a href="/verify-sent" className="text-teal-700 hover:underline">
+          Didn’t get it? Check status
+        </a>
       </div>
     </main>
   );

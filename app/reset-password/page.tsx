@@ -1,9 +1,8 @@
+"use client";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 // app/reset-password/page.tsx
-"use client";
-
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -61,9 +60,7 @@ export default function ResetPasswordPage() {
           onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-md border px-3 py-2"
         />
-        <label className="block text-sm font-medium">
-          Confirm new password
-        </label>
+        <label className="block text-sm font-medium">Confirm new password</label>
         <input
           type="password"
           value={confirm}
@@ -78,11 +75,7 @@ export default function ResetPasswordPage() {
           {busy ? "Updating…" : "Update password"}
         </button>
         {msg && (
-          <p
-            className={`text-sm ${
-              msg.ok ? "text-green-600" : "text-red-600"
-            }`}
-          >
+          <p className={`text-sm ${msg.ok ? "text-green-600" : "text-red-600"}`}>
             {msg.text}
           </p>
         )}

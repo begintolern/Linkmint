@@ -1,9 +1,8 @@
+"use client";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 // app/verify/page.tsx
-"use client";
-
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
