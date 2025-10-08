@@ -1,3 +1,4 @@
+// app/robots.ts
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
@@ -6,13 +7,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: [
-          "/admin",   // admin panel
-          "/tools",   // internal tools (policy-check, etc.)
-          "/api",     // API routes
-        ],
       },
     ],
-    sitemap: "https://linkmint.co/sitemap.xml", // remove if you don't have one
+    sitemap: "https://linkmint.co/sitemap.xml",
+    host: "https://linkmint.co",
   };
 }
