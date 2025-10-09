@@ -1,13 +1,13 @@
 // app/api/auth/[...nextauth]/route.ts
-export const runtime = "nodejs";           // <-- ensure Node runtime (Prisma works)
+export const runtime = "nodejs"; // Prisma-safe
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import NextAuthEntry from "next-auth/next";
+import NextAuth from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 
-const NextAuthAny = NextAuthEntry as unknown as (cfg: unknown) => any;
-const out = NextAuthAny(authOptions as any);
+// TS in some setups thinks NextAuth from "next-auth" isn't callable.
+// The "next-auth/next" entry works correctly in the App Router.
+const handler = (NextAuth as unknown as (opts: unknown) => any)(authOptions as any);
 
-export const GET = out?.handlers?.GET ?? out;
-export const POST = out?.handlers?.POST ?? out;
+export { handler as GET, handler as POST };
