@@ -20,19 +20,18 @@ export const authOptions: any = {
 
   // ✅ Mobile-safe cookies (helps avoid "Unauthorized" on iOS/Safari)
   cookies: {
-    sessionToken: {
-      name: isProd
-        ? "__Secure-next-auth.session-token"
-        : "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: isProd,
-        domain: isProd ? "linkmint.co" : undefined,
-      },
+  sessionToken: {
+    name: isProd ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+    options: {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      secure: isProd,
+      // no domain → browser will use current host automatically
     },
   },
+},
+
 
   providers: [
     EmailProvider({
