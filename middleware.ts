@@ -2,16 +2,26 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export function middleware(req: NextRequest) {
-  const url = req.nextUrl;
+  // Only enforce in production on our real domain
+  if (process.env.NODE_ENV !== "production") return NextResponse.next();
 
-  // Force HTTPS
+  const url = req.nextUrl;
+  const host = req.headers.get("host") || "";
+
+  // Only apply to our site domain(s)
+  const isOurDomain =
+    host === "linkmint.co" || host === "www.linkmint.co";
+
+  if (!isOurDomain) return NextResponse.next();
+
+  // Force HTTPS (if somehow HTTP slipped through a proxy)
   if (url.protocol === "http:") {
     url.protocol = "https:";
     return NextResponse.redirect(url, 301);
   }
 
-  // Force apex domain (no www)
-  if (url.hostname === "www.linkmint.co") {
+  // Force apex (no www)
+  if (host === "www.linkmint.co") {
     url.hostname = "linkmint.co";
     return NextResponse.redirect(url, 301);
   }
@@ -19,5 +29,5 @@ export function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// Run on all paths
+// Let everything run; matcher can stay broad
 export const config = { matcher: ["/:path*"] };
