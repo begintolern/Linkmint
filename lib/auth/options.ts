@@ -8,11 +8,31 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { verifyPin } from "@/lib/pin";
 
+const isProd = process.env.NODE_ENV === "production";
+
 export const authOptions: any = {
   adapter: PrismaAdapter(prisma),
+
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 }, // 30 days
   secret: process.env.NEXTAUTH_SECRET,
-  debug: true,
+  debug: false,
+  trustHost: true,
+
+  // ✅ Mobile-safe cookies (helps avoid "Unauthorized" on iOS/Safari)
+  cookies: {
+    sessionToken: {
+      name: isProd
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProd,
+        domain: isProd ? "linkmint.co" : undefined,
+      },
+    },
+  },
 
   providers: [
     EmailProvider({
@@ -21,7 +41,7 @@ export const authOptions: any = {
       maxAge: 60 * 60 * 24 * 30, // 30 days
     }),
 
-    // Username/Password login
+    // 🔐 Email & Password Login
     CredentialsProvider({
       name: "Email & Password",
       credentials: {
@@ -57,9 +77,7 @@ export const authOptions: any = {
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        if (user.deletedAt) {
-          return null;
-        }
+        if (user.deletedAt) return null;
 
         return {
           id: user.id,
@@ -71,7 +89,7 @@ export const authOptions: any = {
       },
     }),
 
-    // PIN (per-device) login
+    // 🔢 PIN-based login
     CredentialsProvider({
       id: "pin",
       name: "PIN",
@@ -95,7 +113,14 @@ export const authOptions: any = {
 
         const user = await prisma.user.findUnique({
           where: { id: cred.userId },
-          select: { id: true, email: true, name: true, role: true, referralCode: true, deletedAt: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            referralCode: true,
+            deletedAt: true,
+          },
         });
         if (!user || user.deletedAt) return null;
 
@@ -119,12 +144,10 @@ export const authOptions: any = {
       if (!user?.id) return false;
       try {
         const db = await prisma.user.findUnique({
-          where: { id: user.id as string },
+          where: { id: user.id },
           select: { deletedAt: true },
         });
-        if (db?.deletedAt) {
-          return false;
-        }
+        if (db?.deletedAt) return false;
       } catch {
         return false;
       }
@@ -134,10 +157,9 @@ export const authOptions: any = {
     async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
       if (user) {
         token.sub = (user.id ?? token.sub) as string;
-        token.email = (user.email ?? token.email) as string; // keep email sticky on sign-in
+        token.email = (user.email ?? token.email) as string;
       } else {
-        // ensure email stays sticky on subsequent calls
-        token.email = (token.email ?? (token as any).email) as string;
+        token.email = token.email ?? (token as any).email;
       }
 
       const userId = (user?.id ?? token.sub) as string | undefined;
@@ -149,23 +171,38 @@ export const authOptions: any = {
           });
           if (dbUser) {
             (token as any).referralCode = dbUser.referralCode ?? null;
-            (token as any).role = dbUser.role ?? (token as any).role ?? "USER";
+            (token as any).role =
+              dbUser.role ?? (token as any).role ?? "USER";
             (token as any).deletedAt = dbUser.deletedAt ?? null;
           }
         } catch {
-          // ignore DB error
+          // ignore DB errors
         }
       }
       return token;
     },
 
-    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
+    async session({
+      session,
+      token,
+    }: {
+      session: Session;
+      token: JWT;
+    }): Promise<Session> {
       if (session?.user) {
         (session.user as any).id = (token.sub ?? "") as string;
-        (session.user as any).email = (token.email ?? session.user.email ?? null) as string | null; // ← NEW: ensure email always present
+        (session.user as any).email = (
+          token.email ??
+          session.user.email ??
+          null
+        ) as string | null;
         (session.user as any).role = ((token as any).role ?? "USER") as string;
-        (session.user as any).referralCode = ((token as any).referralCode ?? null) as string | null;
-        (session.user as any).disabled = Boolean((token as any).deletedAt ?? false);
+        (session.user as any).referralCode = (
+          (token as any).referralCode ?? null
+        ) as string | null;
+        (session.user as any).disabled = Boolean(
+          (token as any).deletedAt ?? false
+        );
       }
       return session;
     },
