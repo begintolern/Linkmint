@@ -1,28 +1,18 @@
 // app/logout/page.tsx
-
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 export default function LogoutPage() {
-  const router = useRouter();
-
   useEffect(() => {
-    const logout = async () => {
-      await fetch("/api/logout", {
-        method: "POST",
-      });
-
-      router.push("/login"); // 👈 Redirect to login after logout
-    };
-
-    logout();
-  }, [router]);
+    // End session then send user to /login
+    signOut({ callbackUrl: "/login" });
+  }, []);
 
   return (
-    <div className="p-6 text-lg text-gray-600">
-      Logging out...
-    </div>
+    <main className="mx-auto max-w-sm p-6">
+      <p>Signing you out…</p>
+    </main>
   );
 }
