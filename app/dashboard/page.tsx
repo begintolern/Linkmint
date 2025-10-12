@@ -3,9 +3,14 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth/options";
-import type { Session } from "next-auth";
+
+import { REGION } from "@/lib/config";
+import { getUsdToPhpRate } from "@/lib/fx";
+import { formatMoneyPHP, formatMoneyUSD } from "@/lib/currency";
+
 import DashboardPageHeader from "@/components/DashboardPageHeader";
 import HealthStatusCard from "@/components/HealthStatusCard";
 import DashboardCard from "@/components/DashboardCard";
@@ -33,6 +38,13 @@ async function getFinderRecommendations(baseUrl: string) {
   }
 }
 
+function resolveBaseUrl() {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  if (process.env.RAILWAY_STATIC_URL) return `https://${process.env.RAILWAY_STATIC_URL}`;
+  return "http://localhost:3000";
+}
+
 export default async function DashboardPage() {
   const session = (await getServerSession(authOptions)) as Session | null;
   if (!session) {
@@ -45,21 +57,24 @@ export default async function DashboardPage() {
   const role: string = (user.role ?? "user").toLowerCase();
   const userId: string = user.id ?? "";
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")
-      || (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : "")
-      || "http://localhost:3000";
-
+  const baseUrl = resolveBaseUrl();
   const recommendations = await getFinderRecommendations(baseUrl);
 
+  // FX for PH display (backend remains USD)
+  const usdToPhp = REGION === "PH" ? await getUsdToPhpRate() : 1;
+
+  // TODO: replace with real totals from your API
+  const totalUsd = 11.56;
+  const totalLabel =
+    REGION === "PH" ? formatMoneyPHP(totalUsd, usdToPhp, true) : formatMoneyUSD(totalUsd);
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
+    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
       {/* Header */}
       <DashboardPageHeader title="Overview" subtitle={`Welcome back, ${name}`} />
 
       {/* Tools Grid */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         <DashboardCard href="/dashboard/links" title="Smart Links" subtitle="Create and manage links" />
         <DashboardCard href="/dashboard/referrals" title="Referrals" subtitle="Invite and track bonuses" badge="5% Bonus" />
         <DashboardCard href="/dashboard/earnings" title="Earnings" subtitle="Commissions and status" />
@@ -70,12 +85,12 @@ export default async function DashboardPage() {
 
       {/* Earnings Summary + Request Payout */}
       <section className="mb-8 rounded-2xl border p-4 sm:p-5">
-        <h2 className="text-base sm:text-lg font-medium mb-3">🪙 Earnings & Payout</h2>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <h2 className="mb-3 text-base font-medium sm:text-lg">🪙 Earnings & Payout</h2>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs sm:text-sm text-gray-600">Total Earnings</p>
-            <p className="text-xl sm:text-2xl font-semibold">$11.56</p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 sm:text-sm">Total Earnings</p>
+            <p className="text-xl font-semibold sm:text-2xl">{totalLabel}</p>
+            <p className="mt-1 text-xs text-gray-500">
               PH payouts via GCash or PayPal. Minimum ₱500. Bank or wallet fees may apply.
             </p>
           </div>
@@ -84,9 +99,9 @@ export default async function DashboardPage() {
       </section>
 
       {/* 🛍️ Trending Products to Share */}
-      <section className="mb-8 rounded-2xl border p-4 sm:p-5 bg-white shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base sm:text-lg font-medium">🛍️ Trending Products to Share</h2>
+      <section className="mb-8 rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-medium sm:text-lg">🛍️ Trending Products to Share</h2>
           <Link href="/dashboard/finder" className="text-sm text-blue-600 hover:underline">
             View More →
           </Link>
@@ -110,8 +125,8 @@ export default async function DashboardPage() {
         </section>
       )}
 
-      <p className="text-center text-xs text-gray-400 mt-10">
-        Powered by Linkmint.co · © 2025 Golden Twin Ventures Inc.
+      <p className="mt-10 text-center text-xs text-gray-400">
+        Powered by Linkmint.co · © {new Date().getFullYear()} Golden Twin Ventures Inc.
       </p>
     </div>
   );
