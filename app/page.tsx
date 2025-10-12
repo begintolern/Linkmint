@@ -4,7 +4,7 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -22,6 +22,14 @@ const ASSETS = {
 } as const;
 
 export default function LandingPage() {
+  return (
+    <Suspense fallback={null}>
+      <LandingContent />
+    </Suspense>
+  );
+}
+
+function LandingContent() {
   const search = useSearchParams();
   const router = useRouter();
   const pathname = usePathname() || "/";
@@ -29,7 +37,7 @@ export default function LandingPage() {
   const initialLang = (search?.get("lang") === "tl" ? "tl" : "en") as Lang;
   const [lang, setLang] = useState<Lang>(initialLang);
 
-  // Keep EN as clean default (no ?lang); TL explicitly sets ?lang=tl
+  // EN is clean default (no ?lang); TL explicitly sets ?lang=tl
   useEffect(() => {
     const params = new URLSearchParams(search ? search.toString() : "");
     if (lang === "tl") {
