@@ -65,8 +65,12 @@ export default async function DashboardPage() {
 
   // TODO: replace with real totals from your API
   const totalUsd = 11.56;
-  const totalLabel =
-    REGION === "PH" ? formatMoneyPHP(totalUsd, usdToPhp, true) : formatMoneyUSD(totalUsd);
+  const showUsd = role === "admin"; // only admin sees USD reference
+const totalLabel =
+  REGION === "PH"
+    ? formatMoneyPHP(totalUsd, usdToPhp, showUsd)
+    : formatMoneyUSD(totalUsd);
+
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
