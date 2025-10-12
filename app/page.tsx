@@ -1,90 +1,243 @@
 // app/page.tsx
 "use client";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+
+type Lang = "en" | "tl";
+
+const ROUTES = {
+  home: "/",
+  dashboard: "/dashboard",
+  trustCenterEn: "/trust-center",
+  trustCenterTl: "/trust-center/tl",
+} as const;
+
+const ASSETS = {
+  phoneVideo: "/video/tutorial-web.mp4",
+} as const;
 
 export default function LandingPage() {
+  const search = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const initialLang = (search.get("lang") === "tl" ? "tl" : "en") as Lang;
+  const [lang, setLang] = useState<Lang>(initialLang);
+
+  // Keep EN as clean default (no ?lang); TL explicitly sets ?lang=tl
+  useEffect(() => {
+    const params = new URLSearchParams(search.toString());
+    if (lang === "tl") {
+      params.set("lang", "tl");
+    } else {
+      params.delete("lang");
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
+
+  const t = useMemo(() => {
+    if (lang === "tl") {
+      return {
+        nav_dashboard: "Dashboard",
+        nav_trust: "Trust Center",
+        hero_title: "Gawing kita ang simpleng pag-share ng mga link.",
+        hero_sub:
+          "linkmint.co helps you earn micro-commissions by sharing smart links — transparent rules, real payouts.",
+        cta_primary: "Sumali o Mag-login",
+        cta_secondary: "Buksan ang Dashboard",
+        how_title: "Paano ito gumagana",
+        how_1_t: "1) Gumawa ng Smart Link",
+        how_1_d:
+          "Pumili ng merchant, auto-format ng link, at i-check ang policy bago mo i-share.",
+        how_2_t: "2) I-share at Mag-earn",
+        how_2_d:
+          "Kapag may bumili mula sa link mo, may commission ka — malinaw ang status at timing.",
+        how_3_t: "3) Payout na Klaro",
+        how_3_d:
+          "Nagbabayad lamang kapag na-receive ng linkmint.co ang funds mula sa affiliate partner.",
+        video_caption: "Preview: Phone-size view (9:16)",
+        trust_line:
+          "Kumpleto ang paliwanag tungkol sa payout timing at rules sa Trust Center.",
+        footer_left: "© " + new Date().getFullYear() + " linkmint.co",
+        footer_right: "Built for ethical micro-sales",
+      };
+    }
+    return {
+      nav_dashboard: "Dashboard",
+      nav_trust: "Trust Center",
+      hero_title: "Turn simple link sharing into earnings.",
+      hero_sub:
+        "linkmint.co helps you earn micro-commissions by sharing smart links — transparent rules, real payouts.",
+      cta_primary: "Join or Sign In",
+      cta_secondary: "Open Dashboard",
+      how_title: "How it works",
+      how_1_t: "1) Create a Smart Link",
+      how_1_d:
+        "Pick a merchant, auto-format the link, and run a policy pre-check before sharing.",
+      how_2_t: "2) Share & Earn",
+      how_2_d:
+        "When someone buys through your link, you earn — with clear status and timing.",
+      how_3_t: "3) Payouts You Can Trust",
+      how_3_d:
+        "We only pay out after linkmint.co actually receives funds from the affiliate partner.",
+      video_caption: "Preview: Phone-size view (9:16)",
+      trust_line:
+        "Full payout timing and rules are explained in the Trust Center.",
+      footer_left: "© " + new Date().getFullYear() + " linkmint.co",
+      footer_right: "Built for ethical micro-sales",
+    };
+  }, [lang]);
+
+  // Always send Trust Center clicks to EN; TL selectable inside Trust Center page
+  const trustHref = ROUTES.trustCenterEn;
+
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 to-black text-white">
-      {/* Hero Section */}
-      <section className="text-center mt-24 px-6">
-        <h1 className="text-4xl md:text-6xl font-bold mb-4">
-          Turn everyday links into income
-        </h1>
-        <p className="text-gray-300 text-lg md:text-xl mb-8 max-w-2xl mx-auto">
-          Share smart links, earn passive income, and join the new wave of micro-affiliates.
-        </p>
-        <Link
-          href="/signup"
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold transition"
-        >
-          Get Started Free
-        </Link>
-      </section>
-
-      {/* Tutorial Video Section (restored original phone-size look) */}
-      <section className="mt-16 mb-24 px-4 w-full flex justify-center">
-        <div className="relative mx-auto w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg rounded-xl overflow-hidden border border-gray-700 shadow-lg">
-          <video
-            src="/video/tutorial.mp4"
-            controls
-            playsInline
-            preload="metadata"
-            className="w-full h-auto object-contain"
-          >
-            <track
-              src="/video/tutorial.vtt"
-              kind="subtitles"
-              srcLang="en"
-              label="English"
-              default
-            />
-          </video>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="text-center mb-32 px-6">
-        <h2 className="text-3xl md:text-4xl font-bold mb-6">How it works</h2>
-        <div className="max-w-4xl mx-auto text-gray-300 space-y-4 text-lg">
-          <p>
-            1. Create or share smart links for trending merchants.
-          </p>
-          <p>
-            2. Earn commissions when people buy through your links.
-          </p>
-          <p>
-            3. Withdraw your earnings directly to PayPal after approval.
-          </p>
-        </div>
-      </section>
-
-      {/* Trust Center Snippet */}
-      <section className="text-center mb-24 px-6">
-        <h2 className="text-2xl font-semibold mb-3">Trust and Transparency</h2>
-        <p className="text-gray-400 max-w-2xl mx-auto">
-          linkmint.co ensures every payout is tied to verified affiliate earnings.  
-          Funds are released only after merchants confirm transactions.  
-          Learn more in our{" "}
-          <Link href="/trust-center" className="text-emerald-400 hover:underline">
-            Trust Center
-          </Link>.
-        </p>
-      </section>
-
-      {/* Footer */}
-      <footer className="text-gray-500 text-sm mb-6">
-        <p>© {new Date().getFullYear()} linkmint.co — All rights reserved.</p>
-        <p className="mt-2">
-          <Link href="/terms" className="hover:underline">
-            Terms
-          </Link>{" "}
-          ·{" "}
-          <Link href="/privacy" className="hover:underline">
-            Privacy
+    <main className="min-h-screen bg-white text-gray-900">
+      <header className="sticky top-0 z-20 border-b bg-white/70 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
+            <span className="inline-block h-6 w-6 rounded-md bg-emerald-500" />
+            <span>linkmint.co</span>
           </Link>
-        </p>
+
+          <div className="flex items-center gap-2">
+            <LangToggle lang={lang} setLang={setLang} />
+            <nav className="hidden items-center gap-4 sm:flex">
+              <Link
+                href={ROUTES.dashboard}
+                className="text-sm text-gray-700 hover:text-gray-900"
+              >
+                {t.nav_dashboard}
+              </Link>
+              <Link
+                href={trustHref}
+                className="text-sm text-gray-700 hover:text-gray-900"
+              >
+                {t.nav_trust}
+              </Link>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pb-16 pt-10 md:grid-cols-2 md:items-center">
+        <div>
+          <h1 className="text-3xl font-bold leading-tight md:text-5xl">
+            {t.hero_title}
+          </h1>
+          <p className="mt-4 max-w-prose text-base text-gray-600 md:text-lg">
+            {t.hero_sub}
+          </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href={`/auth/signin`}
+              className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              {t.cta_primary}
+            </Link>
+            <Link
+              href={ROUTES.dashboard}
+              className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+            >
+              {t.cta_secondary}
+            </Link>
+          </div>
+
+          <p className="mt-3 text-xs text-gray-500">
+            {t.trust_line}{" "}
+            <Link
+              href={trustHref}
+              className="underline decoration-dotted underline-offset-2 hover:text-gray-700"
+            >
+              {t.nav_trust}
+            </Link>.
+          </p>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="w-full max-w-[380px] md:max-w-[420px]">
+            <div className="relative aspect-[9/16] overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200">
+              <video
+                className="h-full w-full object-cover"
+                playsInline
+                muted
+                loop
+                controls
+                src={ASSETS.phoneVideo}
+              />
+            </div>
+            <p className="mt-2 text-center text-xs text-gray-500">
+              {t.video_caption}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t bg-gray-50">
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
+          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <Card title={t.how_1_t} desc={t.how_1_d} />
+            <Card title={t.how_2_t} desc={t.how_2_d} />
+            <Card title={t.how_3_t} desc={t.how_3_d} />
+          </div>
+        </div>
+      </section>
+
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
+          <span>{t.footer_left}</span>
+          <span>{t.footer_right}</span>
+        </div>
       </footer>
     </main>
+  );
+}
+
+function Card({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <h3 className="text-base font-semibold">{title}</h3>
+      <p className="mt-2 text-sm text-gray-600">{desc}</p>
+    </div>
+  );
+}
+
+function LangToggle({
+  lang,
+  setLang,
+}: {
+  lang: Lang;
+  setLang: (v: Lang) => void;
+}) {
+  return (
+    <div className="inline-flex items-center rounded-xl border border-gray-300 p-1">
+      <button
+        onClick={() => setLang("en")}
+        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+          lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+        }`}
+        aria-pressed={lang === "en"}
+      >
+        EN
+      </button>
+      <button
+        onClick={() => setLang("tl")}
+        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+          lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+        }`}
+        aria-pressed={lang === "tl"}
+      >
+        TL
+      </button>
+    </div>
   );
 }

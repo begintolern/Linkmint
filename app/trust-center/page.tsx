@@ -1,79 +1,58 @@
-// app/trust-center/tl/page.tsx
-export const dynamic = "force-dynamic";
+// app/trust-center/page.tsx  (English; adds a TL switch link)
+"use client";
 
 import Link from "next/link";
 
-export default function TrustCenterTagalog() {
+export default function TrustCenterEN() {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10 text-gray-800">
-      <h1 className="text-2xl font-bold mb-6">Sentro ng Tiwala</h1>
+    <main className="min-h-screen bg-white text-gray-900">
+      <header className="border-b bg-white">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+          <Link href="/" className="flex items-center gap-2 font-semibold">
+            <span className="inline-block h-6 w-6 rounded-md bg-emerald-500" />
+            <span>linkmint.co</span>
+          </Link>
+          <Link
+            href="/trust-center/tl"
+            className="rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+          >
+            TL
+          </Link>
+        </div>
+      </header>
 
-      <p className="mb-4">
-        Ang <strong>linkmint.co</strong> ay nakatuon sa pagiging transparent at patas para sa lahat
-        ng gumagamit. Ang pahinang ito ay nagpapaliwanag kung paano namin pinangangalagaan ang
-        pondo, pinoproseso ang mga komisyon, at pinoprotektahan ang iyong tiwala.
-      </p>
+      <section className="mx-auto max-w-4xl px-4 py-10">
+        <h1 className="text-3xl font-bold">Trust Center</h1>
+        <p className="mt-4 text-gray-700">
+          linkmint.co only pays out after we actually receive funds from the affiliate partner.
+          Even with a high TrustScore, early payouts never occur until funds are received.
+        </p>
 
-      <h2 className="text-lg font-semibold mt-8 mb-2">1. Kailan ko matatanggap ang aking bayad?</h2>
-      <p className="mb-4">
-        Ang mga payout ay ginagawa lamang matapos matanggap ng Linkmint ang aktwal na bayad mula sa
-        affiliate merchant (hal. Shopee, Lazada, Amazon, atbp.). Karaniwang tumatagal ito ng{" "}
-        <strong>30 hanggang 90 araw</strong> depende sa patakaran ng merchant.
-      </p>
+        <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Card title="Clear Payout Rule" desc="No payouts until the partner marks commissions 'Approved' and funds are received." />
+          <Card title="Honeymoon Period (30 Days)" desc="During your first 30 days, early payout is locked. After that, it may unlock if you're trusted and float is available." />
+          <Card title="Early Payouts (If Available)" desc="Allowed only using cleared funds (Amazon excluded), strong TrustScore, and within float capacity." />
+          <Card title="Transparent Status" desc="Your dashboard shows 'Pending', 'Approved', or 'Paid' with dates and timing details." />
+        </div>
 
-      <h2 className="text-lg font-semibold mt-8 mb-2">
-        2. Paano kung mataas ang aking TrustScore?
-      </h2>
-      <p className="mb-4">
-        Ang mataas na TrustScore ay nagbibigay sa iyo ng access sa mas mabilis na payout kapag may
-        sapat na pondo na sa Linkmint. Ngunit kahit mataas ang iyong score,{" "}
-        <strong>hindi kami magbabayad nang hindi pa binabayaran ng merchant</strong>.
-      </p>
+        <div className="mt-10">
+          <Link
+            href="/"
+            className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+          >
+            Back to Landing
+          </Link>
+        </div>
+      </section>
+    </main>
+  );
+}
 
-      <h2 className="text-lg font-semibold mt-8 mb-2">3. Bakit may delay o pending ang payout?</h2>
-      <p className="mb-4">
-        Kapag nakatanggap kami ng bayad mula sa merchant, saka lamang namin ito ipapasa sa mga
-        user. Ang status na “Pending” ay nangangahulugang hindi pa kami nakakatanggap ng kumpirmadong
-        pondo mula sa affiliate network.
-      </p>
-
-      <h2 className="text-lg font-semibold mt-8 mb-2">
-        4. Paano pinoprotektahan ng Linkmint ang mga user?
-      </h2>
-      <p className="mb-4">
-        Gumagamit kami ng real-time monitoring at event tracking upang matiyak na bawat komisyon,
-        payout, at referral ay maayos na naitatala. Mayroon din kaming{" "}
-        <Link href="/trust-center" className="text-teal-700 hover:underline">
-          English Trust Center
-        </Link>{" "}
-        para sa mga global user.
-      </p>
-
-      <h2 className="text-lg font-semibold mt-8 mb-2">
-        5. Paano ko makakausap ang support?
-      </h2>
-      <p className="mb-4">
-        Maaari kang makipag-ugnayan sa amin sa{" "}
-        <Link href="mailto:admin@linkmint.co" className="text-teal-700 hover:underline">
-          admin@linkmint.co
-        </Link>{" "}
-        para sa anumang katanungan o reklamo.
-      </p>
-
-      <p className="mt-8 text-sm text-gray-600">
-        Huling na-update: {new Date().toLocaleDateString("en-PH")}
-      </p>
-
-      <p className="mt-6 text-sm">
-        Basahin din ang{" "}
-        <Link href="/tos/tl" className="text-teal-700 hover:underline">
-          Mga Tuntunin ng Serbisyo
-        </Link>{" "}
-        at{" "}
-        <Link href="/privacy/tl" className="text-teal-700 hover:underline">
-          Patakaran sa Privacy
-        </Link>.
-      </p>
+function Card({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <h3 className="text-base font-semibold">{title}</h3>
+      <p className="mt-2 text-sm text-gray-600">{desc}</p>
     </div>
   );
 }
