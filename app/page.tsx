@@ -75,12 +75,11 @@ export default function LandingPage() {
     };
   }, [lang]);
 
-  // Always open Trust Center in English from the landing page
   const trustHref = ROUTES.trustCenterEn;
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
-      {/* Top Bar */}
+      {/* Header */}
       <header className="sticky top-0 z-20 border-b bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
@@ -108,7 +107,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* Hero Section */}
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pb-16 pt-10 md:grid-cols-2 md:items-center">
         <div>
           <h1 className="text-3xl font-bold leading-tight md:text-5xl">
@@ -120,7 +119,7 @@ export default function LandingPage() {
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
-              href="/auth/signin"
+              href="/dashboard"
               className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
             >
               {t.cta_primary}
@@ -144,7 +143,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* Phone-sized video preview */}
+        {/* Video */}
         <div className="flex justify-center">
           <div className="w-full max-w-[380px] md:max-w-[420px]">
             <div className="relative aspect-[9/16] overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200">
@@ -164,7 +163,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it Works */}
       <section className="border-t bg-gray-50">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
@@ -205,24 +204,24 @@ function LangToggle({
 }) {
   return (
     <div className="inline-flex items-center rounded-xl border border-gray-300 p-1">
-    <button
-      onClick={() => setLang("en")}
-      className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-        lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
-      }`}
-      aria-pressed={lang === "en"}
-    >
-      EN
-    </button>
-    <button
-      onClick={() => setLang("tl")}
-      className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-        lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
-      }`}
-      aria-pressed={lang === "tl"}
-    >
-      TL
-    </button>
-  </div>
+      <button
+        onClick={() => setLang("en")}
+        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+          lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+        }`}
+        aria-pressed={lang === "en"}
+      >
+        EN
+      </button>
+      <button
+        onClick={() => setLang("tl")}
+        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+          lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+        }`}
+        aria-pressed={lang === "tl"}
+      >
+        TL
+      </button>
+    </div>
   );
 }
