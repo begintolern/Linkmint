@@ -2,17 +2,27 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth/options";
+import type { Session } from "next-auth";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
-import { cookies } from "next/headers";
 import HealthStatusCard from "@/components/HealthStatusCard";
 import DashboardCard from "@/components/DashboardCard";
 import RequestPayoutButton from "@/components/RequestPayoutButton";
 import TrendingSmartItem from "@/components/dashboard/TrendingSmartItem";
 import Link from "next/link";
 
-async function getFinderRecommendations() {
+type AppUser = {
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
+async function getFinderRecommendations(baseUrl: string) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/finder/products?limit=3`, {
+    const res = await fetch(`${baseUrl}/api/finder/products?limit=3`, {
       cache: "no-store",
     });
     if (!res.ok) return [];
@@ -24,13 +34,24 @@ async function getFinderRecommendations() {
 }
 
 export default async function DashboardPage() {
-  const store = cookies();
-  const email = store.get("email")?.value ?? "";
-  const name = email ? email.split("@")[0] : "there";
-  const role = (store.get("role")?.value ?? "user").toLowerCase();
-  const userId = store.get("userId")?.value ?? "";
+  const session = (await getServerSession(authOptions)) as Session | null;
+  if (!session) {
+    redirect("/api/auth/signin?callbackUrl=/dashboard");
+  }
 
-  const recommendations = await getFinderRecommendations();
+  const user = (session?.user ?? {}) as AppUser;
+  const email: string = user.email ?? "";
+  const name: string = email ? email.split("@")[0] : user.name ?? "there";
+  const role: string = (user.role ?? "user").toLowerCase();
+  const userId: string = user.id ?? "";
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_BASE_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")
+      || (process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : "")
+      || "http://localhost:3000";
+
+  const recommendations = await getFinderRecommendations(baseUrl);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
