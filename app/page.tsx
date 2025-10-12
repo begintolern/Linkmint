@@ -4,9 +4,8 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type Lang = "en" | "tl";
 
@@ -14,7 +13,6 @@ const ROUTES = {
   home: "/",
   dashboard: "/dashboard",
   trustCenterEn: "/trust-center",
-  trustCenterTl: "/trust-center/tl",
 } as const;
 
 const ASSETS = {
@@ -22,33 +20,7 @@ const ASSETS = {
 } as const;
 
 export default function LandingPage() {
-  return (
-    <Suspense fallback={null}>
-      <LandingContent />
-    </Suspense>
-  );
-}
-
-function LandingContent() {
-  const search = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname() || "/";
-
-  const initialLang = (search?.get("lang") === "tl" ? "tl" : "en") as Lang;
-  const [lang, setLang] = useState<Lang>(initialLang);
-
-  // EN is clean default (no ?lang); TL explicitly sets ?lang=tl
-  useEffect(() => {
-    const params = new URLSearchParams(search ? search.toString() : "");
-    if (lang === "tl") {
-      params.set("lang", "tl");
-    } else {
-      params.delete("lang");
-    }
-    const query: string = params.toString() || "";
-    router.replace(query ? `${pathname}?${query}` : pathname);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang]);
+  const [lang, setLang] = useState<Lang>("en");
 
   const t = useMemo(() => {
     if (lang === "tl") {
@@ -233,24 +205,24 @@ function LangToggle({
 }) {
   return (
     <div className="inline-flex items-center rounded-xl border border-gray-300 p-1">
-      <button
-        onClick={() => setLang("en")}
-        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
-        }`}
-        aria-pressed={lang === "en"}
-      >
-        EN
-      </button>
-      <button
-        onClick={() => setLang("tl")}
-        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
-        }`}
-        aria-pressed={lang === "tl"}
-      >
-        TL
-      </button>
-    </div>
+    <button
+      onClick={() => setLang("en")}
+      className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+        lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+      }`}
+      aria-pressed={lang === "en"}
+    >
+      EN
+    </button>
+    <button
+      onClick={() => setLang("tl")}
+      className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+        lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+      }`}
+      aria-pressed={lang === "tl"}
+    >
+      TL
+    </button>
+  </div>
   );
 }
