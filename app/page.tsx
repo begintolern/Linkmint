@@ -1,49 +1,53 @@
 // app/page.tsx
 import Link from "next/link";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <main className="min-h-screen text-white bg-black">
-      {/* HERO (unchanged) */}
-      <section className="relative h-[72vh] w-full bg-gradient-to-b from-black via-gray-900 to-black flex flex-col items-center justify-center text-center px-6">
-        <div className="max-w-2xl">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            Turn everyday links into income
-          </h1>
-          <p className="text-lg md:text-xl text-gray-300 mb-8">
-            Share smarter — earn automatically from the links you already use every day.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              href="/signup"
-              className="rounded-xl bg-white text-black px-6 py-3 text-sm font-medium hover:bg-gray-200 transition"
-            >
-              Get started free
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-xl border border-white/60 px-6 py-3 text-sm font-medium text-white hover:bg-white/10 transition"
-            >
-              Log in
-            </Link>
-          </div>
+    <main className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* Hero Section */}
+      <section className="text-center py-20 px-6">
+        <h1 className="text-4xl sm:text-6xl font-bold mb-6 leading-tight">
+          Turn everyday links into income.
+        </h1>
+        <p className="text-gray-400 max-w-xl mx-auto mb-10">
+          Linkmint.co helps you earn micro-commissions by sharing smart affiliate links.
+          Share ethically. Earn automatically.
+        </p>
+        <div className="flex justify-center gap-4">
+          <Link
+            href="/signup"
+            className="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-8 py-3 rounded-xl transition"
+          >
+            Get Started Free
+          </Link>
+          <Link
+            href="/login"
+            className="border border-gray-500 hover:border-teal-500 text-gray-300 hover:text-white font-semibold px-8 py-3 rounded-xl transition"
+          >
+            Login
+          </Link>
         </div>
       </section>
 
-      {/* VIDEO TUTORIAL — placed BETWEEN hero and how-it-works */}
-      <section className="bg-black text-center py-16 px-4">
-        <h2 className="text-2xl md:text-3xl font-semibold mb-6">Watch how it works (60s)</h2>
+      {/* Tutorial Video Section */}
+      <section className="py-16 bg-[#0f0f0f] text-center">
+        <h2 className="text-2xl sm:text-3xl font-semibold mb-6">
+          Watch how it works (60 seconds)
+        </h2>
+
         <div className="relative mx-auto w-full max-w-3xl aspect-video rounded-xl overflow-hidden border border-gray-700 shadow-lg">
           <video
-            src="/video/tutorial.mp4"
             controls
             playsInline
             preload="metadata"
+            poster="/video/tutorial.jpg"
             className="w-full h-full object-cover"
           >
-            {/* Optional captions (keep file at /public/video/tutorial.vtt) */}
+            <source src="/video/tutorial-web.webm" type="video/webm" />
+            <source src="/video/tutorial-web.mp4" type="video/mp4" />
             <track
               src="/video/tutorial.vtt"
               kind="subtitles"
@@ -51,19 +55,49 @@ export default function Home() {
               label="English"
               default
             />
+            Sorry, your browser doesn’t support embedded videos.
           </video>
         </div>
-        {/* Optional small helper text */}
-        <p className="mt-3 text-sm text-gray-400">Captions available • Works on mobile</p>
       </section>
 
-      {/* HOW IT WORKS / TRUST (unchanged content area) */}
-      <section className="px-6 py-16 text-center bg-gradient-to-b from-[#0b1120] to-[#111827] text-gray-300">
-        <h2 className="text-2xl font-semibold mb-2">Built for creators and communities</h2>
-        <p className="max-w-2xl mx-auto">
-          Simple, transparent, and secure — Linkmint helps you grow income without setup hassles.
-        </p>
+      {/* How It Works Section */}
+      <section className="py-20 text-center px-6">
+        <h2 className="text-3xl font-semibold mb-10">How It Works</h2>
+        <div className="grid sm:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="p-6 bg-[#141414] rounded-2xl border border-gray-800">
+            <h3 className="text-xl font-semibold mb-2 text-teal-400">1. Create</h3>
+            <p className="text-gray-400">
+              Choose a product or service, and Linkmint generates your smart affiliate link.
+            </p>
+          </div>
+          <div className="p-6 bg-[#141414] rounded-2xl border border-gray-800">
+            <h3 className="text-xl font-semibold mb-2 text-teal-400">2. Share</h3>
+            <p className="text-gray-400">
+              Post your link anywhere — social media, chats, blogs, or communities.
+            </p>
+          </div>
+          <div className="p-6 bg-[#141414] rounded-2xl border border-gray-800">
+            <h3 className="text-xl font-semibold mb-2 text-teal-400">3. Earn</h3>
+            <p className="text-gray-400">
+              When someone buys through your link, you earn micro-commissions automatically.
+            </p>
+          </div>
+        </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-800 py-8 text-center text-gray-500 text-sm">
+        <p>
+          © {new Date().getFullYear()} Linkmint.co ·{" "}
+          <Link href="/privacy" className="hover:text-teal-400">
+            Privacy
+          </Link>{" "}
+          ·{" "}
+          <Link href="/terms" className="hover:text-teal-400">
+            Terms
+          </Link>
+        </p>
+      </footer>
     </main>
   );
 }
