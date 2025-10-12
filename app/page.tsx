@@ -24,20 +24,20 @@ const ASSETS = {
 export default function LandingPage() {
   const search = useSearchParams();
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || "/";
 
-  const initialLang = (search.get("lang") === "tl" ? "tl" : "en") as Lang;
+  const initialLang = (search?.get("lang") === "tl" ? "tl" : "en") as Lang;
   const [lang, setLang] = useState<Lang>(initialLang);
 
   // Keep EN as clean default (no ?lang); TL explicitly sets ?lang=tl
   useEffect(() => {
-    const params = new URLSearchParams(search.toString());
+    const params = new URLSearchParams(search ? search.toString() : "");
     if (lang === "tl") {
       params.set("lang", "tl");
     } else {
       params.delete("lang");
     }
-    const query = params.toString();
+    const query: string = params.toString() || "";
     router.replace(query ? `${pathname}?${query}` : pathname);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang]);
@@ -95,11 +95,12 @@ export default function LandingPage() {
     };
   }, [lang]);
 
-  // Always send Trust Center clicks to EN; TL selectable inside Trust Center page
+  // Always open Trust Center in English from the landing page
   const trustHref = ROUTES.trustCenterEn;
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
+      {/* Top Bar */}
       <header className="sticky top-0 z-20 border-b bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
@@ -127,6 +128,7 @@ export default function LandingPage() {
         </div>
       </header>
 
+      {/* Hero */}
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pb-16 pt-10 md:grid-cols-2 md:items-center">
         <div>
           <h1 className="text-3xl font-bold leading-tight md:text-5xl">
@@ -138,7 +140,7 @@ export default function LandingPage() {
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
-              href={`/auth/signin`}
+              href="/auth/signin"
               className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
             >
               {t.cta_primary}
@@ -162,6 +164,7 @@ export default function LandingPage() {
           </p>
         </div>
 
+        {/* Phone-sized video preview */}
         <div className="flex justify-center">
           <div className="w-full max-w-[380px] md:max-w-[420px]">
             <div className="relative aspect-[9/16] overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200">
@@ -181,6 +184,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* How it works */}
       <section className="border-t bg-gray-50">
         <div className="mx-auto max-w-6xl px-4 py-12">
           <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
@@ -192,6 +196,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Footer */}
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
           <span>{t.footer_left}</span>
