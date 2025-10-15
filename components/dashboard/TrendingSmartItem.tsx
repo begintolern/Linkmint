@@ -14,6 +14,7 @@ type Item = {
 
 async function tryCreateSmartlink(originalUrl: string) {
   const candidates = [
+    { ep: "/api/smartlink", body: { url: originalUrl } },          // ✅ your existing working route
     { ep: "/api/smart-links/generate", body: { url: originalUrl } },
     { ep: "/api/links/create", body: { url: originalUrl } },
     { ep: "/api/smartlinks/create", body: { url: originalUrl } },
@@ -30,10 +31,15 @@ async function tryCreateSmartlink(originalUrl: string) {
       if (!res.ok) continue;
       const j = await res.json();
       const short =
-        j?.link || j?.shortUrl || j?.url || j?.data?.shortUrl || j?.data?.url;
+        j?.link ||
+        j?.shortUrl ||
+        j?.url ||
+        j?.data?.shortUrl ||
+        j?.data?.url ||
+        j?.slug;
       if (short && typeof short === "string") return short;
     } catch {
-      /* try next */
+      // try next candidate silently
     }
   }
   return null;
@@ -77,7 +83,7 @@ export default function TrendingSmartItem({ item }: { item: Item }) {
     setLoading(false);
 
     if (!short) {
-      showToast("Couldn’t generate link. Check smart-link API routes.");
+      showToast("Couldn’t generate link. Check smartlink API route.");
       return;
     }
 
@@ -102,13 +108,23 @@ export default function TrendingSmartItem({ item }: { item: Item }) {
 
       <div className="aspect-[4/3] overflow-hidden rounded-lg bg-gray-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+        <img
+          src={item.image}
+          alt={item.title}
+          className="w-full h-full object-cover"
+        />
       </div>
 
-      <div className="mt-2 text-sm font-medium line-clamp-2">{item.title}</div>
+      <div className="mt-2 text-sm font-medium line-clamp-2">
+        {item.title}
+      </div>
       <div className="text-xs text-gray-500 mt-1">
         ₱{Intl.NumberFormat("en-PH").format(item.price)} ·{" "}
-        {item.merchant === "LAZADA_PH" ? "Lazada" : item.merchant === "SHOPEE_PH" ? "Shopee" : item.merchant}
+        {item.merchant === "LAZADA_PH"
+          ? "Lazada"
+          : item.merchant === "SHOPEE_PH"
+          ? "Shopee"
+          : item.merchant}
       </div>
 
       {!link ? (
@@ -116,7 +132,9 @@ export default function TrendingSmartItem({ item }: { item: Item }) {
           onClick={handleGenerate}
           disabled={loading}
           className={`mt-3 w-full rounded-lg border text-sm py-2 transition ${
-            loading ? "bg-gray-200 text-gray-500" : "bg-black text-white hover:bg-gray-800"
+            loading
+              ? "bg-gray-200 text-gray-500"
+              : "bg-black text-white hover:bg-gray-800"
           }`}
         >
           {loading ? "Generating…" : "Get Smartlink"}
