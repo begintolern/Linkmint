@@ -9,22 +9,18 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-// ---- Inlined allow/deny helper ----
+// ---- allow/deny helper -----------------------
 type SourceCheckResult = { ok: true } | { ok: false; reason: string };
 
-function normalizeSource(s: string | null | undefined): string {
+function norm(s: string | null | undefined) {
   return (s ?? "").trim().toLowerCase();
 }
 
 function validateSource(
-  merchant: {
-    merchantName: string;
-    allowedSources?: unknown;
-    disallowedSources?: unknown;
-  },
+  merchant: { merchantName: string; allowedSources?: unknown; disallowedSources?: unknown },
   source: string
 ): SourceCheckResult {
-  const src = normalizeSource(source);
+  const src = norm(source);
   if (!src) return { ok: false, reason: "Missing source" };
 
   const toSet = (v: unknown): Set<string> => {
@@ -51,26 +47,19 @@ function validateSource(
   const disallowed = toSet((merchant as any).disallowed);
 
   if (disallowed.has(src)) {
-    return {
-      ok: false,
-      reason: `${merchant.merchantName}: the source "${source}" is not allowed by the merchant's program rules.`,
-    };
+    return { ok: false, reason: `${merchant.merchantName}: the source "${source}" is not allowed by the merchant's program rules.` };
   }
   if (allowed.size > 0 && !allowed.has(src)) {
-    return {
-      ok: false,
-      reason: `${merchant.merchantName}: the source "${source}" is not in the allowed sources.`,
-    };
+    return { ok: false, reason: `${merchant.merchantName}: the source "${source}" is not in the allowed sources.` };
   }
   return { ok: true };
 }
 
-// ---- Helpers ---------------------------------------------------------------
+// ---- helpers -------------------------------
 function normalizeUrl(input: string): URL | null {
   try {
     const hasProto = /^https?:\/\//i.test(input.trim());
-    const test = hasProto ? input.trim() : `https://${input.trim()}`;
-    const u = new URL(test);
+    const u = new URL(hasProto ? input.trim() : `https://${input.trim()}`);
     if (!u.hostname.includes(".")) return null;
     return u;
   } catch {
@@ -91,61 +80,61 @@ type RuleLite = {
   allowedSources?: unknown;
 };
 
-async function findMerchantRuleByHost(hostname: string): Promise<RuleLite | null> {
+async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
   const host = hostname.toLowerCase().replace(/^www\./, "");
-
-  // Try to find approved merchantRule first
+  // Loosen the search (don't require approved here; handle gating later)
   const rule = await prisma.merchantRule.findFirst({
     where: {
       OR: [
         { domainPattern: { contains: host } },
         { merchantName: { contains: host } },
       ],
-      status: { in: ["approved", "active"] },
       active: true,
     },
   });
+  if (rule) return rule as any;
 
-  // If not found, fallback to any PH-market merchantRule
-  if (!rule) {
+  // Second chance: some records store TLD with subdomain variations
+  const parts = host.split(".");
+  if (parts.length > 2) {
+    const tld = parts.slice(-2).join(".");
     const alt = await prisma.merchantRule.findFirst({
       where: {
         OR: [
-          { domainPattern: { contains: host } },
-          { merchantName: { contains: host } },
+          { domainPattern: { contains: tld } },
+          { merchantName: { contains: tld } },
         ],
-        market: "PH",
+        active: true,
       },
     });
     if (alt) return alt as any;
   }
 
-  return rule as any;
+  return null;
 }
 
-// ---- Handler ---------------------------------------------------------------
+// ---- types ---------------------------------
+type PostBody = { url?: string; label?: string; source?: string };
+
+// ---- handler -------------------------------
 export async function POST(req: NextRequest) {
+  // auth
   const raw = await getServerSession(authOptions);
   const session = raw as Session | null;
   let userId = (session?.user as any)?.id as string | undefined;
-
   if (!userId) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     userId = (token as any)?.sub || (token as any)?.id;
   }
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as {
-    url?: string;
-    label?: string;
-    source?: string;
-  };
+  // input
+  const body = (await req.json().catch(() => ({}))) as PostBody;
   const rawUrl = body?.url?.trim();
   const label = body?.label?.trim() || null;
   const source = (body?.source ?? "").trim();
 
   if (!rawUrl) return NextResponse.json({ error: "Missing url" }, { status: 400 });
-
   const parsed = normalizeUrl(rawUrl);
   if (!parsed)
     return NextResponse.json(
@@ -153,10 +142,11 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
 
+  // resolve rule
   const hostname = parsed.hostname;
-  const rule = await findMerchantRuleByHost(hostname);
+  const rule = await findRuleByHost(hostname);
 
-  // --- If still no rule found, create generic non-commission link
+  // no rule -> make generic link (non-commission)
   if (!rule) {
     const generic = await prisma.smartLink.create({
       data: {
@@ -175,16 +165,35 @@ export async function POST(req: NextRequest) {
     const base = host ? `${proto}://${host}` : "";
     const shortUrl = base ? `${base}/l/${generic.id}` : `/l/${generic.id}`;
 
-    return NextResponse.json({
-      ok: true,
-      link: shortUrl,
-      shortUrl,
-      warning: "No merchant rule matched; link may not earn commissions.",
-    });
+    return NextResponse.json(
+      { ok: true, link: shortUrl, shortUrl, warning: "No merchant rule matched; link may not earn commissions." },
+      { status: 200 }
+    );
   }
 
-  // --- Skip pending/inactive merchants
-  if (!rule.active || !["approved", "active"].includes(rule.status ?? "")) {
+  // gating (PH-first policy + approval)
+  const status = String(rule.status ?? "").toLowerCase(); // 'approved' | 'active' | 'pending' | ''
+  const market = (rule as any).market ?? null;
+  const isApproved = status === "approved" || status === "active";
+  const isPH = market === "PH";
+
+  // Enforce PH market
+  if (market && !isPH) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "MARKET_BLOCKED",
+        reason: "This merchant is not enabled for the Philippines.",
+        merchant: { id: rule.id, name: rule.merchantName, market },
+      },
+      { status: 400 }
+    );
+  }
+
+  // If still pending but PH + active, allow with warning (so testing can proceed)
+  if (!isApproved && isPH) {
+    // continue but flag warning
+  } else if (!isApproved) {
     return NextResponse.json(
       {
         ok: false,
@@ -195,20 +204,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // --- Enforce PH market
-  if ((rule as any).market && (rule as any).market !== "PH") {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "MARKET_BLOCKED",
-        reason: "This merchant is not enabled for the Philippines.",
-        merchant: { id: rule.id, name: rule.merchantName, market: (rule as any).market },
-      },
-      { status: 400 }
-    );
+  // allow/deny source lists if present
+  const hasAllow = Array.isArray((rule as any).allowedSources) && (rule as any).allowedSources.length > 0;
+  const denyList = (rule as any).disallowed;
+  const hasDeny = Array.isArray(denyList) && denyList.length > 0;
+
+  if (hasAllow || hasDeny) {
+    if (!source) {
+      return NextResponse.json(
+        { ok: false, error: "SOURCE_REQUIRED", reason: "This merchant requires a traffic source (tiktok, instagram, facebook, youtube)." },
+        { status: 400 }
+      );
+    }
+    const check = validateSource(rule as any, source);
+    if (!check.ok) return NextResponse.json({ ok: false, error: "SOURCE_BLOCKED", reason: check.reason }, { status: 400 });
   }
 
-  // --- Create SmartLink
+  // create smartlink
   const created = await prisma.smartLink.create({
     data: {
       userId,
@@ -226,18 +238,20 @@ export async function POST(req: NextRequest) {
   const base = host ? `${proto}://${host}` : "";
   const shortUrl = base ? `${base}/l/${created.id}` : `/l/${created.id}`;
 
-  return NextResponse.json(
-    {
-      ok: true,
-      link: shortUrl,
-      shortUrl,
-      merchant: {
-        id: rule.id,
-        name: rule.merchantName,
-        status: rule.status ?? "ACTIVE",
-        market: (rule as any).market ?? null,
-      },
+  const payload: any = {
+    ok: true,
+    link: shortUrl,
+    shortUrl,
+    merchant: {
+      id: rule.id,
+      name: rule.merchantName,
+      status: rule.status ?? "ACTIVE",
+      market,
     },
-    { status: 200 }
-  );
+  };
+  if (!isApproved && isPH) {
+    payload.warning = "Merchant is PENDING but PH-enabled; commissions may be limited until full approval.";
+  }
+
+  return NextResponse.json(payload, { status: 200 });
 }
