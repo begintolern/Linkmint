@@ -42,6 +42,13 @@ export default function LandingPage() {
         how_3_t: "3) Payout na Klaro",
         how_3_d:
           "Nagbabayad lamang kapag na-receive ng linkmint.co ang funds mula sa affiliate partner.",
+        referral_title: "Referral Bonus Rules",
+        referral_points: [
+          "Mag-imbita ng mga kaibigan para kumita pa: Tuwing 3 invite, may 5% bonus ka sa kanilang approved earnings sa loob ng 90 araw.",
+          "Awtomatikong magsisimula ang 90-araw na timer kapag aktibo at kumikita na ang iyong tatlong naimbitahan.",
+          "Pagkatapos ng 90 araw, matatapos ang bonus — mag-imbita ulit ng 3 para magsimula ulit.",
+          "Tanging totoong users at valid na earnings lang ang bibilangin para sa bonuses.",
+        ],
         video_caption: "Preview: Phone-size view (9:16)",
         trust_line:
           "Kumpleto ang paliwanag tungkol sa payout timing at rules sa Trust Center.",
@@ -67,6 +74,13 @@ export default function LandingPage() {
       how_3_t: "3) Payouts You Can Trust",
       how_3_d:
         "We only pay out after linkmint.co actually receives funds from the affiliate partner.",
+      referral_title: "Referral Bonus Rules",
+      referral_points: [
+        "Invite friends, earn more: Every 3 people you invite unlocks a 5% bonus on their approved earnings for 90 days.",
+        "Automatic start: The 90-day timer begins once your 3 invitees are active and earning.",
+        "Temporary reward: After 90 days, the bonus ends automatically — invite 3 more to start again.",
+        "Fair use: Only real users and genuine earnings count toward bonuses.",
+      ],
       video_caption: "Preview: Phone-size view (9:16)",
       trust_line:
         "Full payout timing and rules are explained in the Trust Center.",
@@ -172,6 +186,20 @@ export default function LandingPage() {
             <Card title={t.how_2_t} desc={t.how_2_d} />
             <Card title={t.how_3_t} desc={t.how_3_d} />
           </div>
+        </div>
+      </section>
+
+      {/* Referral Bonus Rules */}
+      <section className="border-t bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16 text-center">
+          <h2 className="text-2xl font-semibold mb-6 text-gray-800">
+            {t.referral_title}
+          </h2>
+          <ul className="text-gray-600 space-y-4 text-lg leading-relaxed text-left max-w-2xl mx-auto">
+            {t.referral_points.map((point, i) => (
+              <li key={i}>{point}</li>
+            ))}
+          </ul>
         </div>
       </section>
 
