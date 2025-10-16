@@ -21,6 +21,7 @@ const ASSETS = {
 
 export default function LandingPage() {
   const [lang, setLang] = useState<Lang>("en");
+  const [showReferral, setShowReferral] = useState(false);
 
   const t = useMemo(() => {
     if (lang === "tl") {
@@ -54,6 +55,8 @@ export default function LandingPage() {
           "Kumpleto ang paliwanag tungkol sa payout timing at rules sa Trust Center.",
         footer_left: "© " + new Date().getFullYear() + " linkmint.co",
         footer_right: "Built for ethical micro-sales",
+        referral_button_show: "Tingnan ang Referral Bonus Rules",
+        referral_button_hide: "Itago ang Referral Bonus Rules",
       };
     }
     return {
@@ -86,6 +89,8 @@ export default function LandingPage() {
         "Full payout timing and rules are explained in the Trust Center.",
       footer_left: "© " + new Date().getFullYear() + " linkmint.co",
       footer_right: "Built for ethical micro-sales",
+      referral_button_show: "View Referral Bonus Rules",
+      referral_button_hide: "Hide Referral Bonus Rules",
     };
   }, [lang]);
 
@@ -189,17 +194,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Referral Bonus Rules */}
+      {/* Collapsible Referral Bonus Section */}
       <section className="border-t bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-16 text-center">
-          <h2 className="text-2xl font-semibold mb-6 text-gray-800">
-            {t.referral_title}
-          </h2>
-          <ul className="text-gray-600 space-y-4 text-lg leading-relaxed text-left max-w-2xl mx-auto">
-            {t.referral_points.map((point, i) => (
-              <li key={i}>{point}</li>
-            ))}
-          </ul>
+        <div className="mx-auto max-w-6xl px-4 py-12 text-center">
+          <button
+            onClick={() => setShowReferral((prev) => !prev)}
+            className="text-emerald-600 font-semibold hover:underline"
+          >
+            {showReferral ? t.referral_button_hide : t.referral_button_show}
+          </button>
+
+          {showReferral && (
+            <div className="mt-6 text-left max-w-2xl mx-auto">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                {t.referral_title}
+              </h2>
+              <ul className="text-gray-600 space-y-4 text-lg leading-relaxed">
+                {t.referral_points.map((point, i) => (
+                  <li key={i}>{point}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </section>
 
