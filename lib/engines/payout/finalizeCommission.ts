@@ -6,43 +6,42 @@ import { calcSplit } from "@/lib/engines/payout/calcSplit";
 /**
  * Called when an affiliate commission is approved and ready to record payouts.
  * Applies the 5% referral bonus (from invitee) when the 90-day window is active.
+ *
+ * NOTE: We avoid selecting unknown amount fields. We include user for referredById,
+ * then dynamically resolve the commission amount (in cents) from whatever field exists.
  */
 export async function finalizeCommission(commissionId: string) {
-  // Fetch only what we need, with multiple possible amount fields
+  // Include user (for referredById); fetch other fields generically
   const commission = await prisma.commission.findUnique({
     where: { id: commissionId },
-    select: {
-      id: true,
-      userId: true,
-      // include possible amount fields (adjust to your schema)
-      grossCents: true,
-      amountCents: true,
-      netCents: true,
-      amount: true,
-      // include user just for referredById
-      user: { select: { referredById: true } },
-    },
+    include: { user: { select: { referredById: true } } },
   });
 
   if (!commission) throw new Error("Commission not found");
 
-  // Safely resolve gross in cents from whatever your schema actually has
-  const grossCents =
-    (commission as any).grossCents ??
-    (commission as any).amountCents ??
-    (commission as any).netCents ?? // fallback if you only stored a single cents field
-    (typeof (commission as any).amount === "number"
-      ? Math.round((commission as any).amount * 100)
-      : null);
+  // Resolve a cents amount from possible fields without relying on TS compile-time keys
+  const cAny = commission as any;
 
-  if (!Number.isFinite(grossCents) || grossCents <= 0) {
+  // Candidate keys in order of preference; adjust if you store differently
+  const candidates = [
+    cAny.grossCents,
+    cAny.amountCents,
+    cAny.netCents,
+    typeof cAny.amount === "number" ? Math.round(cAny.amount * 100) : undefined,
+  ];
+
+  const grossCents = candidates.find(
+    (v) => Number.isFinite(v) && (v as number) > 0
+  );
+
+  if (!Number.isFinite(grossCents)) {
     throw new Error(
-      "Commission amount not found. Expected one of: grossCents, amountCents, netCents, amount"
+      "Commission amount not found on record. Expected one of: grossCents, amountCents, netCents, amount"
     );
   }
 
-  const inviteeId = commission.userId;
-  const referrerId = commission.user?.referredById ?? null;
+  const inviteeId: string = commission.userId as any;
+  const referrerId: string | null = commission.user?.referredById ?? null;
 
   // Check if the 90-day window is active for this pair
   const isActive = await isReferralActiveForPair({
@@ -52,56 +51,53 @@ export async function finalizeCommission(commissionId: string) {
 
   // Compute split with the pure math helper
   const split = calcSplit({
-    grossCents,
+    grossCents: grossCents as number,
     isReferralActive: isActive,
   });
 
-  // Build payout rows
+  // Build payout rows – keep fields minimal to match your schema
   const data: any[] = [
     {
       userId: inviteeId,
-      type: "INVITEE_EARN",
       netCents: split.inviteeCents,
-      statusEnum: "PENDING",
       commissionId: commission.id,
+      // optional typed fields if your Payout model has them:
+      // type: "INVITEE_EARN",
+      // statusEnum: "PENDING",
     },
   ];
 
   if (split.referrerCents > 0 && referrerId) {
     data.push({
       userId: referrerId,
-      type: "REFERRER_BONUS",
       netCents: split.referrerCents,
-      statusEnum: "PENDING",
       commissionId: commission.id,
+      // type: "REFERRER_BONUS",
+      // statusEnum: "PENDING",
     });
   }
 
-  // Optional: platform row (skip if you account elsewhere)
-  data.push({
-    userId: null,
-    type: "PLATFORM_MARGIN",
-    netCents: split.platformCents,
-    statusEnum: "ACCOUNTED",
-    commissionId: commission.id,
-  });
+  // Optional: platform row (uncomment if you store it as a payout entry)
+  // data.push({
+  //   userId: null,
+  //   netCents: split.platformCents,
+  //   commissionId: commission.id,
+  //   // type: "PLATFORM_MARGIN",
+  //   // statusEnum: "ACCOUNTED",
+  // });
 
   await prisma.payout.createMany({ data });
 
-  // If your Commission model has fields for status/flags, update them here.
-  // Remove or adjust if you use a different status system.
-  try {
-    await prisma.commission.update({
-      where: { id: commission.id },
-      data: {
-        // e.g., status: "PAID_OUT",
-        // store the flag if your model has it; otherwise delete this line
-        // appliedReferralBonus: split.appliedReferralBonus,
-      },
-    });
-  } catch {
-    // ignore if those fields don't exist in your schema
-  }
+  // Optional: mark flags on commission if such fields exist
+  // try {
+  //   await prisma.commission.update({
+  //     where: { id: commission.id },
+  //     data: {
+  //       // status: "PAID_OUT",
+  //       // appliedReferralBonus: split.appliedReferralBonus,
+  //     },
+  //   });
+  // } catch {}
 
   return {
     success: true,
