@@ -11,7 +11,7 @@ import { calcSplit } from "@/lib/engines/payout/calcSplit";
  *
  * Notes:
  * - Commission amount is resolved dynamically (grossCents/amountCents/netCents/amount).
- * - Payout rows use `amount` (decimal dollars) to match your Payout schema.
+ * - Payout rows use Payout schema required fields: amount (Float), method (String), status (String).
  */
 export async function finalizeCommission(commissionId: string) {
   // 0) Load commission + minimal user info
@@ -48,15 +48,15 @@ export async function finalizeCommission(commissionId: string) {
     isReferralActive: isActive,
   });
 
-  // 4) Persist payouts
-  // Your Payout schema expects `amount` (decimal dollars). Keep payload minimal.
+  // 4) Persist payouts using required fields: amount, method, status
   const payoutRows: any[] = [
     {
       userId: inviteeId,
       commissionId: commission.id,
-      amount: split.inviteeCents / 100, // dollars
-      // type: "INVITEE_EARN",
-      // statusEnum: "PENDING",
+      amount: split.inviteeCents / 100, // dollars (Float)
+      method: "EARNINGS",               // required String
+      status: "PENDING",                // required String
+      // statusEnum will default to PENDING
     },
   ];
 
@@ -64,19 +64,19 @@ export async function finalizeCommission(commissionId: string) {
     payoutRows.push({
       userId: referrerId,
       commissionId: commission.id,
-      amount: split.referrerCents / 100, // dollars
-      // type: "REFERRER_BONUS",
-      // statusEnum: "PENDING",
+      amount: split.referrerCents / 100, // dollars (Float)
+      method: "REFERRAL",                // required String
+      status: "PENDING",                 // required String
     });
   }
 
-  // If you also store platform margin as a payout row, uncomment:
+  // If you also store platform margin as a payout row, uncomment and ensure userId can be nullable or use a system user:
   // payoutRows.push({
-  //   userId: null,
+  //   userId: SYSTEM_PLATFORM_USER_ID,   // or omit if you don't store platform as payout
   //   commissionId: commission.id,
-  //   amount: split.platformCents / 100, // dollars
-  //   // type: "PLATFORM_MARGIN",
-  //   // statusEnum: "ACCOUNTED",
+  //   amount: split.platformCents / 100,
+  //   method: "PLATFORM",
+  //   status: "ACCOUNTED",
   // });
 
   await prisma.payout.createMany({ data: payoutRows });
