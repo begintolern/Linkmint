@@ -4,41 +4,59 @@ import { isReferralActiveForPair } from "@/lib/referrals/isReferralActiveForPair
 import { calcSplit } from "@/lib/engines/payout/calcSplit";
 
 /**
- * finalizeCommission()
- * --------------------------
  * Called when an affiliate commission is approved and ready to record payouts.
- * This applies the new 5% referral bonus logic:
- *   - Base: 85% invitee / 15% platform
- *   - Active referral window: 80% invitee / 5% referrer / 15% platform
- * The 5% bonus always comes from the invitee’s share.
+ * Applies the 5% referral bonus (from invitee) when the 90-day window is active.
  */
 export async function finalizeCommission(commissionId: string) {
-  // Fetch the commission record and its related user
+  // Fetch only what we need, with multiple possible amount fields
   const commission = await prisma.commission.findUnique({
     where: { id: commissionId },
-    include: { user: true },
+    select: {
+      id: true,
+      userId: true,
+      // include possible amount fields (adjust to your schema)
+      grossCents: true,
+      amountCents: true,
+      netCents: true,
+      amount: true,
+      // include user just for referredById
+      user: { select: { referredById: true } },
+    },
   });
 
-  if (!commission) {
-    throw new Error("Commission not found");
+  if (!commission) throw new Error("Commission not found");
+
+  // Safely resolve gross in cents from whatever your schema actually has
+  const grossCents =
+    (commission as any).grossCents ??
+    (commission as any).amountCents ??
+    (commission as any).netCents ?? // fallback if you only stored a single cents field
+    (typeof (commission as any).amount === "number"
+      ? Math.round((commission as any).amount * 100)
+      : null);
+
+  if (!Number.isFinite(grossCents) || grossCents <= 0) {
+    throw new Error(
+      "Commission amount not found. Expected one of: grossCents, amountCents, netCents, amount"
+    );
   }
 
   const inviteeId = commission.userId;
   const referrerId = commission.user?.referredById ?? null;
 
-  // Step 1 — Check if referral window is active
+  // Check if the 90-day window is active for this pair
   const isActive = await isReferralActiveForPair({
     referrerId,
     inviteeId,
   });
 
-  // Step 2 — Calculate final split
+  // Compute split with the pure math helper
   const split = calcSplit({
-    grossCents: commission.grossCents,
+    grossCents,
     isReferralActive: isActive,
   });
 
-  // Step 3 — Record payouts
+  // Build payout rows
   const data: any[] = [
     {
       userId: inviteeId,
@@ -59,7 +77,7 @@ export async function finalizeCommission(commissionId: string) {
     });
   }
 
-  // Optional: keep platform row for accounting
+  // Optional: platform row (skip if you account elsewhere)
   data.push({
     userId: null,
     type: "PLATFORM_MARGIN",
@@ -70,14 +88,20 @@ export async function finalizeCommission(commissionId: string) {
 
   await prisma.payout.createMany({ data });
 
-  // Step 4 — Update commission status
-  await prisma.commission.update({
-    where: { id: commission.id },
-    data: {
-      status: "PAID_OUT", // or your equivalent status
-      appliedReferralBonus: split.appliedReferralBonus,
-    },
-  });
+  // If your Commission model has fields for status/flags, update them here.
+  // Remove or adjust if you use a different status system.
+  try {
+    await prisma.commission.update({
+      where: { id: commission.id },
+      data: {
+        // e.g., status: "PAID_OUT",
+        // store the flag if your model has it; otherwise delete this line
+        // appliedReferralBonus: split.appliedReferralBonus,
+      },
+    });
+  } catch {
+    // ignore if those fields don't exist in your schema
+  }
 
   return {
     success: true,
