@@ -13,7 +13,8 @@ function coerceEnum(raw: any, enumObj?: Record<string, string>, fallback?: strin
   const values = Object.values(enumObj);
   if (values.includes(v)) return v;
   if (fallback && values.includes(fallback)) return fallback;
-  return values[0] ?? v || fallback || "UNKNOWN";
+  // ✅ Parenthesize ?? when mixing with ||
+  return (values[0] ?? v) || fallback || "UNKNOWN";
 }
 
 /** Try to read Click/Conversion enums from Prisma.$Enums (newer Prisma) */
