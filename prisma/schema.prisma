@@ -9,149 +9,79 @@ datasource db {
 }
 
 model User {
-  id                 String    @id @default(cuid())
-  email              String    @unique
-  name               String?
-  password           String?
-  createdAt          DateTime  @default(now())
-  referralGroupId    String?
-  referredById       String?
-  verifyToken        String?   @unique
-  verifyTokenExpiry  DateTime?
-  trustScore         Int?      @default(0)
-  referralBadge      String?
-  referralCode       String?   @unique
-  role               String?   @default("user")
-  emailVerifiedAt    DateTime?
-  updatedAt          DateTime  @updatedAt
-  ageConfirmed       Boolean   @default(false)
-  ageConfirmedAt     DateTime?
-  deletedAt          DateTime?
-  dob                DateTime?
-  tosAcceptedAt      DateTime?
-  tosAcceptedIp      String?   @db.VarChar(64)
-  bonusCents         Int       @default(0)
-  bonusEligibleUntil DateTime?
-  bonusTier          Int       @default(0)
-  countryCode        String    @default("PH") @db.VarChar(2)
-
-  commissions            Commission[]
-  eventLogs              EventLog[]
-  commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
-  overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
-  passwordResetTokens    PasswordResetToken[]
-  payouts                Payout[]
-  payoutAccounts         PayoutAccount[]
-  payoutLogs             PayoutLog[]
-  pinCredentials         PinCredential[]      @relation("UserPinCredentials")
-  referralBatches        ReferralBatch[]      @relation("UserReferralBatches")
-  referralGroupsCreated  ReferralGroup[]      @relation("UsersInGroupReferrer")
-  smartLinks             SmartLink[]          @relation("UserToSmartLink")
-  referralGroup          ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
-  referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals              User[]               @relation("UserReferrals")
-  verificationTokens     VerificationToken[]  @relation("UserToVerificationTokens")
-  gcashNumber            String?              @db.VarChar(32)
-
-  totalReferrals       Int @default(0)
-  permanentOverrideBps Int @default(0) // 100 bps = 1%
-
-  // Geo gating
-  allowedCountries String[] @default([])
-  blockedCountries String[] @default([])
-
-  // --- PH payout defaults ---
+  id                       String               @id @default(cuid())
+  email                    String               @unique
+  name                     String?
+  password                 String?
+  createdAt                DateTime             @default(now())
+  referralGroupId          String?
+  referredById             String?
+  verifyToken              String?              @unique
+  verifyTokenExpiry        DateTime?
+  trustScore               Int?                 @default(0)
+  referralBadge            String?
+  referralCode             String?              @unique
+  role                     String?              @default("user")
+  emailVerifiedAt          DateTime?
+  updatedAt                DateTime             @updatedAt
+  ageConfirmed             Boolean              @default(false)
+  ageConfirmedAt           DateTime?
+  deletedAt                DateTime?
+  dob                      DateTime?
+  tosAcceptedAt            DateTime?
+  tosAcceptedIp            String?              @db.VarChar(64)
+  bonusCents               Int                  @default(0)
+  bonusEligibleUntil       DateTime?
+  bonusTier                Int                  @default(0)
+  countryCode              String               @default("PH") @db.VarChar(2)
+  allowedCountries         String[]             @default([])
+  blockedCountries         String[]             @default([])
+  permanentOverrideBps     Int                  @default(0)
+  totalReferrals           Int                  @default(0)
+  defaultBankAccountNumber String?              @db.VarChar(40)
+  defaultBankName          String?              @db.VarChar(80)
+  defaultGcashNumber       String?              @db.VarChar(20)
   defaultPayoutMethod      PayoutMethod?
-  defaultGcashNumber       String?       @db.VarChar(20)
-  defaultBankName          String?       @db.VarChar(80)
-  defaultBankAccountNumber String?       @db.VarChar(40)
-
-  // relation: user has many payout requests
-  payoutRequests PayoutRequest[]
+  commissions              Commission[]
+  eventLogs                EventLog[]
+  commissionsFromInvites   OverrideCommission[] @relation("InviteeOverride")
+  overrideEarnings         OverrideCommission[] @relation("ReferrerOverride")
+  passwordResetTokens      PasswordResetToken[]
+  payouts                  Payout[]
+  payoutAccounts           PayoutAccount[]
+  payoutLogs               PayoutLog[]
+  payoutRequests           PayoutRequest[]
+  pinCredentials           PinCredential[]      @relation("UserPinCredentials")
+  referralBatches          ReferralBatch[]      @relation("UserReferralBatches")
+  referralGroupsCreated    ReferralGroup[]      @relation("UsersInGroupReferrer")
+  smartLinks               SmartLink[]          @relation("UserToSmartLink")
+  referralGroup            ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
+  referredBy               User?                @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals                User[]               @relation("UserReferrals")
+  verificationTokens       VerificationToken[]  @relation("UserToVerificationTokens")
 
   @@index([deletedAt])
 }
 
 model PayoutRequest {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id                String         @id @default(cuid())
+  userId            String
   amountPhp         Int
   method            PayoutMethod
-  gcashNumber       String?      @db.VarChar(20)
-  bankName          String?      @db.VarChar(80)
-  bankAccountNumber String?      @db.VarChar(40)
-
-  status        PayoutStatus   @default(PENDING)
-  provider      PayoutProvider @default(MANUAL)
-  requestedAt   DateTime       @default(now())
-  processedAt   DateTime?
-  processorNote String?        @db.VarChar(255)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  gcashNumber       String?        @db.VarChar(20)
+  bankName          String?        @db.VarChar(80)
+  bankAccountNumber String?        @db.VarChar(40)
+  status            PayoutStatus   @default(PENDING)
+  provider          PayoutProvider @default(MANUAL)
+  requestedAt       DateTime       @default(now())
+  processedAt       DateTime?
+  processorNote     String?        @db.VarChar(255)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status, requestedAt])
   @@index([status, requestedAt])
-}
-
-model VerificationToken {
-  id      String   @id @default(cuid())
-  token   String   @unique
-  expires DateTime
-  userId  String
-  user    User     @relation("UserToVerificationTokens", fields: [userId], references: [id])
-}
-
-model ReferralGroup {
-  id         String   @id @default(cuid())
-  referrerId String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  startedAt  DateTime @default(now())
-  referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
-  users      User[]   @relation("UsersInGroup")
-}
-
-model ReferralBatch {
-  id         String    @id @default(cuid())
-  referrerId String
-  inviteeIds String[]
-  startedAt  DateTime?
-  expiresAt  DateTime?
-  status     String    @default("pending")
-  createdAt  DateTime  @default(now())
-  referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
-}
-
-model EventLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  type      String
-  detail    String?
-  message   String?
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
-  severity  Int      @default(1)
-
-  @@index([userId, createdAt])
-}
-
-model PayoutAccount {
-  id         String         @id @default(cuid())
-  userId     String
-  provider   PayoutProvider
-  externalId String
-  label      String?
-  isDefault  Boolean        @default(false)
-  status     String         @default("VERIFIED")
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  user       User           @relation(fields: [userId], references: [id])
-
-  @@unique([userId, provider, externalId])
-  @@index([userId, isDefault])
 }
 
 model Payout {
@@ -179,23 +109,35 @@ model Payout {
   @@index([userId, statusEnum])
 }
 
-model FloatLog {
-  id        String   @id @default(cuid())
-  amount    Float
-  source    String
-  note      String?
-  createdAt DateTime @default(now())
+model PayoutAccount {
+  id         String         @id @default(cuid())
+  userId     String
+  provider   PayoutProvider
+  externalId String
+  label      String?
+  isDefault  Boolean        @default(false)
+  status     String         @default("VERIFIED")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  user       User           @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider, externalId])
+  @@index([userId, isDefault])
 }
 
-model PendingUser {
-  id                String   @id @default(cuid())
-  email             String   @unique
-  password          String
-  name              String?
-  verifyToken       String
-  verifyTokenExpiry DateTime
-  referredById      String?
-  createdAt         DateTime @default(now())
+model PayoutLog {
+  id            String   @id @default(cuid())
+  userId        String?
+  receiverEmail String?
+  amount        Float?
+  paypalBatchId String?
+  transactionId String?
+  note          String?
+  status        String?
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
 }
 
 model Commission {
@@ -215,35 +157,6 @@ model Commission {
 
   @@index([merchantRuleId])
   @@index([userId, status])
-}
-
-model OverrideCommission {
-  id                 String   @id @default(cuid())
-  referrerId         String
-  inviteeId          String
-  amount             Float
-  sourceCommissionId String
-  reason             String   @default("Referral bonus override")
-  status             String   @default("pending")
-  createdAt          DateTime @default(now())
-  invitee            User     @relation("InviteeOverride", fields: [inviteeId], references: [id])
-  referrer           User     @relation("ReferrerOverride", fields: [referrerId], references: [id])
-}
-
-model SystemSetting {
-  key   String @id
-  value String
-}
-
-model NetworkAccount {
-  id        String           @id @default(uuid())
-  network   AffiliateNetwork
-  accountId String
-  note      String?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  @@unique([network, accountId])
 }
 
 model MerchantRule {
@@ -270,13 +183,13 @@ model MerchantRule {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   status           String         @default("PENDING")
+  allowedRegions   String[]
   inactiveReason   String?
   market           String         @default("US")
-  allowedRegions   String[]
-  allowedCountries String[]       @default([])
-  blockedCountries String[]       @default([])
   disallowed       Json?
   allowedSources   Json?
+  allowedCountries String[]       @default([])
+  blockedCountries String[]       @default([])
   commissions      Commission[]
   smartLinks       SmartLink[]    @relation("MerchantRuleToSmartLink")
 
@@ -285,19 +198,73 @@ model MerchantRule {
   @@index([market, active], map: "merchant_market_active_idx")
 }
 
-model PayoutLog {
-  id            String   @id @default(cuid())
-  userId        String?
-  receiverEmail String?
-  amount        Float?
-  paypalBatchId String?
-  transactionId String?
-  note          String?
-  status        String?
-  createdAt     DateTime @default(now())
-  user          User?    @relation(fields: [userId], references: [id])
+model SmartLink {
+  id               String        @id @default(cuid())
+  userId           String
+  merchantRuleId   String?
+  merchantName     String
+  merchantDomain   String?
+  originalUrl      String
+  shortUrl         String
+  label            String?
+  createdAt        DateTime      @default(now())
+  destinationsJson Json?
+  merchantRule     MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
+  user             User          @relation("UserToSmartLink", fields: [userId], references: [id])
+}
+
+model ReferralGroup {
+  id         String   @id @default(cuid())
+  referrerId String
+
+  // Status / timing
+  active     Boolean  @default(true)        // on/off for the batch window
+  windowDays Int      @default(90)          // reference value; logic uses startedAt/expiresAt
+  startedAt  DateTime @default(now())       // when the window was activated
+  expiresAt  DateTime                       
+
+  // Audit
+  createdAt  DateTime @default(now())
+
+  // Relations
+  referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
+  users      User[]   @relation("UsersInGroup")  // many-to-many (implicit join table)
+
+  // Helpful indexes
+  @@index([referrerId, active])
+  @@index([expiresAt])
+}
+
+model ReferralBatch {
+  id         String    @id @default(cuid())
+  referrerId String
+  inviteeIds String[]
+  startedAt  DateTime?
+  expiresAt  DateTime?
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now())
+  referrer   User      @relation("UserReferralBatches", fields: [referrerId], references: [id])
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String
+  detail    String?
+  message   String?
+  createdAt DateTime @default(now())
+  severity  Int      @default(1)
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
+}
+
+model VerificationToken {
+  token   String   @unique
+  expires DateTime
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation("UserToVerificationTokens", fields: [userId], references: [id])
 }
 
 model PasswordResetToken {
@@ -308,11 +275,36 @@ model PasswordResetToken {
   user    User     @relation(fields: [userId], references: [id])
 }
 
-model Waitlist {
+model FloatLog {
   id        String   @id @default(cuid())
-  email     String   @unique
-  source    String?
+  amount    Float
+  source    String
+  note      String?
   createdAt DateTime @default(now())
+}
+
+model PendingUser {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String
+  name              String?
+  verifyToken       String
+  verifyTokenExpiry DateTime
+  referredById      String?
+  createdAt         DateTime @default(now())
+}
+
+model OverrideCommission {
+  id                 String   @id @default(cuid())
+  referrerId         String
+  inviteeId          String
+  amount             Float
+  sourceCommissionId String
+  reason             String   @default("Referral bonus override")
+  status             String   @default("pending")
+  createdAt          DateTime @default(now())
+  invitee            User     @relation("InviteeOverride", fields: [inviteeId], references: [id])
+  referrer           User     @relation("ReferrerOverride", fields: [referrerId], references: [id])
 }
 
 model PinCredential {
@@ -329,35 +321,39 @@ model PinCredential {
   @@unique([userId, deviceId])
 }
 
-model SmartLink {
-  id               String        @id @default(cuid())
-  userId           String
-  merchantRuleId   String?
-  merchantName     String
-  merchantDomain   String?
-  originalUrl      String
-  shortUrl         String
-  label            String?
-  createdAt        DateTime      @default(now())
-  merchantRule     MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
-  user             User          @relation("UserToSmartLink", fields: [userId], references: [id])
-  destinationsJson Json?
-}
-
 model AdvertiserApplication {
-  id           String   @id @default(cuid())
+  id           String   @id
   advertiserId String
   name         String
   status       String
   appliedAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  updatedAt    DateTime
   commission   String?
   cookieWindow Int?
   notes        String?
 }
 
+model ClickEvent {
+  id         String   @id
+  createdAt  DateTime @default(now())
+  userId     String?
+  merchantId String?
+  source     String
+  ip         String?
+  userAgent  String?
+  updatedAt  DateTime @default(now())
+  url        String?
+  referer    String?
+  meta       Json?
+  linkId     String?
+
+  @@index([merchantId, createdAt])
+  @@index([source, createdAt])
+  @@index([userId, createdAt])
+}
+
 model ComplianceEvent {
-  id         String   @id @default(cuid())
+  id         String   @id
   createdAt  DateTime @default(now())
   userId     String?
   merchantId String?
@@ -367,27 +363,8 @@ model ComplianceEvent {
   meta       Json?
 }
 
-model UserFlag {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-  userId    String
-  reason    String
-  status    String   @default("OPEN")
-  notes     String?
-}
-
-model SystemAuditRun {
-  id         String    @id @default(cuid())
-  startedAt  DateTime  @default(now())
-  finishedAt DateTime?
-  status     String    @default("RUNNING")
-  findings   Int       @default(0)
-  meta       Json?
-}
-
 model Conversion {
-  id         String   @id @default(cuid())
+  id         String   @id
   createdAt  DateTime @default(now())
   orderId    String?
   userId     String?
@@ -397,23 +374,46 @@ model Conversion {
   source     String?
 }
 
-model ClickEvent {
-  id         String   @id @default(cuid())
-  createdAt  DateTime @default(now())
-  userId     String?
-  merchantId String?
-  source     String
-  ip         String?
-  userAgent  String?
-  updatedAt  DateTime @default(now()) @updatedAt
-  url        String?
-  referer    String?
-  meta       Json?
-  linkId     String?
+model NetworkAccount {
+  id        String           @id
+  network   AffiliateNetwork
+  accountId String
+  note      String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime
 
-  @@index([userId, createdAt])
-  @@index([merchantId, createdAt])
-  @@index([source, createdAt])
+  @@unique([network, accountId])
+}
+
+model SystemAuditRun {
+  id         String    @id
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  status     String    @default("RUNNING")
+  findings   Int       @default(0)
+  meta       Json?
+}
+
+model SystemSetting {
+  key   String @id
+  value String
+}
+
+model UserFlag {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  userId    String
+  reason    String
+  status    String   @default("OPEN")
+  notes     String?
+}
+
+model Waitlist {
+  id        String   @id
+  email     String   @unique
+  source    String?
+  createdAt DateTime @default(now())
 }
 
 enum PayoutProvider {
@@ -434,12 +434,6 @@ enum PayoutStatus {
 enum PayoutMethod {
   GCASH
   BANK
-}
-
-enum MerchantStatus {
-  PENDING
-  ACTIVE
-  REJECTED
 }
 
 enum CommissionStatus {
@@ -473,4 +467,10 @@ enum ImportMethod {
 enum CommissionCalc {
   PERCENT
   FIXED
+}
+
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  REJECTED
 }
