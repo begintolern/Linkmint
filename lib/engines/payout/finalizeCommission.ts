@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { isReferralActiveForPair } from "@/lib/referrals/isReferralActiveForPair";
 import { calcSplit } from "@/lib/engines/payout/calcSplit";
+import type { Prisma } from "@prisma/client";
 
 /**
  * finalizeCommission()
@@ -47,14 +48,14 @@ export async function finalizeCommission(commissionId: string) {
   // Build payouts using ONLY fields your Payout model has
   const baseDetails = `commission:${commission.id}${isActive ? " (referral 5% active)" : ""}`;
 
-  const payoutRows: Array<Parameters<typeof prisma.payout.createMany>[0]["data"][number]> = [
+  const payoutRows: Prisma.PayoutCreateManyInput[] = [
     {
       userId: inviteeId,
       amount: split.inviteeCents / 100, // Float dollars
       method: "EARNINGS",               // required String
       status: "PENDING",                // required String
       details: baseDetails,
-      // feeCents/netCents have defaults; provider/statusEnum optional
+      // feeCents/netCents default to 0; provider/statusEnum optional
     },
   ];
 
@@ -80,6 +81,14 @@ export async function finalizeCommission(commissionId: string) {
   };
 }
 
+/**
+ * INLINE helper (kept in this file to avoid extra files).
+ * Called AFTER a commission approval for inviteeId.
+ * If the referrer has >= 3 eligible & ungrouped invitees, create a new 90-day ReferralGroup.
+ *
+ * Eligible = user has at least one commission with status "APPROVED".
+ * Adjust the status string if your schema differs.
+ */
 async function maybeCreateReferralGroupInline(inviteeId: string) {
   const invitee = await prisma.user.findUnique({
     where: { id: inviteeId },
