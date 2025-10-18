@@ -7,8 +7,10 @@ import Link from "next/link";
 import { assertAdmin } from "@/lib/utils/adminGuard";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
-import AdminHeader from "@/components/AdminHeader"; // ensure this exists
-import AdminHealthStatusCard from "@/components/AdminHealthStatusCard"; // NEW
+import AdminHeader from "@/components/AdminHeader";
+import AdminHealthStatusCard from "@/components/AdminHealthStatusCard";
+import { isAutoPayoutEnabled, isAutoDisburseEnabled } from "@/lib/config/flags";
+import AutoPayoutStatus from "@/components/AutoPayoutStatus"; // NEW
 
 const tabs = [
   { key: "users",     label: "Users",     href: "/admin/users",     desc: "All users, verification & flags" },
@@ -19,7 +21,6 @@ const tabs = [
 ];
 
 export default async function AdminHomePage() {
-  // Redirects away if not admin
   await assertAdmin();
 
   const session = (await getServerSession(authOptions)) as Session | null;
@@ -28,7 +29,6 @@ export default async function AdminHomePage() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
-      {/* Admin Header with role-based display */}
       <AdminHeader />
 
       <header className="flex items-center justify-between">
@@ -43,9 +43,39 @@ export default async function AdminHomePage() {
         </span>
       </header>
 
-      {/* System Health (Admin) */}
+      {/* System Health */}
       <section className="mt-6">
         <AdminHealthStatusCard />
+      </section>
+
+      {/* Server-side snapshot of flags (ENV/effective at render) */}
+      <section className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
+        <h2 className="text-lg font-semibold mb-2">Payout Automation Status</h2>
+        <p>
+          Auto-Payout:{" "}
+          <span
+            className={`font-bold ml-1 ${
+              isAutoPayoutEnabled() ? "text-green-600" : "text-gray-500"
+            }`}
+          >
+            {isAutoPayoutEnabled() ? "Enabled" : "Disabled"}
+          </span>
+        </p>
+        <p>
+          Auto-Disburse:{" "}
+          <span
+            className={`font-bold ml-1 ${
+              isAutoDisburseEnabled() ? "text-green-600" : "text-gray-500"
+            }`}
+          >
+            {isAutoDisburseEnabled() ? "Enabled" : "Disabled"}
+          </span>
+        </p>
+      </section>
+
+      {/* Client-side read-only status (fetches /api/admin/flags) */}
+      <section className="mt-4">
+        <AutoPayoutStatus />
       </section>
 
       {/* Tabs */}

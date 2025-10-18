@@ -26,3 +26,20 @@ export function isAutoPayoutEnabled() {
 export function isAutoDisburseEnabled() {
   return flags.autoPayoutDisburseEnabled === true;
 }
+/** Useful for APIs to show flag state */
+export function readFlagSnapshot() {
+  return {
+    env: {
+      autoPayoutEnabled: process.env.AUTO_PAYOUT_ENABLED === "true",
+      autoPayoutDisburseEnabled: process.env.AUTO_PAYOUT_DISBURSE_ENABLED === "true",
+    },
+    effective: {
+      autoPayoutEnabled: process.env.AUTO_PAYOUT_ENABLED === "true",
+      autoPayoutDisburseEnabled: process.env.AUTO_PAYOUT_DISBURSE_ENABLED === "true",
+    },
+    overrides: {
+      autoPayoutEnabled: null,
+      autoPayoutDisburseEnabled: null,
+    },
+  };
+}
