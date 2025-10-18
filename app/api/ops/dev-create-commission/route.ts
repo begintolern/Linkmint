@@ -15,12 +15,8 @@ function requireAdmin(req: Request) {
 
 /**
  * POST /api/ops/dev-create-commission
- * Body: { userId: string, amount?: number, status?: string }
- *
- * Notes:
- * - We set `id` explicitly (in case your schema has no default).
- * - We set a minimal amount in the flexible `amount` field so finalizeCommission can pick it up.
- * - We default status to "APPROVED" since your auto-group logic checks for APPROVED commissions.
+ * Body: { userId: string, amount?: number, status?: string, type?: string }
+ * Defaults: amount=$10.00, status="APPROVED", type="SALE"
  */
 export async function POST(req: Request) {
   const unauthorized = requireAdmin(req);
@@ -29,23 +25,32 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const userId = String(body.userId ?? "");
+
     if (!userId) {
       return NextResponse.json({ ok: false, error: "userId_required" }, { status: 400 });
     }
 
-    const amount = Number(body.amount ?? 10.0);   // dollars
-    const status = String(body.status ?? "APPROVED");
+    const amount = Number(body.amount ?? 10.0);         // dollars
+    const status = String(body.status ?? "APPROVED");   // adjust if your enum differs
+    const type = String(body.type ?? "SALE");           // ✅ required by your schema
 
-    // Build minimal data; cast to any so we can set flexible fields.
+    // Minimal payload; include id explicitly in case schema lacks default
     const data: any = {
       id: crypto.randomUUID(),
       userId,
-      amount,         // finalizeCommission will detect this and convert to cents
-      status,         // many schemas use a string enum; adjust as needed
-      // createdAt/updatedAt omitted unless your model requires them
+      amount,   // finalizeCommission reads this and converts to cents
+      status,
+      type,     // ✅ REQUIRED
+      // createdAt/updatedAt only if your schema requires them:
+      // createdAt: new Date(),
+      // updatedAt: new Date(),
     };
 
-    const c = await prisma.commission.create({ data, select: { id: true, userId: true, status: true } });
+    const c = await prisma.commission.create({
+      data,
+      select: { id: true, userId: true, status: true, type: true },
+    });
+
     return NextResponse.json({ ok: true, commission: c });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message ?? "unknown_error" }, { status: 400 });
