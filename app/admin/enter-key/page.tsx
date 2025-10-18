@@ -1,16 +1,27 @@
 // app/admin/enter-key/page.tsx
 "use client";
 
-import { useState } from "react";
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function EnterKeyPage() {
+export default function Page() {
+  // Wrap the form in Suspense so useSearchParams() is safe
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-gray-500">Loading…</div>}>
+      <EnterKeyForm />
+    </Suspense>
+  );
+}
+
+function EnterKeyForm() {
   const [key, setKey] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const sp = useSearchParams();
   const router = useRouter();
 
-  // Defensive check — if sp is null, default to empty string
   const next = sp?.get("next") || "/admin/maintenance";
 
   async function submit() {
@@ -32,9 +43,7 @@ export default function EnterKeyPage() {
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <h1 className="text-lg font-semibold text-gray-900">Admin Access</h1>
-        <p className="mt-1 text-xs text-gray-500">
-          Enter your admin key to continue.
-        </p>
+        <p className="mt-1 text-xs text-gray-500">Enter your admin key to continue.</p>
 
         <label className="mt-4 block text-xs text-gray-700">
           <span className="mb-1 block">Admin Key</span>
