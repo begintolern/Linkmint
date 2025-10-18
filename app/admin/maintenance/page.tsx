@@ -263,6 +263,20 @@ export default function MaintenancePage() {
     }
   }
 
+  // --- NEW: Auto-Payout Apply (honors flag) ---
+  async function applyAutoPayout() {
+    setBusy(true);
+    try {
+      const res = await safeFetch(
+        "/api/admin/cron/auto-payout-apply?take=50",
+        { headers: { ...(adminKey ? { "x-admin-key": adminKey } : {}) } }
+      );
+      j(res);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function e2eNoRef() {
     setBusy(true);
     try {
@@ -382,7 +396,7 @@ export default function MaintenancePage() {
             </Row>
           </Box>
 
-          {/* NEW: Auto-Payout Preview panel */}
+          {/* Auto-Payout Panels */}
           <Box title="Auto-Payout (Dry Run)">
             <Row>
               <Button onClick={previewAutoPayout} disabled={busy}>
@@ -391,6 +405,17 @@ export default function MaintenancePage() {
             </Row>
             <p className="text-xs text-gray-500">
               Shows who <em>would</em> be paid if auto-payout were enabled. This does not write to the DB.
+            </p>
+          </Box>
+
+          <Box title="Auto-Payout (Apply — honors flag)">
+            <Row>
+              <Button onClick={applyAutoPayout} disabled={busy}>
+                Apply Auto-Payout (writes only if enabled)
+              </Button>
+            </Row>
+            <p className="text-xs text-gray-500">
+              If <code>AUTO_PAYOUT_ENABLED</code> is <strong>false</strong>, this returns a disabled response (no changes).
             </p>
           </Box>
 
