@@ -10,7 +10,8 @@ import { authOptions } from "@/lib/auth/options";
 import AdminHeader from "@/components/AdminHeader";
 import AdminHealthStatusCard from "@/components/AdminHealthStatusCard";
 import { isAutoPayoutEnabled, isAutoDisburseEnabled } from "@/lib/config/flags";
-import AutoPayoutStatus from "@/components/AutoPayoutStatus"; // NEW
+import AutoPayoutStatus from "@/components/AutoPayoutStatus";
+import AutoPayoutBadge from "@/components/AutoPayoutBadge"; // NEW
 
 const tabs = [
   { key: "users",     label: "Users",     href: "/admin/users",     desc: "All users, verification & flags" },
@@ -38,9 +39,12 @@ export default async function AdminHomePage() {
             Signed in as <span className="font-medium">{email}</span>
           </p>
         </div>
-        <span className="rounded-full border px-3 py-1 text-xs text-slate-600">
-          Role: {String(role).toUpperCase()}
-        </span>
+        <div className="flex items-center gap-2">
+          <AutoPayoutBadge /> {/* NEW: always-visible status */}
+          <span className="rounded-full border px-3 py-1 text-xs text-slate-600">
+            Role: {String(role).toUpperCase()}
+          </span>
+        </div>
       </header>
 
       {/* System Health */}
@@ -48,7 +52,7 @@ export default async function AdminHomePage() {
         <AdminHealthStatusCard />
       </section>
 
-      {/* Server-side snapshot of flags (ENV/effective at render) */}
+      {/* Server-side snapshot (kept for clarity) */}
       <section className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
         <h2 className="text-lg font-semibold mb-2">Payout Automation Status</h2>
         <p>
@@ -73,7 +77,7 @@ export default async function AdminHomePage() {
         </p>
       </section>
 
-      {/* Client-side read-only status (fetches /api/admin/flags) */}
+      {/* Client-side status + controls */}
       <section className="mt-4">
         <AutoPayoutStatus />
       </section>
