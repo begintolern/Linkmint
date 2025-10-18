@@ -249,6 +249,20 @@ export default function MaintenancePage() {
     }
   }
 
+  // --- NEW: Auto-Payout Dry Run Preview ---
+  async function previewAutoPayout() {
+    setBusy(true);
+    try {
+      const res = await safeFetch(
+        "/api/admin/cron/auto-payout-run?take=50&dryRun=1",
+        { headers: { ...(adminKey ? { "x-admin-key": adminKey } : {}) } }
+      );
+      j(res);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function e2eNoRef() {
     setBusy(true);
     try {
@@ -360,10 +374,24 @@ export default function MaintenancePage() {
               <Button kind="ghost" onClick={trackClick} disabled={busy}>
                 Track Click
               </Button>
+            </Row>
+            <Row>
               <Button kind="ghost" onClick={trackConversion} disabled={busy}>
                 Track Conversion
               </Button>
             </Row>
+          </Box>
+
+          {/* NEW: Auto-Payout Preview panel */}
+          <Box title="Auto-Payout (Dry Run)">
+            <Row>
+              <Button onClick={previewAutoPayout} disabled={busy}>
+                Preview Auto-Payout (dry run)
+              </Button>
+            </Row>
+            <p className="text-xs text-gray-500">
+              Shows who <em>would</em> be paid if auto-payout were enabled. This does not write to the DB.
+            </p>
           </Box>
 
           <Box title="Lists & Shortcuts">
