@@ -4,6 +4,21 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+
+// generic enum coercion (works with Prisma.$Enums or plain strings)
+function coerceEnum(raw: any, enumObj?: Record<string, string>, fallback?: string) {
+  const v = String(raw ?? "").trim();
+  if (!enumObj) return v || fallback || "UNKNOWN";
+  const values = Object.values(enumObj);
+  if (values.includes(v)) return v;
+  if (fallback && values.includes(fallback)) return fallback;
+  return values[0] ?? (v || fallback || "UNKNOWN");
+}
+
+const E = (Prisma as any).$Enums || {}; // newer Prisma exposes enums here
+const CommissionTypeEnum = E.CommissionType as Record<string, string> | undefined;
+const CommissionStatusEnum = E.CommissionStatus as Record<string, string> | undefined;
 
 function requireAdmin(req: Request) {
   const key = req.headers.get("x-admin-key");
@@ -25,25 +40,22 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const userId = String(body.userId ?? "");
-
     if (!userId) {
       return NextResponse.json({ ok: false, error: "userId_required" }, { status: 400 });
     }
 
-    const amount = Number(body.amount ?? 10.0);         // dollars
-    const status = String(body.status ?? "APPROVED");   // adjust if your enum differs
-    const type = String(body.type ?? "SALE");           // ✅ required by your schema
+    const amount = Number(body.amount ?? 10.0);  // dollars
+    const type = coerceEnum(body.type ?? "SALE", CommissionTypeEnum, "SALE");
+    const status = coerceEnum(body.status ?? "APPROVED", CommissionStatusEnum, "APPROVED");
 
-    // Minimal payload; include id explicitly in case schema lacks default
+    // minimal, schema-tolerant payload; include id explicitly in case schema lacks default
     const data: any = {
       id: crypto.randomUUID(),
       userId,
-      amount,   // finalizeCommission reads this and converts to cents
-      status,
-      type,     // ✅ REQUIRED
-      // createdAt/updatedAt only if your schema requires them:
-      // createdAt: new Date(),
-      // updatedAt: new Date(),
+      amount,   // finalizeCommission detects this and converts to cents
+      type,     // enum-safe
+      status,   // enum-safe
+      // createdAt/updatedAt only if your schema requires them
     };
 
     const c = await prisma.commission.create({
