@@ -13,7 +13,6 @@ function coerceEnum(raw: any, enumObj?: Record<string, string>, fallback?: strin
   const values = Object.values(enumObj);
   if (values.includes(v)) return v;
   if (fallback && values.includes(fallback)) return fallback;
-  // ✅ Parenthesize ?? when mixing with ||
   return (values[0] ?? v) || fallback || "UNKNOWN";
 }
 
@@ -48,34 +47,24 @@ export async function POST(req: Request) {
       );
     }
 
-    // Provide required fields commonly needed by Prisma schemas
-    const now = new Date();
-
-    // Build payload — cast to any to avoid TS friction if model differs slightly
+    // Minimal payload — DO NOT include createdAt/updatedAt (your model likely doesn't have them)
     const data: any = {
-      id: crypto.randomUUID(), // ✅ fix for "id is required" on create
-      createdAt: now,          // safe if no @default(now())
-      updatedAt: now,          // safe if no @updatedAt
-
+      id: crypto.randomUUID(), // required if your schema doesn't default @id
       userId,                  // nullable ok if column allows
-      merchantId,              // string
-      orderId,                 // nullable
-      amount,                  // number|null (dollars)
+      merchantId,
+      orderId,
+      amount,                  // number|null
       source,                  // enum/string coerced
       status,                  // enum/string coerced
     };
 
-    // Optional association fields if your schema has them:
+    // Optional fields if present in your schema
     if (body?.linkId) data.linkId = String(body.linkId);
     if (body?.url) data.url = String(body.url);
 
     const conv = await prisma.conversion.create({ data });
 
-    return NextResponse.json({
-      ok: true,
-      id: conv.id,
-      ts: conv?.createdAt ?? now,
-    });
+    return NextResponse.json({ ok: true, id: conv.id });
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err?.message ?? "unknown_error" },
