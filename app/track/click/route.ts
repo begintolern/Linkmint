@@ -1,65 +1,96 @@
+// app/track/click/route.ts
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isSourceAllowed } from "@/lib/compliance/rules";
-import { logEvent } from "@/lib/compliance/log";
+import { Prisma } from "@prisma/client";
+
+/** Try to coerce a string into the Prisma enum for ClickSource (if present). */
+function coerceClickSource(raw: any): any {
+  const src = String(raw ?? "").trim();
+  const enums = (Prisma as any).$Enums;
+  if (enums?.ClickSource) {
+    const values = Object.values(enums.ClickSource);
+    if (values.includes(src)) return src;
+    if (values.includes("UNKNOWN")) return "UNKNOWN";
+    return values[0] ?? (src || "UNKNOWN");
+  }
+  // If your model doesn’t use an enum, just pass through a string.
+  return src || "UNKNOWN";
+}
+
+/** Extract basic client info */
+function getClientInfo(req: Request) {
+  const h = new Headers(req.headers);
+  const ua = h.get("user-agent") || null;
+  const forwardedFor = h.get("x-forwarded-for");
+  const cfIp = h.get("cf-connecting-ip");
+  const realIp = h.get("x-real-ip");
+  const ip =
+    (forwardedFor?.split(",")[0].trim() ||
+      cfIp ||
+      realIp ||
+      h.get("x-client-ip") ||
+      h.get("x-appengine-user-ip")) ?? null;
+
+  return { ip, ua };
+}
 
 export async function POST(req: Request) {
   try {
-    const { userId, merchantId, source } = await req.json();
+    const body = await req.json().catch(() => ({}));
+
+    const merchantId = body?.merchantId != null ? String(body.merchantId) : null;
+    const userId = body?.userId ? String(body.userId) : null;
+    const source = coerceClickSource(body?.source);
+    const linkId = body?.linkId ? String(body.linkId) : null;
+    const url = body?.url ? String(body.url) : null;
 
     if (!merchantId) {
-      return NextResponse.json({ ok: false, error: "merchantId_required" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "merchantId is required" },
+        { status: 400 }
+      );
     }
 
-    const merchant = await prisma.merchantRule.findUnique({ where: { id: merchantId } });
-    if (!merchant) {
-      return NextResponse.json({ ok: false, error: "merchant_not_found" }, { status: 404 });
-    }
+    const { ip, ua } = getClientInfo(req);
+    const now = new Date();
 
-    // Self-check: is this source allowed for this merchant?
-    const src = (source || "unknown").toString().toLowerCase();
-    if (!isSourceAllowed(merchant, src)) {
-      await logEvent({
-        type: "DISALLOWED_SOURCE",
-        severity: 2,
-        message: `Blocked click: ${src} not allowed`,
-        userId: userId ?? null,
-        merchantId,
-        meta: { source: src, merchant: merchant.merchantName },
-      });
-      return NextResponse.json({ ok: false, error: "DISALLOWED_SOURCE" }, { status: 403 });
-    }
+    // Minimal payload that satisfies schemas requiring explicit id/timestamps.
+    const data: any = {
+      id: crypto.randomUUID(), // ✅ required @id if no default
+      createdAt: now,          // safe if your model lacks @default(now())
+      updatedAt: now,          // safe if your model lacks @updatedAt
 
-    // Record the click
-    await prisma.clickEvent.create({
-      data: {
-        userId: userId ?? null,
-        merchantId,
-        source: src,
-      },
+      userId,                  // nullable if schema allows
+      merchantId,              // string
+      source,                  // enum-safe
+      ip,
+      userAgent: ua,
+    };
+
+    if (linkId) data.linkId = linkId;
+    if (url) data.url = url;
+
+    const created = await prisma.clickEvent.create({ data });
+
+    return NextResponse.json({
+      ok: true,
+      id: created.id,
+      ts: created?.createdAt ?? now,
     });
-
-    await logEvent({
-      type: "CLICK_RECORDED",
-      severity: 1,
-      message: `Click recorded (${src})`,
-      userId: userId ?? null,
-      merchantId,
-      meta: { source: src },
-    });
-
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("track/click POST failed:", err);
-    await logEvent({
-      type: "CLICK_ERROR",
-      severity: 3,
-      message: "Track click failed",
-      meta: { error: String(err) },
-    });
-    return NextResponse.json({ ok: false, error: "CLICK_FAILED" }, { status: 500 });
+  } catch (err: any) {
+    return NextResponse.json(
+      { ok: false, error: err?.message ?? "unknown_error" },
+      { status: 400 }
+    );
   }
+}
+
+export async function GET(req: Request) {
+  // Optional simple ping: /track/click?ping=1
+  const { searchParams } = new URL(req.url);
+  if (searchParams.get("ping")) return NextResponse.json({ ok: true, pong: true });
+  return NextResponse.json({ ok: true });
 }
