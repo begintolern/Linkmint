@@ -4,21 +4,29 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { Prisma, CommissionType, CommissionStatus } from "@prisma/client";
 
-// generic enum coercion (works with Prisma.$Enums or plain strings)
-function coerceEnum(raw: any, enumObj?: Record<string, string>, fallback?: string) {
-  const v = String(raw ?? "").trim();
-  if (!enumObj) return v || fallback || "UNKNOWN";
-  const values = Object.values(enumObj);
-  if (values.includes(v)) return v;
-  if (fallback && values.includes(fallback)) return fallback;
-  return values[0] ?? (v || fallback || "UNKNOWN");
+// Get allowed enum values robustly (works across Prisma versions)
+function enumValues<T extends Record<string, string> | undefined>(
+  direct: T,
+  $enums: any,
+  name: string
+): string[] {
+  if (direct && typeof direct === "object") return Object.values(direct as any);
+  const e = $enums?.[name];
+  return e ? Object.values(e) : [];
 }
+const $E = (Prisma as any).$Enums || {};
+const TYPE_VALUES = enumValues(CommissionType as any, $E, "CommissionType");
+const STATUS_VALUES = enumValues(CommissionStatus as any, $E, "CommissionStatus");
 
-const E = (Prisma as any).$Enums || {}; // newer Prisma exposes enums here
-const CommissionTypeEnum = E.CommissionType as Record<string, string> | undefined;
-const CommissionStatusEnum = E.CommissionStatus as Record<string, string> | undefined;
+// Pick a safe enum value: prefer a requested one if valid; else a sensible default; else first value.
+function pickEnum(requested: any, allowed: string[], fallback?: string) {
+  const want = String(requested ?? "").trim();
+  if (want && allowed.includes(want)) return want;
+  if (fallback && allowed.includes(fallback)) return fallback;
+  return allowed[0]; // last resort: first defined enum value
+}
 
 function requireAdmin(req: Request) {
   const key = req.headers.get("x-admin-key");
@@ -31,7 +39,7 @@ function requireAdmin(req: Request) {
 /**
  * POST /api/ops/dev-create-commission
  * Body: { userId: string, amount?: number, status?: string, type?: string }
- * Defaults: amount=$10.00, status="APPROVED", type="SALE"
+ * Defaults: amount=$10.00, status ~ APPROVED if available, type ~ first allowed
  */
 export async function POST(req: Request) {
   const unauthorized = requireAdmin(req);
@@ -44,18 +52,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "userId_required" }, { status: 400 });
     }
 
-    const amount = Number(body.amount ?? 10.0);  // dollars
-    const type = coerceEnum(body.type ?? "SALE", CommissionTypeEnum, "SALE");
-    const status = coerceEnum(body.status ?? "APPROVED", CommissionStatusEnum, "APPROVED");
+    const amount = Number(body.amount ?? 10.0); // dollars
+    const type = pickEnum(body.type, TYPE_VALUES, "SALE");          // will choose valid
+    const status = pickEnum(body.status, STATUS_VALUES, "APPROVED"); // will choose valid
 
-    // minimal, schema-tolerant payload; include id explicitly in case schema lacks default
+    if (!TYPE_VALUES.length || !STATUS_VALUES.length) {
+      return NextResponse.json(
+        { ok: false, error: "Commission enums not detected (CommissionType/CommissionStatus)." },
+        { status: 500 }
+      );
+    }
+
     const data: any = {
       id: crypto.randomUUID(),
       userId,
-      amount,   // finalizeCommission detects this and converts to cents
-      type,     // enum-safe
-      status,   // enum-safe
-      // createdAt/updatedAt only if your schema requires them
+      amount,         // finalizeCommission converts to cents internally
+      type,           // valid enum value
+      status,         // valid enum value
+      // add timestamps here only if your schema requires them
     };
 
     const c = await prisma.commission.create({
