@@ -1,6 +1,5 @@
 // middleware.ts
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
 /**
  * IMPORTANT:
@@ -18,21 +17,46 @@ export const config = {
   ],
 };
 
+const ADMIN_PATH_PREFIX = "/admin";
+const ADMIN_KEY_NAME = "admin_key";
+
 export function middleware(req: NextRequest) {
-  // OPTIONAL: If you force canonical host/https, do it gently and only when needed.
   const url = req.nextUrl;
 
-  // Force https (Railway should already be https, but keep this safe)
+  // --- 1️⃣ Force HTTPS on Railway ---
   if (url.protocol === "http:") {
     url.protocol = "https:";
     return NextResponse.redirect(url, { status: 308 });
   }
 
-  // OPTIONAL: Force apex domain (remove www)
+  // --- 2️⃣ Canonical redirect: remove www ---
   if (url.hostname === "www.linkmint.co") {
     url.hostname = "linkmint.co";
     return NextResponse.redirect(url, { status: 308 });
   }
 
+  // --- 3️⃣ Admin area protection ---
+  if (url.pathname.startsWith(ADMIN_PATH_PREFIX)) {
+    // Allow access to the key-entry page itself
+    if (url.pathname.startsWith("/admin/enter-key")) {
+      return NextResponse.next();
+    }
+
+    const cookieKey = req.cookies.get(ADMIN_KEY_NAME)?.value;
+    const headerKey = req.headers.get("x-admin-key");
+    const adminKey = process.env.ADMIN_API_KEY || "";
+
+    const ok =
+      !!adminKey && (cookieKey === adminKey || headerKey === adminKey);
+
+    if (!ok) {
+      const redirectUrl = url.clone();
+      redirectUrl.pathname = "/admin/enter-key";
+      redirectUrl.searchParams.set("next", url.pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+  }
+
+  // --- Default pass-through ---
   return NextResponse.next();
 }
