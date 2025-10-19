@@ -6,7 +6,6 @@ import { NextResponse } from "next/server";
 import { autoPayoutApply } from "@/lib/engines/payout/autoApply";
 import { isAutoDisburseEnabled, isAutoPayoutEnabled } from "@/lib/config/flags";
 
-/** Admin key guard (same pattern as other admin APIs) */
 function requireAdmin(req: Request) {
   const key = req.headers.get("x-admin-key");
   if (!key || key !== process.env.ADMIN_API_KEY) {
@@ -15,12 +14,10 @@ function requireAdmin(req: Request) {
   return null;
 }
 
-/** Helpful ping for browser GETs */
 export async function GET() {
   return NextResponse.json({ ok: true, methods: ["POST"] });
 }
 
-/** Run the auto-payout apply pass (flag-gated). */
 export async function POST(req: Request) {
   const unauthorized = requireAdmin(req);
   if (unauthorized) return unauthorized;
@@ -31,19 +28,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "auto_payout_disabled" }, { status: 400 });
   }
 
-  // Optional: allow an explicit batch limit (1..100)
   let limit = 20;
+  let explainSkips = false;
   try {
     const body = await req.json().catch(() => ({} as any));
     if (typeof body?.limit === "number" && body.limit > 0 && body.limit <= 100) {
       limit = body.limit | 0;
     }
+    if (typeof body?.explainSkips === "boolean") {
+      explainSkips = body.explainSkips;
+    }
   } catch {
-    /* ignore body parse issues; keep default limit */
+    /* ignore */
   }
 
-  // Execute the apply pass (this calls finalizeCommission on eligible items)
-  const result = await autoPayoutApply({ limit });
+  const result = await autoPayoutApply({ limit, explainSkips });
 
   return NextResponse.json({
     ...result,
