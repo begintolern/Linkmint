@@ -6,6 +6,7 @@ import { useState } from "react";
 export default function AutoPayoutApplyCard() {
   const [adminKey, setAdminKey] = useState("");
   const [busy, setBusy] = useState(false);
+  const [explainSkips, setExplainSkips] = useState(true); // NEW: default ON
   const [out, setOut] = useState<string>("");
 
   async function runApply() {
@@ -18,7 +19,12 @@ export default function AutoPayoutApplyCard() {
           "content-type": "application/json",
           ...(adminKey ? { "x-admin-key": adminKey } : {}),
         },
-        body: JSON.stringify({ reason: "admin_manual_click" }),
+        body: JSON.stringify({
+          reason: "admin_manual_click",
+          explainSkips,         // NEW: send to API
+          // (optional) add limit here if you want a fixed batch size:
+          // limit: 20,
+        }),
       });
       const ct = r.headers.get("content-type") || "";
       if (ct.includes("application/json")) {
@@ -54,7 +60,17 @@ export default function AutoPayoutApplyCard() {
           />
         </label>
 
-        <div className="flex items-end">
+        <label className="flex items-end gap-2 text-xs">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300"
+            checked={explainSkips}
+            onChange={(e) => setExplainSkips(e.target.checked)}
+          />
+          <span className="mb-[2px] text-gray-700">Explain skips in result</span>
+        </label>
+
+        <div className="sm:col-span-2 flex items-end">
           <button
             onClick={runApply}
             disabled={busy || !adminKey}
