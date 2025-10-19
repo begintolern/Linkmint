@@ -1,87 +1,34 @@
 // lib/config/flags.ts
-import { prisma } from "@/lib/db";
-
-/** ENV defaults (fallback if no DB values yet) */
+/**
+ * Payout feature flags + safety knobs.
+ * - AUTO_PAYOUT_ENABLED / AUTO_PAYOUT_DISBURSE_ENABLED
+ * - AUTO_PAYOUT_BATCH_LIMIT   (default 20)
+ * - AUTO_PAYOUT_ALLOWLIST     (CSV of userIds; empty = no allowlist)
+ */
 function toBool(v: string | undefined, def = false) {
   if (!v) return def;
   const s = v.trim().toLowerCase();
   return s === "1" || s === "true" || s === "yes" || s === "on";
 }
-const envAutoPayoutEnabled = toBool(process.env.AUTO_PAYOUT_ENABLED, false);
-const envAutoDisburseEnabled = toBool(process.env.AUTO_PAYOUT_DISBURSE_ENABLED, false);
-
-/** Small server-side cache to reduce DB hits */
-type Cache = {
-  ts: number;
-  data: { autoPayoutEnabled: boolean; autoPayoutDisburseEnabled: boolean };
-};
-const GLOBAL = globalThis as any;
-if (!GLOBAL.__flags_cache) GLOBAL.__flags_cache = null as Cache | null;
-
-async function readFromDB(): Promise<Cache["data"]> {
-  const rows = await prisma.systemSetting.findMany({
-    where: { key: { in: ["auto_payout_enabled", "auto_payout_disburse_enabled"] } },
-  });
-  const map = new Map(rows.map(r => [r.key, r.value]));
-  return {
-    autoPayoutEnabled: map.has("auto_payout_enabled")
-      ? map.get("auto_payout_enabled") === "true"
-      : envAutoPayoutEnabled,
-    autoPayoutDisburseEnabled: map.has("auto_payout_disburse_enabled")
-      ? map.get("auto_payout_disburse_enabled") === "true"
-      : envAutoDisburseEnabled,
-  };
+function toInt(v: string | undefined, def: number) {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : def;
+}
+function parseCsvSet(v: string | undefined) {
+  if (!v) return new Set<string>();
+  return new Set(
+    v.split(",").map(s => s.trim()).filter(Boolean)
+  );
 }
 
-async function getCached(): Promise<Cache["data"]> {
-  const now = Date.now();
-  const cache: Cache | null = GLOBAL.__flags_cache;
-  if (cache && now - cache.ts < 15_000) return cache.data; // 15s TTL
-  const data = await readFromDB();
-  GLOBAL.__flags_cache = { ts: now, data };
-  return data;
-}
+export const flags = {
+  autoPayoutEnabled: toBool(process.env.AUTO_PAYOUT_ENABLED, false),
+  autoPayoutDisburseEnabled: toBool(process.env.AUTO_PAYOUT_DISBURSE_ENABLED, false),
+  autoPayoutBatchLimit: toInt(process.env.AUTO_PAYOUT_BATCH_LIMIT, 20),
+  autoPayoutAllowlist: parseCsvSet(process.env.AUTO_PAYOUT_ALLOWLIST),
+} as const;
 
-/** Public getters (async) */
-export async function isAutoPayoutEnabled(): Promise<boolean> {
-  const d = await getCached();
-  return d.autoPayoutEnabled;
-}
-export async function isAutoDisburseEnabled(): Promise<boolean> {
-  const d = await getCached();
-  return d.autoPayoutDisburseEnabled;
-}
-
-/** Admin set/clear (persists to DB) */
-export async function setAutoPayoutEnabled(v: boolean) {
-  await prisma.systemSetting.upsert({
-    where: { key: "auto_payout_enabled" },
-    update: { value: v ? "true" : "false" },
-    create: { key: "auto_payout_enabled", value: v ? "true" : "false" },
-  });
-  GLOBAL.__flags_cache = null;
-}
-export async function setAutoDisburseEnabled(v: boolean) {
-  await prisma.systemSetting.upsert({
-    where: { key: "auto_payout_disburse_enabled" },
-    update: { value: v ? "true" : "false" },
-    create: { key: "auto_payout_disburse_enabled", value: v ? "true" : "false" },
-  });
-  GLOBAL.__flags_cache = null;
-}
-
-/** Snapshot for API/UI */
-export async function readFlagSnapshot() {
-  const d = await getCached();
-  return {
-    env: {
-      autoPayoutEnabled: envAutoPayoutEnabled,
-      autoPayoutDisburseEnabled: envAutoDisburseEnabled,
-    },
-    overrides: {
-      autoPayoutEnabled: null,
-      autoPayoutDisburseEnabled: null,
-    },
-    effective: d,
-  };
-}
+export async function isAutoPayoutEnabled() { return flags.autoPayoutEnabled; }
+export async function isAutoDisburseEnabled() { return flags.autoPayoutDisburseEnabled; }
+export function getAutoBatchLimit() { return flags.autoPayoutBatchLimit; }
+export function getAutoAllowlist() { return flags.autoPayoutAllowlist; }

@@ -4,7 +4,8 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { autoPayoutApply } from "@/lib/engines/payout/autoApply";
-import { isAutoDisburseEnabled, isAutoPayoutEnabled } from "@/lib/config/flags";
+import { isAutoDisburseEnabled, isAutoPayoutEnabled, getAutoBatchLimit } from "@/lib/config/flags";
+import { acquireAutoPayoutLock, releaseAutoPayoutLock, peekAutoPayoutLock, forceUnlockAutoPayout } from "@/lib/config/lock";
 
 function requireAdmin(req: Request) {
   const key = req.headers.get("x-admin-key");
@@ -14,7 +15,15 @@ function requireAdmin(req: Request) {
   return null;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const unauthorized = requireAdmin(req);
+  if (unauthorized) return unauthorized;
+
+  const { searchParams } = new URL(req.url);
+  if (searchParams.get("peek")) {
+    const lock = await peekAutoPayoutLock();
+    return NextResponse.json({ ok: true, lock });
+  }
   return NextResponse.json({ ok: true, methods: ["POST"] });
 }
 
@@ -28,24 +37,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "auto_payout_disabled" }, { status: 400 });
   }
 
-  let limit = 20;
+  let limit = getAutoBatchLimit();
   let explainSkips = false;
+  let forceUnlock = false;
+
   try {
     const body = await req.json().catch(() => ({} as any));
-    if (typeof body?.limit === "number" && body.limit > 0 && body.limit <= 100) {
-      limit = body.limit | 0;
-    }
-    if (typeof body?.explainSkips === "boolean") {
-      explainSkips = body.explainSkips;
-    }
-  } catch {
-    /* ignore */
+    if (typeof body?.limit === "number" && body.limit > 0 && body.limit <= 100) limit = body.limit | 0;
+    if (typeof body?.explainSkips === "boolean") explainSkips = body.explainSkips;
+    if (body?.forceUnlock === true) forceUnlock = true;
+  } catch {}
+
+  if (forceUnlock) {
+    await forceUnlockAutoPayout();
+    return NextResponse.json({ ok: true, unlocked: true });
   }
 
-  const result = await autoPayoutApply({ limit, explainSkips });
+  // Acquire lock (60s TTL)
+  const lock = await acquireAutoPayoutLock(60_000);
+  if (!lock.ok) {
+    return NextResponse.json({ ok: false, error: "locked", lock }, { status: 423 }); // 423 Locked
+  }
 
-  return NextResponse.json({
-    ...result,
-    mode: disburse ? "DISBURSE" : "DRY_RUN",
-  });
+  try {
+    const result = await autoPayoutApply({ limit, explainSkips });
+    return NextResponse.json({ ...result, mode: disburse ? "DISBURSE" : "DRY_RUN" });
+  } finally {
+    await releaseAutoPayoutLock();
+  }
 }

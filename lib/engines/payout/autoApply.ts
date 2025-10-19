@@ -1,11 +1,8 @@
 // lib/engines/payout/autoApply.ts
 import { prisma } from "@/lib/db";
 import { finalizeCommission } from "@/lib/engines/payout/finalizeCommission";
+import { getAutoAllowlist } from "@/lib/config/flags";
 
-/**
- * Finds eligible commissions and runs finalizeCommission on each.
- * Idempotency guard: skips if a payout already exists with details containing `commission:<id>`.
- */
 export async function autoPayoutApply({
   limit = 20,
   explainSkips = false,
@@ -13,11 +10,18 @@ export async function autoPayoutApply({
   limit?: number;
   explainSkips?: boolean;
 }) {
+  const allow = getAutoAllowlist();
+  const where: any = {
+    status: "APPROVED",
+    finalizedAt: null,
+  };
+  if (allow.size > 0) {
+    // only users in allowlist
+    where.userId = { in: Array.from(allow) };
+  }
+
   const candidates = await prisma.commission.findMany({
-    where: {
-      status: "APPROVED", // enum value in your schema
-      // If you later add finalizedAt, include: finalizedAt: null
-    },
+    where,
     orderBy: { createdAt: "asc" },
     take: Math.max(1, Math.min(limit, 100)),
     select: { id: true, userId: true, createdAt: true },
@@ -31,7 +35,7 @@ export async function autoPayoutApply({
   for (const c of candidates) {
     scanned += 1;
 
-    // Idempotency guard — already has a payout tied to this commission
+    // safety: skip if payout already exists referencing this commission
     const existing = await prisma.payout.findFirst({
       where: { details: { contains: `commission:${c.id}` } },
       select: { id: true },
@@ -49,11 +53,5 @@ export async function autoPayoutApply({
     }
   }
 
-  return {
-    ok: true,
-    scanned,
-    applied,
-    errors,
-    ...(explainSkips ? { skipped } : {}),
-  };
+  return { ok: true, scanned, applied, errors, ...(explainSkips ? { skipped } : {}) };
 }
