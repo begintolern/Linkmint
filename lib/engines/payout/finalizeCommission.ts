@@ -35,7 +35,8 @@ export async function finalizeCommission(commissionId: string) {
     // No amount to split — mark finalized to avoid repeated attempts
     await prisma.commission.update({
       where: { id: commission.id },
-      data: { finalizedAt: new Date() },
+      // TEMP cast so it compiles even if the generated types don’t include finalizedAt yet
+      data: { finalizedAt: new Date() } as any,
     });
     return { ok: true, skipped: true, reason: "zero_gross", finalized: true };
   }
@@ -88,7 +89,8 @@ export async function finalizeCommission(commissionId: string) {
   // 6) Mark commission finalized (prevents re-processing)
   await prisma.commission.update({
     where: { id: commission.id },
-    data: { finalizedAt: new Date() },
+    // TEMP cast so it compiles even if the generated types don’t include finalizedAt yet
+    data: { finalizedAt: new Date() } as any,
   });
 
   return {
