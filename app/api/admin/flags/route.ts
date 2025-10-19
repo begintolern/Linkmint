@@ -5,11 +5,12 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import {
   readFlagSnapshot,
-  setAutoDisburseEnabled,
   setAutoPayoutEnabled,
+  setAutoDisburseEnabled,
+  setAutoBatchLimit,
+  setAutoAllowlistCsv,
 } from "@/lib/config/flags";
 
-/** Admin key guard */
 function requireAdmin(req: Request) {
   const key = req.headers.get("x-admin-key");
   if (!key || key !== process.env.ADMIN_API_KEY) {
@@ -18,39 +19,38 @@ function requireAdmin(req: Request) {
   return null;
 }
 
-/** GET: read env + effective (DB-backed) */
 export async function GET(req: Request) {
   const unauthorized = requireAdmin(req);
   if (unauthorized) return unauthorized;
 
-  return NextResponse.json({ ok: true, ...(await readFlagSnapshot()) });
+  const snapshot = readFlagSnapshot();
+  return NextResponse.json({ ok: true, ...snapshot });
 }
 
-/**
- * POST: set flags persistently (DB)
- * Body:
- * { autoPayoutEnabled?: boolean, autoPayoutDisburseEnabled?: boolean }
- */
 export async function POST(req: Request) {
   const unauthorized = requireAdmin(req);
   if (unauthorized) return unauthorized;
 
+  let body: any = {};
   try {
-    const body = await req.json().catch(() => ({} as any));
-
-    if (Object.prototype.hasOwnProperty.call(body, "autoPayoutEnabled")) {
-      if (typeof body.autoPayoutEnabled === "boolean") {
-        await setAutoPayoutEnabled(body.autoPayoutEnabled);
-      }
-    }
-    if (Object.prototype.hasOwnProperty.call(body, "autoPayoutDisburseEnabled")) {
-      if (typeof body.autoPayoutDisburseEnabled === "boolean") {
-        await setAutoDisburseEnabled(body.autoPayoutDisburseEnabled);
-      }
-    }
-
-    return NextResponse.json({ ok: true, ...(await readFlagSnapshot()) });
-  } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err?.message ?? "bad_request" }, { status: 400 });
+    body = await req.json();
+  } catch {
+    /* ignore empty body */
   }
+
+  if (typeof body?.autoPayoutEnabled === "boolean") {
+    setAutoPayoutEnabled(body.autoPayoutEnabled);
+  }
+  if (typeof body?.autoPayoutDisburseEnabled === "boolean") {
+    setAutoDisburseEnabled(body.autoPayoutDisburseEnabled);
+  }
+  if (typeof body?.autoPayoutBatchLimit === "number") {
+    setAutoBatchLimit(body.autoPayoutBatchLimit);
+  }
+  if (typeof body?.autoPayoutAllowlistCsv === "string") {
+    setAutoAllowlistCsv(body.autoPayoutAllowlistCsv);
+  }
+
+  const snapshot = readFlagSnapshot();
+  return NextResponse.json({ ok: true, ...snapshot });
 }
