@@ -11,7 +11,7 @@ import AdminHeader from "@/components/AdminHeader";
 import AdminHealthStatusCard from "@/components/AdminHealthStatusCard";
 import { isAutoPayoutEnabled, isAutoDisburseEnabled } from "@/lib/config/flags";
 import AutoPayoutStatus from "@/components/AutoPayoutStatus";
-import AutoPayoutBadge from "@/components/AutoPayoutBadge"; // NEW
+import AutoPayoutBadge from "@/components/AutoPayoutBadge";
 
 const tabs = [
   { key: "users",     label: "Users",     href: "/admin/users",     desc: "All users, verification & flags" },
@@ -23,6 +23,10 @@ const tabs = [
 
 export default async function AdminHomePage() {
   await assertAdmin();
+
+  // NEW: await async DB-backed flags
+  const autoOn = await isAutoPayoutEnabled();
+  const disburseOn = await isAutoDisburseEnabled();
 
   const session = (await getServerSession(authOptions)) as Session | null;
   const email = session?.user?.email ?? "admin";
@@ -40,7 +44,7 @@ export default async function AdminHomePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AutoPayoutBadge /> {/* NEW: always-visible status */}
+          <AutoPayoutBadge on={autoOn} disbursing={disburseOn} />
           <span className="rounded-full border px-3 py-1 text-xs text-slate-600">
             Role: {String(role).toUpperCase()}
           </span>
@@ -52,27 +56,19 @@ export default async function AdminHomePage() {
         <AdminHealthStatusCard />
       </section>
 
-      {/* Server-side snapshot (kept for clarity) */}
+      {/* Server-side snapshot */}
       <section className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
         <h2 className="text-lg font-semibold mb-2">Payout Automation Status</h2>
         <p>
           Auto-Payout:{" "}
-          <span
-            className={`font-bold ml-1 ${
-              isAutoPayoutEnabled() ? "text-green-600" : "text-gray-500"
-            }`}
-          >
-            {isAutoPayoutEnabled() ? "Enabled" : "Disabled"}
+          <span className={`font-bold ml-1 ${autoOn ? "text-green-600" : "text-gray-500"}`}>
+            {autoOn ? "Enabled" : "Disabled"}
           </span>
         </p>
         <p>
           Auto-Disburse:{" "}
-          <span
-            className={`font-bold ml-1 ${
-              isAutoDisburseEnabled() ? "text-green-600" : "text-gray-500"
-            }`}
-          >
-            {isAutoDisburseEnabled() ? "Enabled" : "Disabled"}
+          <span className={`font-bold ml-1 ${disburseOn ? "text-green-600" : "text-gray-500"}`}>
+            {disburseOn ? "Enabled" : "Disabled"}
           </span>
         </p>
       </section>
