@@ -1,81 +1,87 @@
 // lib/config/flags.ts
+import { prisma } from "@/lib/db";
 
-/**
- * Feature flags for payouts.
- * - AUTO_PAYOUT_ENABLED: enables the engine to auto-create/advance payout rows
- * - AUTO_PAYOUT_DISBURSE_ENABLED: actually hits payment providers (GCash/PayPal/etc.)
- *
- * ENV is the source of truth; admin UI can set in-memory overrides (ephemeral).
- * Overrides reset on server restart/redeploy.
- */
-
+/** ENV defaults (fallback if no DB values yet) */
 function toBool(v: string | undefined, def = false) {
   if (!v) return def;
   const s = v.trim().toLowerCase();
   return s === "1" || s === "true" || s === "yes" || s === "on";
 }
-
-// ENV defaults
 const envAutoPayoutEnabled = toBool(process.env.AUTO_PAYOUT_ENABLED, false);
 const envAutoDisburseEnabled = toBool(process.env.AUTO_PAYOUT_DISBURSE_ENABLED, false);
 
-// In-memory overrides (ephemeral)
-type FlagOverrides = {
-  autoPayoutEnabled?: boolean;
-  autoPayoutDisburseEnabled?: boolean;
+/** Small server-side cache to reduce DB hits */
+type Cache = {
+  ts: number;
+  data: { autoPayoutEnabled: boolean; autoPayoutDisburseEnabled: boolean };
 };
+const GLOBAL = globalThis as any;
+if (!GLOBAL.__flags_cache) GLOBAL.__flags_cache = null as Cache | null;
 
-// Ensure a single global bag in dev/hot-reload
-const GLOBAL_KEY = "__linkmint_flag_overrides__";
-const g = globalThis as any;
-if (!g[GLOBAL_KEY]) g[GLOBAL_KEY] = {} as FlagOverrides;
-const overrides: FlagOverrides = g[GLOBAL_KEY];
-
-export const flags = {
-  envAutoPayoutEnabled,
-  envAutoDisburseEnabled,
-  get autoPayoutEnabled() {
-    return typeof overrides.autoPayoutEnabled === "boolean"
-      ? overrides.autoPayoutEnabled
-      : envAutoPayoutEnabled;
-  },
-  get autoPayoutDisburseEnabled() {
-    return typeof overrides.autoPayoutDisburseEnabled === "boolean"
-      ? overrides.autoPayoutDisburseEnabled
-      : envAutoDisburseEnabled;
-  },
-} as const;
-
-/** Convenience getters */
-export function isAutoPayoutEnabled() {
-  return flags.autoPayoutEnabled === true;
-}
-export function isAutoDisburseEnabled() {
-  return flags.autoPayoutDisburseEnabled === true;
+async function readFromDB(): Promise<Cache["data"]> {
+  const rows = await prisma.systemSetting.findMany({
+    where: { key: { in: ["auto_payout_enabled", "auto_payout_disburse_enabled"] } },
+  });
+  const map = new Map(rows.map(r => [r.key, r.value]));
+  return {
+    autoPayoutEnabled: map.has("auto_payout_enabled")
+      ? map.get("auto_payout_enabled") === "true"
+      : envAutoPayoutEnabled,
+    autoPayoutDisburseEnabled: map.has("auto_payout_disburse_enabled")
+      ? map.get("auto_payout_disburse_enabled") === "true"
+      : envAutoDisburseEnabled,
+  };
 }
 
-/** Admin-only: set/clear runtime overrides (pass undefined to clear) */
-export function setAutoPayoutEnabledOverride(v: boolean | undefined) {
-  overrides.autoPayoutEnabled = v;
-}
-export function setAutoDisburseEnabledOverride(v: boolean | undefined) {
-  overrides.autoPayoutDisburseEnabled = v;
+async function getCached(): Promise<Cache["data"]> {
+  const now = Date.now();
+  const cache: Cache | null = GLOBAL.__flags_cache;
+  if (cache && now - cache.ts < 15_000) return cache.data; // 15s TTL
+  const data = await readFromDB();
+  GLOBAL.__flags_cache = { ts: now, data };
+  return data;
 }
 
-/** Snapshot for APIs/UI */
-export function readFlagSnapshot() {
+/** Public getters (async) */
+export async function isAutoPayoutEnabled(): Promise<boolean> {
+  const d = await getCached();
+  return d.autoPayoutEnabled;
+}
+export async function isAutoDisburseEnabled(): Promise<boolean> {
+  const d = await getCached();
+  return d.autoPayoutDisburseEnabled;
+}
+
+/** Admin set/clear (persists to DB) */
+export async function setAutoPayoutEnabled(v: boolean) {
+  await prisma.systemSetting.upsert({
+    where: { key: "auto_payout_enabled" },
+    update: { value: v ? "true" : "false" },
+    create: { key: "auto_payout_enabled", value: v ? "true" : "false" },
+  });
+  GLOBAL.__flags_cache = null;
+}
+export async function setAutoDisburseEnabled(v: boolean) {
+  await prisma.systemSetting.upsert({
+    where: { key: "auto_payout_disburse_enabled" },
+    update: { value: v ? "true" : "false" },
+    create: { key: "auto_payout_disburse_enabled", value: v ? "true" : "false" },
+  });
+  GLOBAL.__flags_cache = null;
+}
+
+/** Snapshot for API/UI */
+export async function readFlagSnapshot() {
+  const d = await getCached();
   return {
     env: {
       autoPayoutEnabled: envAutoPayoutEnabled,
       autoPayoutDisburseEnabled: envAutoDisburseEnabled,
     },
     overrides: {
-      autoPayoutEnabled: overrides.autoPayoutEnabled ?? null,
-      autoPayoutDisburseEnabled: overrides.autoPayoutDisburseEnabled ?? null,
+      autoPayoutEnabled: null,
+      autoPayoutDisburseEnabled: null,
     },
-    effective: {
-      autoPayoutEnabled: isAutoPayoutEnabled(),
-      autoPayoutDisburseEnabled: isAutoDisburseEnabled(),
-    },
+    effective: d,
   };
 }
