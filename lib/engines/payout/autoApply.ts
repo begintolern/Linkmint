@@ -11,20 +11,16 @@ export async function autoPayoutApply({
   explainSkips?: boolean;
 }) {
   const allow = getAutoAllowlist();
-  const where: any = {
-    status: "APPROVED",
-    finalizedAt: null,
-  };
-  if (allow.size > 0) {
-    // only users in allowlist
-    where.userId = { in: Array.from(allow) };
-  }
+
+  // ⚠️ Do NOT filter by finalizedAt here (prod client may not have the field yet).
+  const where: any = { status: "APPROVED" };
+  if (allow.size > 0) where.userId = { in: Array.from(allow) };
 
   const candidates = await prisma.commission.findMany({
     where,
     orderBy: { createdAt: "asc" },
     take: Math.max(1, Math.min(limit, 100)),
-    select: { id: true, userId: true, createdAt: true },
+    select: { id: true, userId: true, createdAt: true }, // no finalizedAt in select either
   });
 
   let scanned = 0;
@@ -35,7 +31,7 @@ export async function autoPayoutApply({
   for (const c of candidates) {
     scanned += 1;
 
-    // safety: skip if payout already exists referencing this commission
+    // Idempotency guard: if any payout already references this commission, skip.
     const existing = await prisma.payout.findFirst({
       where: { details: { contains: `commission:${c.id}` } },
       select: { id: true },

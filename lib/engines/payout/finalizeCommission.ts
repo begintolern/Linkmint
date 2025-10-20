@@ -12,7 +12,7 @@ export async function finalizeCommission(commissionId: string) {
       userId: true,
       createdAt: true,
       status: true,
-      amount: true,  // USD float
+      amount: true, // USD float
     },
   });
 
@@ -21,17 +21,21 @@ export async function finalizeCommission(commissionId: string) {
     return { ok: true, skipped: true, reason: "not_approved" };
   }
 
-  // 🔒 Normalize/validate amount
+  // Validate amount
   const amt = Number(commission.amount);
   if (!Number.isFinite(amt) || amt <= 0) {
-    await prisma.commission.update({
-      where: { id: commission.id },
-      data: { finalizedAt: new Date() } as any, // safe cast until client definitely has the field
-    });
+    // Try to mark finalized; never crash if field not present
+    try {
+      await prisma.commission.update({
+        where: { id: commission.id },
+        data: { finalizedAt: new Date() } as any,
+      });
+    } catch {}
     return { ok: true, skipped: true, reason: "invalid_amount", finalized: true };
   }
   const grossCents = Math.round(amt * 100);
 
+  // Referral window
   const inviteeId = commission.userId;
   const user = await prisma.user.findUnique({
     where: { id: inviteeId },
@@ -44,10 +48,7 @@ export async function finalizeCommission(commissionId: string) {
     isActive = await isReferralActiveForPair({ referrerId, inviteeId });
   }
 
-  const split = calcSplit({
-    grossCents,
-    isReferralActive: Boolean(isActive),
-  });
+  const split = calcSplit({ grossCents, isReferralActive: Boolean(isActive) });
 
   const baseDetails =
     `commission:${commission.id}` + (isActive ? " (referral 5% active)" : "");
@@ -73,10 +74,13 @@ export async function finalizeCommission(commissionId: string) {
 
   await prisma.payout.createMany({ data: rows, skipDuplicates: true });
 
-  await prisma.commission.update({
-    where: { id: commission.id },
-    data: { finalizedAt: new Date() } as any,
-  });
+  // Try to mark finalized; never crash if field not present
+  try {
+    await prisma.commission.update({
+      where: { id: commission.id },
+      data: { finalizedAt: new Date() } as any,
+    });
+  } catch {}
 
   return {
     ok: true,
