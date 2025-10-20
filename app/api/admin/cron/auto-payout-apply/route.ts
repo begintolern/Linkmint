@@ -40,7 +40,6 @@ export async function POST(req: Request) {
   let limit = getAutoBatchLimit();
   let explainSkips = false;
   let forceUnlock = false;
-
   try {
     const body = await req.json().catch(() => ({} as any));
     if (typeof body?.limit === "number" && body.limit > 0 && body.limit <= 100) limit = body.limit | 0;
@@ -56,12 +55,22 @@ export async function POST(req: Request) {
   // Acquire lock (60s TTL)
   const lock = await acquireAutoPayoutLock(60_000);
   if (!lock.ok) {
-    return NextResponse.json({ ok: false, error: "locked", lock }, { status: 423 }); // 423 Locked
+    return NextResponse.json({ ok: false, error: "locked", lock }, { status: 423 });
   }
 
   try {
-    const result = await autoPayoutApply({ limit, explainSkips });
-    return NextResponse.json({ ...result, mode: disburse ? "DISBURSE" : "DRY_RUN" });
+    // ⬇️ Wrap the engine in a try/catch to avoid 500s
+    try {
+      const result = await autoPayoutApply({ limit, explainSkips });
+      return NextResponse.json({ ...result, mode: disburse ? "DISBURSE" : "DRY_RUN" });
+    } catch (err: any) {
+      const payload = {
+        ok: false,
+        error: err?.message ?? String(err),
+        stack: err?.stack ?? null,
+      };
+      return NextResponse.json(payload, { status: 500 });
+    }
   } finally {
     await releaseAutoPayoutLock();
   }
