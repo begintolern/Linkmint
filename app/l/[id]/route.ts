@@ -1,37 +1,44 @@
 // app/l/[id]/route.ts
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// Best-effort IP extraction behind proxies
+// Extract best-effort IP behind proxies/CDNs
 function getClientIp(req: Request): string | null {
   const xf = req.headers.get("x-forwarded-for");
   if (xf) {
     const first = xf.split(",")[0]?.trim();
     if (first) return first;
   }
-  return req.headers.get("x-real-ip") || null;
+  return (
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    null
+  );
 }
 
-/** Append our click id to any URL (fallback) */
+/** Append subid/utm for generic fallback links */
 function appendSubid(productUrl: string, subid: string): string {
   try {
     const u = new URL(productUrl);
-    u.searchParams.set("lm_subid", subid);        // our universal subid
-    u.searchParams.set("utm_source", "linkmint"); // optional analytics
+    if (!u.searchParams.has("lm_subid")) u.searchParams.set("lm_subid", subid);
+    if (!u.searchParams.has("utm_source"))
+      u.searchParams.set("utm_source", "linkmint");
     return u.toString();
   } catch {
     return productUrl;
   }
 }
 
-/** Involve Asia wrapper (configurable via env). Returns null if misconfigured. */
+/** Involve Asia wrapper (for Lazada PH etc.) */
 function wrapWithInvolveAsia(productUrl: string, subid: string): string | null {
-  const base = (process.env.INVOLVEASIA_BASE_URL || "").trim(); // e.g. https://invol.co/aff_m
+  const base = (process.env.INVOLVEASIA_BASE_URL || "").trim();
   if (!base) return null;
 
   const deeplinkParam = (process.env.INVOLVEASIA_DEEPLINK_PARAM || "url").trim();
   const subidParam = (process.env.INVOLVEASIA_SUBID_PARAM || "aff_sub").trim();
-
   const affIdParam = (process.env.INVOLVEASIA_AFF_ID_PARAM || "").trim();
   const affIdValue = (process.env.INVOLVEASIA_AFF_ID_VALUE || "").trim();
 
@@ -39,9 +46,8 @@ function wrapWithInvolveAsia(productUrl: string, subid: string): string | null {
     const out = new URL(base);
     out.searchParams.set(deeplinkParam, productUrl);
     out.searchParams.set(subidParam, subid);
-    if (affIdParam && affIdValue) out.searchParams.set(affIdParam, affIdValue);
-
-    // backup for reconciliation
+    if (affIdParam && affIdValue)
+      out.searchParams.set(affIdParam, affIdValue);
     out.searchParams.set("lm_subid", subid);
     out.searchParams.set("utm_source", "linkmint");
     return out.toString();
@@ -50,14 +56,13 @@ function wrapWithInvolveAsia(productUrl: string, subid: string): string | null {
   }
 }
 
-/** Shopee Affiliate wrapper (configurable via env). Returns null if misconfigured. */
+/** Shopee Affiliate wrapper (for Shopee PH etc.) */
 function wrapWithShopee(productUrl: string, subid: string): string | null {
   const base = (process.env.SHOPEE_BASE_URL || "").trim();
   if (!base) return null;
 
   const deeplinkParam = (process.env.SHOPEE_DEEPLINK_PARAM || "url").trim();
   const subidParam = (process.env.SHOPEE_SUBID_PARAM || "subid").trim();
-
   const affIdParam = (process.env.SHOPEE_AFF_ID_PARAM || "").trim();
   const affIdValue = (process.env.SHOPEE_AFF_ID_VALUE || "").trim();
 
@@ -65,9 +70,8 @@ function wrapWithShopee(productUrl: string, subid: string): string | null {
     const out = new URL(base);
     out.searchParams.set(deeplinkParam, productUrl);
     out.searchParams.set(subidParam, subid);
-    if (affIdParam && affIdValue) out.searchParams.set(affIdParam, affIdValue);
-
-    // backup for reconciliation
+    if (affIdParam && affIdValue)
+      out.searchParams.set(affIdParam, affIdValue);
     out.searchParams.set("lm_subid", subid);
     out.searchParams.set("utm_source", "linkmint");
     return out.toString();
@@ -76,21 +80,15 @@ function wrapWithShopee(productUrl: string, subid: string): string | null {
   }
 }
 
-/**
- * Central builder for outbound URLs.
- * - Lazada PH via Involve Asia
- * - Shopee PH via Shopee Affiliate
- * - Fallback: ?lm_subid=...
- */
+/** Central outbound URL builder */
 function buildOutboundUrl(opts: {
   productUrl: string;
   smartLinkId: string;
   merchant?: { network?: string | null; domain?: string | null; name?: string | null };
-  context?: { userId?: string | null; source?: string | null };
 }): string {
   const { productUrl, smartLinkId, merchant } = opts;
   const network = (merchant?.network || "").trim().toLowerCase();
-  const domain  = (merchant?.domain  || "").trim().toLowerCase();
+  const domain = (merchant?.domain || "").trim().toLowerCase();
 
   // Involve Asia → Lazada PH
   const isIA = network === "involve asia";
@@ -114,14 +112,10 @@ function buildOutboundUrl(opts: {
   return appendSubid(productUrl, smartLinkId);
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   const id = (params?.id || "").trim();
-  if (!id) {
+  if (!id)
     return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
-  }
 
   const link = await prisma.smartLink.findUnique({
     where: { id },
@@ -133,14 +127,15 @@ export async function GET(
       merchantDomain: true,
       originalUrl: true,
       createdAt: true,
-      merchantRule: {
-        select: { network: true, domainPattern: true },
-      },
+      merchantRule: { select: { network: true, domainPattern: true } },
     },
   });
 
   if (!link || !link.originalUrl) {
-    return NextResponse.json({ ok: false, error: "LINK_NOT_FOUND" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "LINK_NOT_FOUND" },
+      { status: 404 }
+    );
   }
 
   const outboundUrl = buildOutboundUrl({
@@ -151,10 +146,9 @@ export async function GET(
       domain: link.merchantDomain ?? link.merchantRule?.domainPattern ?? null,
       name: link.merchantName ?? null,
     },
-    context: { userId: link.userId },
   });
 
-  // --- Fixed logging: relation 'user' + JSON string in 'detail'
+  // Request metadata
   const ip = getClientIp(req);
   const ua = req.headers.get("user-agent") || null;
   const referer = req.headers.get("referer") || null;
@@ -174,16 +168,40 @@ export async function GET(
     at: new Date().toISOString(),
   };
 
+  // --- EventLog (relation-safe, no ip/userId mix)
+  const eventData: any = {
+    type: "CLICK",
+    message: "SmartLink click",
+    detail: JSON.stringify(detailPayload),
+    severity: 1,
+  };
+  if (link.userId) {
+    eventData.user = { connect: { id: link.userId } };
+  }
+
   prisma.eventLog
+    .create({ data: eventData })
+    .catch((e) => console.error("[shortlink][EventLog] error:", e));
+
+  // --- ClickEvent (used by admin/clicks)
+  prisma.clickEvent
     .create({
       data: {
-        user: { connect: { id: link.userId } }, // relation (not userId scalar)
-        type: "CLICK",
-        message: "SmartLink click",
-        detail: JSON.stringify(detailPayload),    // store JSON as string
+        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        source: "SHORTLINK",
+        userId: link.userId ?? null,
+        merchantId: link.merchantRuleId ?? null,
+        ip: ip ?? null,
+        userAgent: ua ?? null,
+        url: outboundUrl,
+        referer: referer ?? null,
+        meta: { country },
+        linkId: link.id,
       },
     })
-    .catch(() => { /* do not block redirect on logging issues */ });
+    .catch((e) => console.error("[shortlink][ClickEvent] error:", e));
 
   return NextResponse.redirect(outboundUrl, { status: 302 });
 }
