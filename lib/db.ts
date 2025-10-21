@@ -3,23 +3,19 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
+// In dev, also relax Node's global check (Windows quirk); prod stays strict by default
+if (process.env.NODE_ENV !== "production") {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 function buildPoolFromEnv() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
 
-  const u = new URL(url);
-  const isRailwayInternal = u.hostname.endsWith("railway.internal");
-
-  // In dev, allow self-signed for external proxies (Windows quirk)
-  if (process.env.NODE_ENV !== "production") {
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-  }
-
+  // ✅ Force TLS but accept self-signed certs everywhere (Railway internal & external)
   return new pg.Pool({
     connectionString: url,
-    // ✅ Inside Railway (internal host) — no TLS needed
-    // ✅ Elsewhere — use TLS but don't block self-signed (dev proxies)
-    ssl: isRailwayInternal ? false : { require: true, rejectUnauthorized: false },
+    ssl: { require: true, rejectUnauthorized: false },
     max: 5,
   });
 }
