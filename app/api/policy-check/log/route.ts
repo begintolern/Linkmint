@@ -1,78 +1,68 @@
 // app/api/policy-check/log/route.ts
 import { NextResponse } from "next/server";
-import { logPolicyCheck } from "@/lib/log/policyCheck";
-import type { PolicySeverity } from "@prisma/client";
+import { headers, cookies } from "next/headers";
+import { prisma } from "@/lib/db";
 
-// helper: extract IP even behind proxies
-function getClientIP(req: Request) {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return req.headers.get("x-real-ip") || null;
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+function parseBody(text: string) {
+  if (!text || !text.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    // allow naive form-ish payloads later if needed
+    return {};
+  }
 }
 
 export async function POST(req: Request) {
+  const h = headers();
+  const jar = cookies();
+
+  // raw body so we’re not strict about content-type
+  const raw = await req.text();
+  const body = parseBody(raw);
+
+  // accept either flat shape or { data: { ... } }
+  const src: any = (body && typeof body === "object" && "data" in body) ? (body as any).data : body;
+
+  const engine = typeof src?.engine === "string" ? src.engine : "unknown";
+  const severity = typeof src?.severity === "string" ? src.severity : "NONE";
+  const categories = Array.isArray(src?.categories) ? (src.categories as any[]).map(String) : [];
+  const sampleText = typeof src?.sampleText === "string" ? src.sampleText : "";
+
+  // minimal validation: require at least one of engine/sampleText
+  if (!engine && !sampleText) {
+    return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
+  }
+
+  // meta
+  const ip =
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    h.get("x-real-ip") ||
+    null;
+  const userAgent = h.get("user-agent") || null;
+  const userId = jar.get("userId")?.value || null;
+
   try {
-    // 🔒 Safely parse body (handles bad JSON without crashing)
-    let json: any = null;
-    try {
-      json = await req.json();
-    } catch {
-      const text = await req.text().catch(() => "");
-      try {
-        json = JSON.parse(text);
-      } catch {
-        return NextResponse.json(
-          { ok: false, error: "Invalid JSON payload" },
-          { status: 400 }
-        );
-      }
-    }
-
-    const {
-      inputChars,
-      engine,
-      severity,
-      categories,
-      findings,
-      rawResult,
-      sampleText,
-    } = json ?? {};
-
-
-    // basic validation
-    if (
-      typeof inputChars !== "number" ||
-      !engine ||
-      !severity ||
-      !Array.isArray(categories)
-    ) {
-      return NextResponse.json({ ok: false, error: "Invalid payload" }, { status: 400 });
-    }
-
-    // map severity to enum safely
-    const validSev = new Set<PolicySeverity>(["NONE", "LOW", "MEDIUM", "HIGH"] as const);
-    const sev = String(severity).toUpperCase() as PolicySeverity;
-    const severityEnum: PolicySeverity = validSev.has(sev) ? sev : "NONE";
-
-    const ip = getClientIP(req);
-    const userAgent = req.headers.get("user-agent");
-
-    const saved = await logPolicyCheck({
-      userId: null, // no NextAuth dependency—avoid crashes
-      ip,
-      userAgent,
-      inputChars,
-      engine,
-      severity: severityEnum,
-      categories,
-      findings,
-      rawResult,
-      sampleText: typeof sampleText === "string" ? sampleText : null,
+    const rec = await prisma.policyCheckLog.create({
+      data: {
+        engine,
+        severity,
+        categories,
+        sampleText,
+        inputChars: sampleText.length,
+        ip,
+        userAgent,
+        userId,
+      },
+      select: { id: true, createdAt: true, severity: true },
     });
 
-    return NextResponse.json({ ok: true, id: saved.id, at: saved.createdAt });
-  } catch (err) {
-    console.error("[policy-check/log] error:", err);
+    return NextResponse.json({ ok: true, id: rec.id, at: rec.createdAt, severity: rec.severity });
+  } catch (e: any) {
+    console.error("[policy-check/log] create error:", e?.message || e);
     return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }
