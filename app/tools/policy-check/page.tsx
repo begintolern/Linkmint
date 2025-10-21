@@ -12,9 +12,12 @@ export const metadata = {
 };
 
 export default async function Page() {
-  // Restrict to admin only
-  const role = (cookies().get("role")?.value || "").toLowerCase();
-  if (role !== "admin") {
+  // Gate access (allow admin via role cookie OR admin_key)
+  const jar = cookies();
+  const role = (jar.get("role")?.value || "").toLowerCase();
+  const hasAdminKey = !!jar.get("admin_key")?.value;
+
+  if (!(role === "admin" || hasAdminKey)) {
     notFound();
   }
 

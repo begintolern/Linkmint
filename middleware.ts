@@ -24,10 +24,10 @@ export function middleware(req: NextRequest) {
   const url = req.nextUrl;
 
   // --- 1️⃣ Force HTTPS on Railway ---
-  if (url.protocol === "http:") {
-    url.protocol = "https:";
-    return NextResponse.redirect(url, { status: 308 });
-  }
+  if (process.env.NODE_ENV === "production" && url.protocol === "http:") {
+  url.protocol = "https:";
+  return NextResponse.redirect(url, { status: 308 });
+}
 
   // --- 2️⃣ Canonical redirect: remove www ---
   if (url.hostname === "www.linkmint.co") {

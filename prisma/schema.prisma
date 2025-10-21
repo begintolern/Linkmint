@@ -3,62 +3,64 @@ generator client {
 }
 
 datasource db {
-  provider          = "postgresql"
-  url               = env("DATABASE_URL")
-  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  provider = "postgresql"
+  // TEMPORARY hardcode for Prisma Studio test
+  url      = "postgresql://postgres:<YOUR_PASSWORD>@maglev.proxy.rlwy.net:20064/railway?schema=public&sslmode=require"
 }
 
 model User {
-  id                       String               @id @default(cuid())
-  email                    String               @unique
+  id                       String        @id @default(cuid())
+  email                    String        @unique
   name                     String?
   password                 String?
-  createdAt                DateTime             @default(now())
+  createdAt                DateTime      @default(now())
   referralGroupId          String?
   referredById             String?
-  verifyToken              String?              @unique
+  verifyToken              String?       @unique
   verifyTokenExpiry        DateTime?
-  trustScore               Int?                 @default(0)
+  trustScore               Int?          @default(0)
   referralBadge            String?
-  referralCode             String?              @unique
-  role                     String?              @default("user")
+  referralCode             String?       @unique
+  role                     String?       @default("user")
   emailVerifiedAt          DateTime?
-  updatedAt                DateTime             @updatedAt
-  ageConfirmed             Boolean              @default(false)
+  updatedAt                DateTime      @updatedAt
+  ageConfirmed             Boolean       @default(false)
   ageConfirmedAt           DateTime?
   deletedAt                DateTime?
   dob                      DateTime?
   tosAcceptedAt            DateTime?
-  tosAcceptedIp            String?              @db.VarChar(64)
-  bonusCents               Int                  @default(0)
+  tosAcceptedIp            String?       @db.VarChar(64)
+  bonusCents               Int           @default(0)
   bonusEligibleUntil       DateTime?
-  bonusTier                Int                  @default(0)
-  countryCode              String               @default("PH") @db.VarChar(2)
-  allowedCountries         String[]             @default([])
-  blockedCountries         String[]             @default([])
-  permanentOverrideBps     Int                  @default(0)
-  totalReferrals           Int                  @default(0)
-  defaultBankAccountNumber String?              @db.VarChar(40)
-  defaultBankName          String?              @db.VarChar(80)
-  defaultGcashNumber       String?              @db.VarChar(20)
+  bonusTier                Int           @default(0)
+  countryCode              String        @default("PH") @db.VarChar(2)
+  allowedCountries         String[]      @default([])
+  blockedCountries         String[]      @default([])
+  permanentOverrideBps     Int           @default(0)
+  totalReferrals           Int           @default(0)
+  defaultBankAccountNumber String?       @db.VarChar(40)
+  defaultBankName          String?       @db.VarChar(80)
+  defaultGcashNumber       String?       @db.VarChar(20)
   defaultPayoutMethod      PayoutMethod?
-  commissions              Commission[]
-  eventLogs                EventLog[]
-  commissionsFromInvites   OverrideCommission[] @relation("InviteeOverride")
-  overrideEarnings         OverrideCommission[] @relation("ReferrerOverride")
-  passwordResetTokens      PasswordResetToken[]
-  payouts                  Payout[]
-  payoutAccounts           PayoutAccount[]
-  payoutLogs               PayoutLog[]
-  payoutRequests           PayoutRequest[]
-  pinCredentials           PinCredential[]      @relation("UserPinCredentials")
-  referralBatches          ReferralBatch[]      @relation("UserReferralBatches")
-  referralGroupsCreated    ReferralGroup[]      @relation("UsersInGroupReferrer")
-  smartLinks               SmartLink[]          @relation("UserToSmartLink")
-  referralGroup            ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
-  referredBy               User?                @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals                User[]               @relation("UserReferrals")
-  verificationTokens       VerificationToken[]  @relation("UserToVerificationTokens")
+
+  commissions            Commission[]
+  eventLogs              EventLog[]
+  commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
+  overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
+  passwordResetTokens    PasswordResetToken[] @relation("UserToPasswordResetTokens")
+  payouts                Payout[]
+  payoutAccounts         PayoutAccount[]
+  payoutLogs             PayoutLog[]
+  payoutRequests         PayoutRequest[]
+  pinCredentials         PinCredential[]      @relation("UserPinCredentials")
+  referralBatches        ReferralBatch[]      @relation("UserReferralBatches")
+  referralGroupsCreated  ReferralGroup[]      @relation("UsersInGroupReferrer")
+  smartLinks             SmartLink[]          @relation("UserToSmartLink")
+  referralGroup          ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
+  referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals              User[]               @relation("UserReferrals")
+  verificationTokens     VerificationToken[]  @relation("UserToVerificationTokens")
+  policyCheckLogs        PolicyCheckLog[]     @relation("UserToPolicyCheckLogs")
 
   @@index([deletedAt])
 }
@@ -154,9 +156,11 @@ model Commission {
   status         CommissionStatus @default(UNVERIFIED)
   merchant       MerchantRule?    @relation(fields: [merchantRuleId], references: [id])
   user           User             @relation(fields: [userId], references: [id])
+  finalizedAt    DateTime?
 
   @@index([merchantRuleId])
   @@index([userId, status])
+  @@index([status, finalizedAt])
 }
 
 model MerchantRule {
@@ -216,21 +220,14 @@ model SmartLink {
 model ReferralGroup {
   id         String   @id @default(cuid())
   referrerId String
-
-  // Status / timing
-  active     Boolean  @default(true)        // on/off for the batch window
-  windowDays Int      @default(90)          // reference value; logic uses startedAt/expiresAt
-  startedAt  DateTime @default(now())       // when the window was activated
-  expiresAt  DateTime                       
-
-  // Audit
+  active     Boolean  @default(true)
+  windowDays Int      @default(90)
+  startedAt  DateTime @default(now())
+  expiresAt  DateTime
   createdAt  DateTime @default(now())
-
-  // Relations
   referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
-  users      User[]   @relation("UsersInGroup")  // many-to-many (implicit join table)
+  users      User[]   @relation("UsersInGroup")
 
-  // Helpful indexes
   @@index([referrerId, active])
   @@index([expiresAt])
 }
@@ -272,7 +269,7 @@ model PasswordResetToken {
   userId  String
   token   String   @unique
   expires DateTime
-  user    User     @relation(fields: [userId], references: [id])
+  user    User     @relation("UserToPasswordResetTokens", fields: [userId], references: [id])
 }
 
 model FloatLog {
@@ -395,8 +392,10 @@ model SystemAuditRun {
 }
 
 model SystemSetting {
-  key   String @id
-  value String
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model UserFlag {
@@ -415,6 +414,49 @@ model Waitlist {
   source    String?
   createdAt DateTime @default(now())
 }
+
+/**
+ * ---------- NEW: Policy Pre-Check logging ----------
+ */
+
+enum PolicySeverity {
+  NONE
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model PolicyCheckLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // who ran it
+  userId String?
+  user   User?   @relation("UserToPolicyCheckLogs", fields: [userId], references: [id])
+
+  // request context
+  ip        String?
+  userAgent String?
+
+  // input + engine info
+  inputChars Int
+  engine     String
+
+  // result summary
+  severity   PolicySeverity
+  categories String[]
+  findings   Json?
+  rawResult  Json?
+
+  // sample of the checked text
+  sampleText String? @db.Text
+
+  @@index([createdAt])
+}
+
+/**
+ * ---------- Enums ----------
+ */
 
 enum PayoutProvider {
   PAYPAL
