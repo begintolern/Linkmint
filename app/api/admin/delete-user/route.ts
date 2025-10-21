@@ -132,7 +132,7 @@ export async function POST(req: Request) {
       await del("ReferralGroup",       tx.referralGroup.deleteMany({ where: { referrerId: user.id } }));
 
       // Finally, delete user
-      await tx.user.delete({ where: { id: user.id } });
+      await del("User", tx.user.deleteMany({ where: { id: user.id } }));
     });
 
     return NextResponse.json({
