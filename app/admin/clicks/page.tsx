@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { prisma } from "@/lib/db";
+import TimeCell from "@/app/admin/components/TimeCell";
 
 // Final shape for UI
 type ClickRow = {
@@ -152,7 +153,8 @@ export default async function AdminClicksPage() {
             {clicks.map((c) => (
               <tr key={c.id} className="align-top">
                 <td className="px-4 py-3 whitespace-nowrap">
-                  {new Date(c.createdAt).toLocaleString()}
+                  <TimeCell iso={c.createdAt} />
+
                 </td>
                 <td className="px-4 py-3">
                   {c.user ? `${c.user.email ?? c.user.id}` : "—"}
