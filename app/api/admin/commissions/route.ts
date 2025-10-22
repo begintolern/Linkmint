@@ -1,4 +1,3 @@
-// app/api/admin/commissions/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
@@ -9,6 +8,7 @@ type UserBrief = {
   id: string;
   email: string | null;
   name: string | null;
+  referredById: string | null;
 };
 
 type CommissionRow = {
@@ -28,32 +28,24 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // Pagination
+    // pagination
     const limit = clampInt(parseInt(searchParams.get("limit") || "50", 10), 1, 200);
     const cursor = searchParams.get("cursor") || undefined;
 
-    // Filters (all optional)
-    const statusParam = pick(searchParams.get("status")); // may be "APPROVED" or "PENDING,APPROVED"
+    // filters
+    const status = pick(searchParams.get("status"));
     const type = pick(searchParams.get("type"));
+    const paid = pick(searchParams.get("paid"));
     const email = pick(searchParams.get("email"));
     const q = pick(searchParams.get("q"));
     const dateFrom = pick(searchParams.get("dateFrom"));
     const dateTo = pick(searchParams.get("dateTo"));
 
-    // Prisma where
     const where: any = {};
-
-    // ✅ handle comma-separated statuses
-    if (statusParam && statusParam !== "ALL") {
-      const parts = statusParam.split(",").map((s) => s.trim()).filter(Boolean);
-      if (parts.length > 1) {
-        where.status = { in: parts };
-      } else {
-        where.status = parts[0];
-      }
-    }
-
-    if (type && type !== "ALL") where.type = type;
+    if (status) where.status = status;
+    if (type) where.type = type;
+    if (paid === "paid") where.paidOut = true;
+    if (paid === "unpaid") where.paidOut = false;
 
     if (email) {
       where.user = { is: { email: { contains: email, mode: "insensitive" } } };
@@ -65,7 +57,7 @@ export async function GET(req: Request) {
       if (dateTo) where.createdAt.lte = new Date(dateTo);
     }
 
-    // Fetch +1 to probe next page
+    // fetch page (+1 to probe next page)
     const page = await prisma.commission.findMany({
       where,
       take: limit + 1,
@@ -73,11 +65,11 @@ export async function GET(req: Request) {
       ...(cursor && { cursor: { id: String(cursor) } }),
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, email: true, name: true, referredById: true } },
+        user: { select: { id: true, email: true, name: true, referredById: true } }, // ⬅️ include referrer link
       },
     });
 
-    // Optional post-filter (free-text)
+    // optional free-text post-filter
     const filtered: CommissionRow[] = q
       ? page.filter((it: any) => {
           const haystack = [
@@ -99,11 +91,12 @@ export async function GET(req: Request) {
     const data = hasNext ? filtered.slice(0, -1) : filtered;
     const nextCursor = hasNext ? String(filtered[filtered.length - 1].id) : null;
 
-    // Add share breakdowns
-    const mapped: any[] = data.map((it: any) => {
+    // add share breakdowns (referrer share only if referredById present)
+    const mapped = data.map((it: any) => {
       const amountNum = Number(it.amount);
       const hasReferrer = !!it.user?.referredById;
-      const userShare = round2(amountNum * 0.7);
+
+      const userShare = round2(amountNum * 0.70);
       const referrerShare = hasReferrer ? round2(amountNum * 0.05) : 0;
       const platformShare = round2(amountNum - userShare - referrerShare);
 
@@ -112,6 +105,7 @@ export async function GET(req: Request) {
             id: String(it.user.id),
             email: it.user.email ?? null,
             name: it.user.name ?? null,
+            referredById: it.user.referredById ?? null,
           }
         : null;
 
@@ -130,11 +124,6 @@ export async function GET(req: Request) {
         referrerShare,
         platformShare,
         hasReferrer,
-      } satisfies CommissionRow & {
-        userShare: number;
-        referrerShare: number;
-        platformShare: number;
-        hasReferrer: boolean;
       };
     });
 
@@ -147,7 +136,7 @@ export async function GET(req: Request) {
   } catch (e: any) {
     console.error("Error in /api/admin/commissions", e);
     return NextResponse.json(
-      { success: false, error: e.message ?? "Server error" },
+      { success: false, error: e?.message ?? "Server error" },
       { status: 500 }
     );
   }
@@ -158,12 +147,10 @@ function pick(v: string | null): string | undefined {
   const t = v.trim();
   return t ? t : undefined;
 }
-
 function clampInt(n: number, min: number, max: number) {
   if (Number.isNaN(n)) return min;
   return Math.min(max, Math.max(min, n));
 }
-
 function round2(n: number) {
   return Math.round(n * 100) / 100;
 }
