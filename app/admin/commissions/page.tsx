@@ -25,7 +25,6 @@ type Item = {
 type Filters = {
   status: string;
   type: string;
-  paid: string;
   q: string;
 };
 
@@ -38,7 +37,6 @@ export default function AdminCommissionsPage() {
   const [filters, setFilters] = useState<Filters>({
     status: "ALL",
     type: "ALL",
-    paid: "all",
     q: "",
   });
 
@@ -51,12 +49,17 @@ export default function AdminCommissionsPage() {
       url.searchParams.set("limit", "50");
       if (next) url.searchParams.set("cursor", next);
 
-      // Server-side filters
-      if (filters.status !== "ALL") url.searchParams.set("status", filters.status);
-      if (filters.type !== "ALL") url.searchParams.set("type", filters.type);
-      if (filters.paid !== "all") url.searchParams.set("paid", filters.paid);
+      // ✅ Simplified filter logic
+      if (filters.status !== "ALL") {
+        if (filters.status === "unpaid") {
+          url.searchParams.set("status", "PENDING,APPROVED");
+        } else {
+          url.searchParams.set("status", filters.status);
+        }
+      }
 
-      // Free-text search
+      if (filters.type !== "ALL") url.searchParams.set("type", filters.type);
+
       const q = filters.q.trim();
       if (q) {
         url.searchParams.set("q", q);
@@ -82,7 +85,7 @@ export default function AdminCommissionsPage() {
   useEffect(() => {
     load(null, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.status, filters.type, filters.paid, filters.q]);
+  }, [filters.status, filters.type, filters.q]);
 
   const totals = useMemo(() => {
     const t = items.reduce(
@@ -118,7 +121,7 @@ export default function AdminCommissionsPage() {
         </button>
       </header>
 
-      {/* Filters */}
+      {/* ✅ Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <select
           value={filters.status}
@@ -126,6 +129,7 @@ export default function AdminCommissionsPage() {
           className="rounded-md border px-2 py-1 text-sm"
         >
           <option value="ALL">All Status</option>
+          <option value="unpaid">Unpaid (Pending + Approved)</option>
           <option value="PENDING">Pending</option>
           <option value="APPROVED">Approved</option>
           <option value="PAID">Paid</option>
@@ -140,16 +144,6 @@ export default function AdminCommissionsPage() {
           <option value="referral_purchase">Referral Purchase</option>
           <option value="override_bonus">Override Bonus</option>
           <option value="payout">Payout</option>
-        </select>
-
-        <select
-          value={filters.paid}
-          onChange={(e) => setFilters({ ...filters, paid: e.target.value })}
-          className="rounded-md border px-2 py-1 text-sm"
-        >
-          <option value="all">Paid & Unpaid</option>
-          <option value="paid">Paid Only</option>
-          <option value="unpaid">Unpaid Only</option>
         </select>
 
         <input
@@ -191,6 +185,7 @@ export default function AdminCommissionsPage() {
         </div>
       </div>
 
+      {/* Table */}
       <div className="overflow-x-auto rounded-2xl ring-1 ring-zinc-200">
         <table className="min-w-full text-sm">
           <thead className="bg-zinc-50">

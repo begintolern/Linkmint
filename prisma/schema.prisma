@@ -41,6 +41,7 @@ model User {
   defaultBankAccountNumber String?       @db.VarChar(40)
   defaultBankName          String?       @db.VarChar(80)
   defaultGcashNumber       String?       @db.VarChar(20)
+  hasCompletedWalkthrough  Boolean       @default(false)
   defaultPayoutMethod      PayoutMethod?
 
   commissions            Commission[]
