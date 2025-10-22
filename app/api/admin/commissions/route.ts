@@ -14,7 +14,7 @@ type UserBrief = {
 type CommissionRow = {
   id: string;
   userId: string;
-  amount: number | string; // Prisma.Decimal | number | string
+  amount: number | string;
   status: string;
   paidOut: boolean;
   type: string;
@@ -28,28 +28,34 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // pagination
+    // Pagination
     const limit = clampInt(parseInt(searchParams.get("limit") || "50", 10), 1, 200);
     const cursor = searchParams.get("cursor") || undefined;
 
-    // filters (all optional)
-    const status = pick(searchParams.get("status")); // e.g. APPROVED
-    const type = pick(searchParams.get("type")); // e.g. referral_purchase
-    const paid = pick(searchParams.get("paid")); // "paid" | "unpaid"
-    const email = pick(searchParams.get("email")); // contains
-    const q = pick(searchParams.get("q")); // free text (applied post-fetch)
+    // Filters (all optional)
+    const statusParam = pick(searchParams.get("status")); // may be "APPROVED" or "PENDING,APPROVED"
+    const type = pick(searchParams.get("type"));
+    const email = pick(searchParams.get("email"));
+    const q = pick(searchParams.get("q"));
     const dateFrom = pick(searchParams.get("dateFrom"));
     const dateTo = pick(searchParams.get("dateTo"));
 
     // Prisma where
     const where: any = {};
-    if (status) where.status = status;
-    if (type) where.type = type;
-    if (paid === "paid") where.paidOut = true;
-    if (paid === "unpaid") where.paidOut = false;
+
+    // ✅ handle comma-separated statuses
+    if (statusParam && statusParam !== "ALL") {
+      const parts = statusParam.split(",").map((s) => s.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        where.status = { in: parts };
+      } else {
+        where.status = parts[0];
+      }
+    }
+
+    if (type && type !== "ALL") where.type = type;
 
     if (email) {
-      // relation filter (works on modern Prisma)
       where.user = { is: { email: { contains: email, mode: "insensitive" } } };
     }
 
@@ -59,7 +65,7 @@ export async function GET(req: Request) {
       if (dateTo) where.createdAt.lte = new Date(dateTo);
     }
 
-    // fetch page (+1 to probe next page)
+    // Fetch +1 to probe next page
     const page = await prisma.commission.findMany({
       where,
       take: limit + 1,
@@ -67,11 +73,11 @@ export async function GET(req: Request) {
       ...(cursor && { cursor: { id: String(cursor) } }),
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, email: true, name: true } },
+        user: { select: { id: true, email: true, name: true, referredById: true } },
       },
     });
 
-    // optional free-text post-filter on the fetched slice
+    // Optional post-filter (free-text)
     const filtered: CommissionRow[] = q
       ? page.filter((it: any) => {
           const haystack = [
@@ -93,11 +99,12 @@ export async function GET(req: Request) {
     const data = hasNext ? filtered.slice(0, -1) : filtered;
     const nextCursor = hasNext ? String(filtered[filtered.length - 1].id) : null;
 
-    // add share breakdowns (adjust if you have custom rules)
+    // Add share breakdowns
     const mapped: any[] = data.map((it: any) => {
       const amountNum = Number(it.amount);
+      const hasReferrer = !!it.user?.referredById;
       const userShare = round2(amountNum * 0.7);
-      const referrerShare = round2(amountNum * 0.05);
+      const referrerShare = hasReferrer ? round2(amountNum * 0.05) : 0;
       const platformShare = round2(amountNum - userShare - referrerShare);
 
       const userBrief: UserBrief | null = it.user
@@ -122,8 +129,7 @@ export async function GET(req: Request) {
         userShare,
         referrerShare,
         platformShare,
-        // If you track referrer separately, update this field accordingly
-        hasReferrer: userBrief !== null,
+        hasReferrer,
       } satisfies CommissionRow & {
         userShare: number;
         referrerShare: number;
