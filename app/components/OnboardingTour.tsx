@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Joyride, { CallBackProps, STATUS, Step } from "react-joyride";
 
 type Props = {
@@ -9,8 +10,10 @@ type Props = {
 };
 
 export default function OnboardingTour({ replay = false, onClose }: Props) {
+  const router = useRouter();
   const [run, setRun] = useState(false);
   const [ready, setReady] = useState(false);
+  const [ended, setEnded] = useState(false); // hard stop rendering after exit
 
   const steps: Step[] = useMemo(
     () => [
@@ -55,7 +58,7 @@ export default function OnboardingTour({ replay = false, onClose }: Props) {
     []
   );
 
-  // Helper: nuke any Joyride artifacts from the DOM
+  // Remove any Joyride DOM artifacts (belt-and-suspenders)
   const hardCleanup = useCallback(() => {
     try {
       const selectors = [
@@ -67,12 +70,10 @@ export default function OnboardingTour({ replay = false, onClose }: Props) {
       selectors.forEach((sel) => {
         document.querySelectorAll(sel).forEach((el) => el.remove());
       });
-      // also remove aria-hidden from body if set
       document.body.removeAttribute("aria-hidden");
     } catch {}
   }, []);
 
-  // Load walkthrough status (run on first-login unless already completed; always run if replay)
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -90,41 +91,49 @@ export default function OnboardingTour({ replay = false, onClose }: Props) {
       }
     })();
     return () => {
-      // hard DOM cleanup on unmount
       hardCleanup();
     };
   }, [replay, hardCleanup]);
 
-  // Finish/skip/close -> mark complete, stop run, force cleanup, unmount
+  // End the tour on ANY exit signal, unmount, and force return to dashboard
   const handleJoyride = useCallback(
     async (data: CallBackProps) => {
-      const ended =
+      const endedNow =
         data.status === STATUS.FINISHED ||
         data.status === STATUS.SKIPPED ||
         (data as any)?.action === "skip" ||
         (data as any)?.action === "close" ||
         (data as any)?.type === "tour:end";
 
-      if (ended) {
+      if (endedNow) {
         try {
           await fetch("/api/user/walkthrough/complete", { method: "POST" });
         } catch {}
+
+        // Stop Joyride & mark ended so this component renders nothing
         setRun(false);
+        setEnded(true);
 
-        // ensure overview is visible
-        try {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        } catch {}
-
-        // nuke any leftover Joyride elements, then unmount parent
+        // Cleanup overlay and make cards visible
         hardCleanup();
-        setTimeout(() => onClose?.(), 10);
+        try { window.scrollTo({ top: 0, behavior: "auto" }); } catch {}
+
+        // Tell parent to hide its tour state
+        try { onClose?.(); } catch {}
+
+        // Force navigation back to dashboard as a last resort
+        try { router.replace("/dashboard"); } catch {}
+        // Absolute fallback: hard reload to /dashboard
+        setTimeout(() => {
+          try { window.location.replace("/dashboard"); } catch {}
+        }, 50);
       }
     },
-    [onClose, hardCleanup]
+    [onClose, hardCleanup, router]
   );
 
-  if (!ready) return null;
+  // After end, render nothing (prevents any lingering overlay)
+  if (!ready || ended) return null;
 
   return (
     <Joyride
