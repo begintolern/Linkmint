@@ -5,7 +5,7 @@ import Joyride, { CallBackProps, STATUS, Step } from "react-joyride";
 
 type Props = {
   replay?: boolean;
-  onClose?: () => void; // ← allow parent to unmount when finished/skipped
+  onClose?: () => void; // parent unmount handler
 };
 
 export default function OnboardingTour({ replay = false, onClose }: Props) {
@@ -55,7 +55,24 @@ export default function OnboardingTour({ replay = false, onClose }: Props) {
     []
   );
 
-  // Load walkthrough status
+  // Helper: nuke any Joyride artifacts from the DOM
+  const hardCleanup = useCallback(() => {
+    try {
+      const selectors = [
+        ".react-joyride__overlay",
+        ".react-joyride__tooltip",
+        ".react-joyride__beacon",
+        "[data-test-id='react-joyride']",
+      ];
+      selectors.forEach((sel) => {
+        document.querySelectorAll(sel).forEach((el) => el.remove());
+      });
+      // also remove aria-hidden from body if set
+      document.body.removeAttribute("aria-hidden");
+    } catch {}
+  }, []);
+
+  // Load walkthrough status (run on first-login unless already completed; always run if replay)
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -68,37 +85,44 @@ export default function OnboardingTour({ replay = false, onClose }: Props) {
         setRun(replay ? true : !hasCompleted);
         setReady(true);
       } catch {
-        // If status fails (or column missing), allow replay
         setRun(!!replay);
         setReady(true);
       }
     })();
     return () => {
-      cancelled = true;
+      // hard DOM cleanup on unmount
+      hardCleanup();
     };
-  }, [replay]);
+  }, [replay, hardCleanup]);
 
-  // Finish/skip → mark complete, stop run, notify parent
- const handleJoyride = useCallback(async (data: CallBackProps) => {
-  const finishedOrSkipped =
-    data.status === STATUS.FINISHED ||
-    data.status === STATUS.SKIPPED ||
-    data.action === "skip" ||
-    data.action === "close" ||
-    data.type === "tour:end";
+  // Finish/skip/close -> mark complete, stop run, force cleanup, unmount
+  const handleJoyride = useCallback(
+    async (data: CallBackProps) => {
+      const ended =
+        data.status === STATUS.FINISHED ||
+        data.status === STATUS.SKIPPED ||
+        (data as any)?.action === "skip" ||
+        (data as any)?.action === "close" ||
+        (data as any)?.type === "tour:end";
 
-  if (finishedOrSkipped) {
-    try {
-      await fetch("/api/user/walkthrough/complete", { method: "POST" });
-    } catch {
-      // no-op
-    }
-    setRun(false);
-    onClose?.();
-    // optional: ensure viewport is back to top of overview
-    try { window.scrollTo({ top: 0 }); } catch {}
-  }
-}, [onClose]);
+      if (ended) {
+        try {
+          await fetch("/api/user/walkthrough/complete", { method: "POST" });
+        } catch {}
+        setRun(false);
+
+        // ensure overview is visible
+        try {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } catch {}
+
+        // nuke any leftover Joyride elements, then unmount parent
+        hardCleanup();
+        setTimeout(() => onClose?.(), 10);
+      }
+    },
+    [onClose, hardCleanup]
+  );
 
   if (!ready) return null;
 
