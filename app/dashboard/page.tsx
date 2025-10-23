@@ -1,234 +1,136 @@
-"use client";
-
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import OnboardingTour from "@/app/components/OnboardingTour";
-import WelcomeTourPrompt from "@/app/components/WelcomeTourPrompt";
-
-// Stop prerender & caching (prevents build-time DB calls)
+// app/dashboard/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
-export default function DashboardPage() {
-  return (
-    <Suspense fallback={null}>
-      <DashboardInner />
-    </Suspense>
-  );
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth/options";
+
+import { REGION } from "@/lib/config";
+import { getUsdToPhpRate } from "@/lib/fx";
+import { formatMoneyPHP, formatMoneyUSD } from "@/lib/currency";
+
+import DashboardPageHeader from "@/components/DashboardPageHeader";
+import HealthStatusCard from "@/components/HealthStatusCard";
+import DashboardCard from "@/components/DashboardCard";
+import RequestPayoutButton from "@/components/RequestPayoutButton";
+import TrendingSmartItem from "@/components/dashboard/TrendingSmartItem";
+import Link from "next/link";
+
+type AppUser = {
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
+async function getFinderRecommendations(baseUrl: string) {
+  try {
+    const res = await fetch(`${baseUrl}/api/finder/products?limit=3`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json.items) ? json.items.slice(0, 3) : [];
+  } catch {
+    return [];
+  }
 }
 
-function DashboardInner() {
-  const router = useRouter();
-  const params = useSearchParams();
-  const [user, setUser] = useState<any>(null);
-  const [showTour, setShowTour] = useState(false);
-  const [tourKey, setTourKey] = useState<number>(0);
+function resolveBaseUrl() {
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  if (process.env.RAILWAY_STATIC_URL) return `https://${process.env.RAILWAY_STATIC_URL}`;
+  return "http://localhost:3000";
+}
 
-  // 🔒 Global + URL kill-switch
-  const tourDisabled = useMemo(
-    () =>
-      process.env.NEXT_PUBLIC_TOUR_ENABLED === "false" ||
-      params?.get("notour") === "1",
-    [params]
-  );
+export default async function DashboardPage() {
+  const session = (await getServerSession(authOptions)) as Session | null;
+  if (!session) {
+    redirect("/api/auth/signin?callbackUrl=/dashboard");
+  }
 
-  // Fetch session client-side (no useSession to avoid Provider requirement)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/auth/session");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled) setUser(data?.user || null);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const user = (session?.user ?? {}) as AppUser;
+  const email: string = user.email ?? "";
+  const name: string = email ? email.split("@")[0] : user.name ?? "there";
+  const role: string = (user.role ?? "user").toLowerCase();
+  const userId: string = user.id ?? "";
 
-  const displayName = user?.name || user?.email || "";
+  const baseUrl = resolveBaseUrl();
+  const recommendations = await getFinderRecommendations(baseUrl);
 
-  const startTour = useCallback(() => {
-    if (tourDisabled) return;
-    setTourKey(Date.now());
-    setShowTour(true);
-  }, [tourDisabled]);
+  // FX for PH display (backend remains USD)
+  const usdToPhp = REGION === "PH" ? await getUsdToPhpRate() : 1;
 
-  const exitTour = useCallback(() => {
-    try {
-      localStorage.setItem("tourDismissed", "1");
-    } catch {}
-    setShowTour(false);
-    try {
-      window.scrollTo({ top: 0, behavior: "auto" });
-    } catch {}
-  }, []);
-
-  const go = useCallback(
-    (path: string) => {
-      try {
-        router.push(path);
-      } catch {
-        /* ignore */
-      }
-    },
-    [router]
-  );
+  // TODO: replace with real totals from your API
+  const totalUsd = 11.56;
+  const showUsd = role === "admin"; // only admin sees USD reference
+  const totalLabel =
+    REGION === "PH"
+      ? formatMoneyPHP(totalUsd, usdToPhp, showUsd)
+      : formatMoneyUSD(totalUsd);
 
   return (
-    <div className="p-6">
-      {/* CSS kill-switch: when tourDisabled, hide any Joyride artifacts safely */}
-      {tourDisabled && (
-        <style jsx global>{`
-          .react-joyride__overlay,
-          .react-joyride__tooltip,
-          .react-joyride__beacon,
-          [data-test-id="react-joyride"] {
-            display: none !important;
-            visibility: hidden !important;
-            pointer-events: none !important;
-          }
-          body[aria-hidden="true"] {
-            aria-hidden: false !important;
-          }
-        `}</style>
-      )}
-
-      {/* TOUR (only when enabled + active) */}
-      {showTour && !tourDisabled && (
-        <>
-          <button
-            onClick={exitTour}
-            className="fixed right-3 top-3 z-[10000] px-3 py-2 rounded-lg border bg-white/90 hover:bg-white shadow"
-            title="Exit tour and return to dashboard"
-          >
-            Exit tour
-          </button>
-
-          <OnboardingTour key={tourKey} replay onClose={exitTour} />
-        </>
-      )}
-
-      {/* Banner (only when tour enabled and not active) */}
-      {!showTour && !tourDisabled && <WelcomeTourPrompt />}
-
+    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">
-          Welcome{displayName ? `, ${displayName}` : ""}
-        </h1>
-        <div className="flex items-center gap-3">
-          {!tourDisabled && (
-            <button
-              onClick={startTour}
-              className="px-3 py-2 rounded-lg bg-gray-900 text-white hover:bg-black"
-            >
-              Take a quick tour
-            </button>
-          )}
-          <div id="tour-finish" />
-        </div>
+      <DashboardPageHeader title="Overview" subtitle={`Welcome back, ${name}`} />
+
+      {/* Tools Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+        <DashboardCard href="/dashboard/links" title="Smart Links" subtitle="Create and manage links" />
+        <DashboardCard href="/dashboard/referrals" title="Referrals" subtitle="Invite and track bonuses" badge="5% Bonus" />
+        <DashboardCard href="/dashboard/earnings" title="Earnings" subtitle="Commissions and status" />
+        <DashboardCard href="/dashboard/payouts" title="Payouts" subtitle="History and accounts" />
+        <DashboardCard href="/dashboard/opportunities" title="Opportunities" subtitle="AI-powered trending offers" />
+        <DashboardCard href="/dashboard/settings" title="Settings" subtitle="Manage your account" />
       </div>
 
-      {/* Overview cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Smart Link creation */}
-        <div
-          id="tour-create-link"
-          className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
-        >
-          <h2 className="text-lg font-semibold mb-2">Create Smart Link</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Generate affiliate links with built-in tracking and compliance.
-          </p>
-          <button
-            type="button"
-            onClick={() => go("/dashboard/create-link")}
-            className="relative z-50 pointer-events-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            Create Link
-          </button>
+      {/* Earnings Summary + Request Payout */}
+      <section className="mb-8 rounded-2xl border p-4 sm:p-5">
+        <h2 className="mb-3 text-base font-medium sm:text-lg">🪙 Earnings & Payout</h2>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs text-gray-600 sm:text-sm">Total Earnings</p>
+            <p className="text-xl font-semibold sm:text-2xl">{totalLabel}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              PH payouts via GCash or PayPal. Minimum ₱500. Bank or wallet fees may apply.
+            </p>
+          </div>
+          <RequestPayoutButton userId={userId} />
+        </div>
+      </section>
+
+      {/* 🛍️ Trending Products to Share */}
+      <section className="mb-8 rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-medium sm:text-lg">🛍️ Trending Products to Share</h2>
+          <Link href="/dashboard/finder" className="text-sm text-blue-600 hover:underline">
+            View More →
+          </Link>
         </div>
 
-        {/* Merchant Rules / AI Suggestions */}
-        <div
-          id="tour-merchant-rules"
-          className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
-        >
-          <h2 className="text-lg font-semibold mb-2">
-            Merchant Rules + AI Suggestions
-          </h2>
-          <p className="text-sm text-gray-600 mb-4">
-            See merchant policies and use AI to find trending offers.
-          </p>
-          <button
-            type="button"
-            onClick={() => go("/dashboard/merchants")}
-            className="relative z-50 pointer-events-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Explore Merchants
-          </button>
-        </div>
+        {recommendations.length === 0 ? (
+          <p className="text-sm text-gray-500">No trending products available right now.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {recommendations.map((item: any) => (
+              <TrendingSmartItem key={item.id} item={item} />
+            ))}
+          </div>
+        )}
+      </section>
 
-        {/* Referrals */}
-        <div
-          id="tour-referrals"
-          className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
-        >
-          <h2 className="text-lg font-semibold mb-2">Referrals</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Invite friends to earn 5% override bonuses for 90 days.
-          </p>
-          <button
-            type="button"
-            onClick={() => go("/dashboard/referrals")}
-            className="relative z-50 pointer-events-auto px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            Invite Friends
-          </button>
-        </div>
+      {/* System Health — ADMIN ONLY */}
+      {role === "admin" && (
+        <section className="mb-8">
+          <HealthStatusCard />
+        </section>
+      )}
 
-        {/* Trust Center (public page) */}
-        <div
-          id="tour-trust-center"
-          className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
-        >
-          <h2 className="text-lg font-semibold mb-2">Trust Center</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Learn about payout rules, verification, and how funds clear.
-          </p>
-          <button
-            type="button"
-            onClick={() => go("/trust-center")}
-            className="relative z-50 pointer-events-auto px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-          >
-            View Details
-          </button>
-        </div>
-
-        {/* Payouts */}
-        <div
-          id="tour-payouts"
-          className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
-        >
-          <h2 className="text-lg font-semibold mb-2">Payouts</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Track pending and completed payouts, view PayPal fee details.
-          </p>
-          <button
-            type="button"
-            onClick={() => go("/dashboard/payouts")}
-            className="relative z-50 pointer-events-auto px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-          >
-            View Payouts
-          </button>
-        </div>
-      </div>
+      <p className="mt-10 text-center text-xs text-gray-400">
+        Powered by Linkmint.co · © {new Date().getFullYear()} Golden Twin Ventures Inc.
+      </p>
     </div>
   );
 }
