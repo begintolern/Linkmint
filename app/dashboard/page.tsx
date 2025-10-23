@@ -1,11 +1,25 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import OnboardingTour from "@/app/components/OnboardingTour";
 import WelcomeTourPrompt from "@/app/components/WelcomeTourPrompt";
 
+// Disable prerendering & caching for this page so build never hits DB
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 export default function DashboardPage() {
+  // Wrap the hook-using inner UI in Suspense to satisfy Next.js
+  return (
+    <Suspense fallback={null}>
+      <DashboardInner />
+    </Suspense>
+  );
+}
+
+function DashboardInner() {
   const params = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [showTour, setShowTour] = useState(false);
@@ -31,13 +45,13 @@ export default function DashboardPage() {
     fetchUser();
   }, []);
 
-  function startTour() {
+  const startTour = useCallback(() => {
     if (tourDisabled) return;
     setTourKey(Date.now());
     setShowTour(true);
-  }
+  }, [tourDisabled]);
 
-  function exitTour() {
+  const exitTour = useCallback(() => {
     try {
       localStorage.setItem("tourDismissed", "1");
     } catch {}
@@ -45,7 +59,7 @@ export default function DashboardPage() {
     try {
       window.scrollTo({ top: 0, behavior: "auto" });
     } catch {}
-  }
+  }, []);
 
   return (
     <div className="p-6">
@@ -61,11 +75,7 @@ export default function DashboardPage() {
             Exit tour
           </button>
 
-          <OnboardingTour
-            key={tourKey}
-            replay
-            onClose={exitTour}
-          />
+          <OnboardingTour key={tourKey} replay onClose={exitTour} />
         </>
       )}
 
