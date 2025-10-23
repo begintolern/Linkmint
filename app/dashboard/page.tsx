@@ -2,7 +2,6 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import OnboardingTour from "@/app/components/OnboardingTour";
 import WelcomeTourPrompt from "@/app/components/WelcomeTourPrompt";
 
@@ -22,8 +21,7 @@ export default function DashboardPage() {
 function DashboardInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const { data: session } = useSession();
-  const [fallbackUser, setFallbackUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
   const [showTour, setShowTour] = useState(false);
   const [tourKey, setTourKey] = useState<number>(0);
 
@@ -35,29 +33,25 @@ function DashboardInner() {
     [params]
   );
 
-  // Fallback session fetch (in case SessionProvider isn't wired yet)
+  // Fetch session client-side (no useSession to avoid Provider requirement)
   useEffect(() => {
-    if (session?.user) return;
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/auth/session");
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled) setFallbackUser(data?.user || null);
-      } catch {}
+        if (!cancelled) setUser(data?.user || null);
+      } catch {
+        /* ignore */
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [session?.user]);
+  }, []);
 
-  const displayName =
-    session?.user?.name ||
-    session?.user?.email ||
-    fallbackUser?.name ||
-    fallbackUser?.email ||
-    "";
+  const displayName = user?.name || user?.email || "";
 
   const startTour = useCallback(() => {
     if (tourDisabled) return;
@@ -75,12 +69,16 @@ function DashboardInner() {
     } catch {}
   }, []);
 
-  // Single helper to navigate on click — adds z-index & pointer-events safety
-  const go = useCallback((path: string) => {
-    try {
-      router.push(path);
-    } catch {}
-  }, [router]);
+  const go = useCallback(
+    (path: string) => {
+      try {
+        router.push(path);
+      } catch {
+        /* ignore */
+      }
+    },
+    [router]
+  );
 
   return (
     <div className="p-6">
@@ -137,7 +135,7 @@ function DashboardInner() {
         </div>
       </div>
 
-      {/* Overview cards (buttons use router.push; high z-index & pointer-events) */}
+      {/* Overview cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Smart Link creation */}
         <div
@@ -152,7 +150,6 @@ function DashboardInner() {
             type="button"
             onClick={() => go("/dashboard/create-link")}
             className="relative z-50 pointer-events-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            role="button"
           >
             Create Link
           </button>
@@ -173,7 +170,6 @@ function DashboardInner() {
             type="button"
             onClick={() => go("/dashboard/merchants")}
             className="relative z-50 pointer-events-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            role="button"
           >
             Explore Merchants
           </button>
@@ -192,16 +188,15 @@ function DashboardInner() {
             type="button"
             onClick={() => go("/dashboard/referrals")}
             className="relative z-50 pointer-events-auto px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            role="button"
           >
             Invite Friends
           </button>
         </div>
 
-        {/* Trust Center (use public page; change to /dashboard/trust-center if you prefer) */}
+        {/* Trust Center (public page) */}
         <div
-            id="tour-trust-center"
-            className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
+          id="tour-trust-center"
+          className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
         >
           <h2 className="text-lg font-semibold mb-2">Trust Center</h2>
           <p className="text-sm text-gray-600 mb-4">
@@ -211,7 +206,6 @@ function DashboardInner() {
             type="button"
             onClick={() => go("/trust-center")}
             className="relative z-50 pointer-events-auto px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-            role="button"
           >
             View Details
           </button>
@@ -230,7 +224,6 @@ function DashboardInner() {
             type="button"
             onClick={() => go("/dashboard/payouts")}
             className="relative z-50 pointer-events-auto px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-            role="button"
           >
             View Payouts
           </button>
