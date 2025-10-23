@@ -2,104 +2,61 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+import { getServerSession } from "next-auth/next";
+import type { Session } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth/options";
+
 import Link from "next/link";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
-import { Suspense } from "react";
-import CreateSmartLinkForm from "./CreateSmartLinkForm";
-import PolicyCheckWidget from "@/components/PolicyCheckWidget"; // ⬅️ new import
 
-export default async function LinksPage() {
+type AppUser = {
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+};
+
+export default async function SmartLinksPage() {
+  const session = (await getServerSession(authOptions)) as Session | null;
+  if (!session) {
+    redirect("/api/auth/signin?callbackUrl=/dashboard/links");
+  }
+
+  const user = (session?.user ?? {}) as AppUser;
+  const name = user?.email ? user.email.split("@")[0] : user?.name ?? "there";
+
   return (
-    <main>
+    <main className="mx-auto max-w-6xl space-y-6 p-6">
       <DashboardPageHeader
         title="Smart Links"
-        subtitle="Find merchants and create payout-ready links."
+        subtitle={`Create and manage links · Welcome back, ${name}`}
       />
 
-      {/* Find Merchants */}
-      <section className="mb-8">
-        <div className="flex flex-wrap gap-2 mb-4">
-          {[
-            "Apparel",
-            "Shoes",
-            "Beauty",
-            "Accessories",
-            "Travel",
-            "Pets",
-            "Electronics",
-            "Software",
-          ].map((label) => (
-            <button
-              key={label}
-              type="button"
-              className="rounded-full border px-3 py-1 text-sm hover:bg-gray-50"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2 mb-4">
-          <input
-            type="text"
-            placeholder='Search items or brands… (use quotes for exact)'
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-          <input
-            type="text"
-            placeholder="Pick a category or type a brand/item."
-            className="w-full rounded-md border px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div className="rounded-md border p-4">
-          <Suspense
-            fallback={<p className="text-sm text-gray-600">Loading merchants…</p>}
-          >
-            <EmptyMerchants />
-          </Suspense>
-        </div>
-      </section>
-
-      {/* Create Smart Link */}
-      <section className="rounded-lg border p-4 space-y-6">
-        <h2 className="text-lg font-medium">Create Smart Link</h2>
-
-        {/* Client-side form that calls /api/smartlink */}
-        <CreateSmartLinkForm defaultSource="" />
-
-        {/* AI Policy Pre-Check */}
-        <div className="mt-6">
-          <h3 className="text-md font-semibold mb-2">⚖️ Policy Pre-Check</h3>
-          <PolicyCheckWidget />
-        </div>
-      </section>
-    </main>
-  );
-}
-
-function EmptyMerchants() {
-  return (
-    <div className="flex flex-col items-start gap-2">
-      <p className="text-sm text-gray-700 font-medium">No merchants yet.</p>
-      <p className="text-sm text-gray-600">
-        Connect or apply to affiliate networks to populate your merchant list. Once approved,
-        they’ll appear here for quick link creation.
-      </p>
-      <div className="mt-2 flex gap-2">
+      {/* Primary actions */}
+      <div className="flex flex-col gap-3 sm:flex-row">
         <Link
-          href="/admin/merchant-rules"
-          className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+          href="/dashboard/create-link"
+          className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
         >
-          Manage merchant rules
+          Create Smart Link
         </Link>
+
         <Link
-          href="/admin"
-          className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+          href="/dashboard/merchants"
+          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
         >
-          Go to Admin
+          Explore Merchants
         </Link>
       </div>
-    </div>
+
+      {/* (Optional) recent links placeholder – safe to keep empty for now */}
+      <section className="rounded-2xl border bg-white p-4 sm:p-5">
+        <h2 className="text-base font-medium sm:text-lg">Your recent links</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          Your last created links will appear here. Create one to get started.
+        </p>
+      </section>
+    </main>
   );
 }
