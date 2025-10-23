@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import OnboardingTour from "@/app/components/OnboardingTour";
 import WelcomeTourPrompt from "@/app/components/WelcomeTourPrompt";
 
@@ -24,24 +24,57 @@ export default function DashboardPage() {
     fetchUser();
   }, []);
 
+  const hardCleanup = useCallback(() => {
+    try {
+      const selectors = [
+        ".react-joyride__overlay",
+        ".react-joyride__tooltip",
+        ".react-joyride__beacon",
+        "[data-test-id='react-joyride']",
+      ];
+      selectors.forEach((sel) => {
+        document.querySelectorAll(sel).forEach((el) => el.remove());
+      });
+      document.body.removeAttribute("aria-hidden");
+    } catch {}
+  }, []);
+
   function startTour() {
     setTourKey(Date.now());
     setShowTour(true);
   }
 
+  function exitTour() {
+    try { localStorage.setItem("tourDismissed", "1"); } catch {}
+    setShowTour(false);
+    hardCleanup();
+    try { window.scrollTo({ top: 0, behavior: "auto" }); } catch {}
+  }
+
   return (
     <div className="p-6">
-      {/* Render tour ONLY when user clicks a button */}
+      {/* TOUR (mounted only when active) */}
       {showTour && (
-        <OnboardingTour
-          key={tourKey}
-          replay
-          onClose={() => setShowTour(false)} // unmount after finish/skip
-        />
+        <>
+          {/* Kill-switch visible only while the tour is active */}
+          <button
+            onClick={exitTour}
+            className="fixed right-3 top-3 z-[10000] px-3 py-2 rounded-lg border bg-white/90 hover:bg-white shadow"
+            title="Exit tour and return to dashboard"
+          >
+            Exit tour
+          </button>
+
+          <OnboardingTour
+            key={tourKey}
+            replay
+            onClose={exitTour} // unmount after finish/skip/close
+          />
+        </>
       )}
 
-      {/* 🔔 Optional first-login banner that politely offers the tour */}
-      <WelcomeTourPrompt />
+      {/* First-login banner (offers optional tour). It hides itself when a tour is running. */}
+      {!showTour && <WelcomeTourPrompt />}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -59,7 +92,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Sections with tour anchors */}
+      {/* Overview cards (tour anchors) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Smart Link creation */}
         <div
