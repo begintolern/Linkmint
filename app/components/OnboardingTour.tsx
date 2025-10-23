@@ -79,18 +79,26 @@ export default function OnboardingTour({ replay = false, onClose }: Props) {
   }, [replay]);
 
   // Finish/skip → mark complete, stop run, notify parent
-  const handleJoyride = useCallback(async (data: CallBackProps) => {
-    const finished = data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED;
-    if (finished) {
-      try {
-        await fetch("/api/user/walkthrough/complete", { method: "POST" });
-      } catch {
-        // no-op
-      }
-      setRun(false);
-      onClose?.(); // tell parent to unmount
+ const handleJoyride = useCallback(async (data: CallBackProps) => {
+  const finishedOrSkipped =
+    data.status === STATUS.FINISHED ||
+    data.status === STATUS.SKIPPED ||
+    data.action === "skip" ||
+    data.action === "close" ||
+    data.type === "tour:end";
+
+  if (finishedOrSkipped) {
+    try {
+      await fetch("/api/user/walkthrough/complete", { method: "POST" });
+    } catch {
+      // no-op
     }
-  }, [onClose]);
+    setRun(false);
+    onClose?.();
+    // optional: ensure viewport is back to top of overview
+    try { window.scrollTo({ top: 0 }); } catch {}
+  }
+}, [onClose]);
 
   if (!ready) return null;
 
