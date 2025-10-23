@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import OnboardingTour from "@/app/components/OnboardingTour";
 import WelcomeTourPrompt from "@/app/components/WelcomeTourPrompt";
 
 export default function DashboardPage() {
+  const params = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [showTour, setShowTour] = useState(false);
   const [tourKey, setTourKey] = useState<number>(0);
+
+  // 🔒 Kill-switch: disable tour with env or URL param
+  const tourDisabled =
+    process.env.NEXT_PUBLIC_TOUR_ENABLED === "false" ||
+    params?.get("notour") === "1";
 
   useEffect(() => {
     async function fetchUser() {
@@ -24,39 +31,28 @@ export default function DashboardPage() {
     fetchUser();
   }, []);
 
-  const hardCleanup = useCallback(() => {
-    try {
-      const selectors = [
-        ".react-joyride__overlay",
-        ".react-joyride__tooltip",
-        ".react-joyride__beacon",
-        "[data-test-id='react-joyride']",
-      ];
-      selectors.forEach((sel) => {
-        document.querySelectorAll(sel).forEach((el) => el.remove());
-      });
-      document.body.removeAttribute("aria-hidden");
-    } catch {}
-  }, []);
-
   function startTour() {
+    if (tourDisabled) return;
     setTourKey(Date.now());
     setShowTour(true);
   }
 
   function exitTour() {
-  try { localStorage.setItem("tourDismissed", "1"); } catch {}
-  setShowTour(false);
-  try { window.scrollTo({ top: 0, behavior: "auto" }); } catch {}
-}
-
+    try {
+      localStorage.setItem("tourDismissed", "1");
+    } catch {}
+    setShowTour(false);
+    try {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    } catch {}
+  }
 
   return (
     <div className="p-6">
-      {/* TOUR (mounted only when active) */}
-      {showTour && (
+      {/* TOUR (mounted only when active and not disabled) */}
+      {showTour && !tourDisabled && (
         <>
-          {/* Kill-switch visible only while the tour is active */}
+          {/* Fixed exit button */}
           <button
             onClick={exitTour}
             className="fixed right-3 top-3 z-[10000] px-3 py-2 rounded-lg border bg-white/90 hover:bg-white shadow"
@@ -68,13 +64,13 @@ export default function DashboardPage() {
           <OnboardingTour
             key={tourKey}
             replay
-            onClose={exitTour} // unmount after finish/skip/close
+            onClose={exitTour}
           />
         </>
       )}
 
-      {/* First-login banner (offers optional tour). It hides itself when a tour is running. */}
-      {!showTour && <WelcomeTourPrompt />}
+      {/* Welcome banner (off when tour disabled or running) */}
+      {!showTour && !tourDisabled && <WelcomeTourPrompt />}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -82,17 +78,19 @@ export default function DashboardPage() {
           Welcome{user?.email ? `, ${user.email}` : ""}
         </h1>
         <div className="flex items-center gap-3">
-          <button
-            onClick={startTour}
-            className="px-3 py-2 rounded-lg bg-gray-900 text-white hover:bg-black"
-          >
-            Take a quick tour
-          </button>
+          {!tourDisabled && (
+            <button
+              onClick={startTour}
+              className="px-3 py-2 rounded-lg bg-gray-900 text-white hover:bg-black"
+            >
+              Take a quick tour
+            </button>
+          )}
           <div id="tour-finish" />
         </div>
       </div>
 
-      {/* Overview cards (tour anchors) */}
+      {/* Overview cards (dashboard core) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Smart Link creation */}
         <div
