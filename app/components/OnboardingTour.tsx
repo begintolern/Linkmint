@@ -3,9 +3,12 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import Joyride, { CallBackProps, STATUS, Step } from "react-joyride";
 
-type Props = { replay?: boolean };
+type Props = {
+  replay?: boolean;
+  onClose?: () => void; // ← allow parent to unmount when finished/skipped
+};
 
-export default function OnboardingTour({ replay = false }: Props) {
+export default function OnboardingTour({ replay = false, onClose }: Props) {
   const [run, setRun] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -65,7 +68,7 @@ export default function OnboardingTour({ replay = false }: Props) {
         setRun(replay ? true : !hasCompleted);
         setReady(true);
       } catch {
-        // If status fails (or column missing), allow replay only
+        // If status fails (or column missing), allow replay
         setRun(!!replay);
         setReady(true);
       }
@@ -75,21 +78,19 @@ export default function OnboardingTour({ replay = false }: Props) {
     };
   }, [replay]);
 
-  // Mark complete when tour ends or is skipped
-const handleJoyride = useCallback(async (data: CallBackProps) => {
-  const finished =
-    data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED;
-
-  if (finished) {
-    try {
-      await fetch("/api/user/walkthrough/complete", { method: "POST" });
-    } catch {
-      // no-op
+  // Finish/skip → mark complete, stop run, notify parent
+  const handleJoyride = useCallback(async (data: CallBackProps) => {
+    const finished = data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED;
+    if (finished) {
+      try {
+        await fetch("/api/user/walkthrough/complete", { method: "POST" });
+      } catch {
+        // no-op
+      }
+      setRun(false);
+      onClose?.(); // tell parent to unmount
     }
-    setRun(false);
-  }
-}, []);
-
+  }, [onClose]);
 
   if (!ready) return null;
 
