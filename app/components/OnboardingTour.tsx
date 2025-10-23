@@ -76,17 +76,20 @@ export default function OnboardingTour({ replay = false }: Props) {
   }, [replay]);
 
   // Mark complete when tour ends or is skipped
-  const handleJoyride = useCallback(async (data: CallBackProps) => {
-    const finished = [STATUS.FINISHED, STATUS.SKIPPED].includes(data.status);
-    if (finished) {
-      try {
-        await fetch("/api/user/walkthrough/complete", { method: "POST" });
-      } catch {
-        // no-op
-      }
-      setRun(false);
+const handleJoyride = useCallback(async (data: CallBackProps) => {
+  const finished =
+    data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED;
+
+  if (finished) {
+    try {
+      await fetch("/api/user/walkthrough/complete", { method: "POST" });
+    } catch {
+      // no-op
     }
-  }, []);
+    setRun(false);
+  }
+}, []);
+
 
   if (!ready) return null;
 
