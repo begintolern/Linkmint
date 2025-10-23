@@ -1,17 +1,16 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import OnboardingTour from "@/app/components/OnboardingTour";
 import WelcomeTourPrompt from "@/app/components/WelcomeTourPrompt";
 
-// Disable prerendering & caching for this page so build never hits DB
+// Stop prerender & caching (prevents build-time DB calls)
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
 export default function DashboardPage() {
-  // Wrap the hook-using inner UI in Suspense to satisfy Next.js
   return (
     <Suspense fallback={null}>
       <DashboardInner />
@@ -25,24 +24,28 @@ function DashboardInner() {
   const [showTour, setShowTour] = useState(false);
   const [tourKey, setTourKey] = useState<number>(0);
 
-  // 🔒 Kill-switch: disable tour with env or URL param
-  const tourDisabled =
-    process.env.NEXT_PUBLIC_TOUR_ENABLED === "false" ||
-    params?.get("notour") === "1";
+  // 🔒 Global + URL kill-switch
+  const tourDisabled = useMemo(
+    () =>
+      process.env.NEXT_PUBLIC_TOUR_ENABLED === "false" ||
+      params?.get("notour") === "1",
+    [params]
+  );
 
+  // Fetch session (CSR only)
   useEffect(() => {
-    async function fetchUser() {
+    let cancelled = false;
+    (async () => {
       try {
         const res = await fetch("/api/auth/session");
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data?.user || null);
-        }
-      } catch (err) {
-        console.error("Failed to load user session", err);
-      }
-    }
-    fetchUser();
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setUser(data?.user || null);
+      } catch {}
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const startTour = useCallback(() => {
@@ -63,10 +66,26 @@ function DashboardInner() {
 
   return (
     <div className="p-6">
-      {/* TOUR (mounted only when active and not disabled) */}
+      {/* CSS kill-switch: when tourDisabled, hide any Joyride artifacts safely */}
+      {tourDisabled && (
+        <style jsx global>{`
+          .react-joyride__overlay,
+          .react-joyride__tooltip,
+          .react-joyride__beacon,
+          [data-test-id="react-joyride"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+          }
+          body[aria-hidden="true"] {
+            aria-hidden: false !important;
+          }
+        `}</style>
+      )}
+
+      {/* TOUR (only when enabled + active) */}
       {showTour && !tourDisabled && (
         <>
-          {/* Fixed exit button */}
           <button
             onClick={exitTour}
             className="fixed right-3 top-3 z-[10000] px-3 py-2 rounded-lg border bg-white/90 hover:bg-white shadow"
@@ -79,7 +98,7 @@ function DashboardInner() {
         </>
       )}
 
-      {/* Welcome banner (off when tour disabled or running) */}
+      {/* Banner (only when tour enabled and not active) */}
       {!showTour && !tourDisabled && <WelcomeTourPrompt />}
 
       {/* Header */}
@@ -100,9 +119,8 @@ function DashboardInner() {
         </div>
       </div>
 
-      {/* Overview cards (dashboard core) */}
+      {/* Overview cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Smart Link creation */}
         <div
           id="tour-create-link"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -116,7 +134,6 @@ function DashboardInner() {
           </button>
         </div>
 
-        {/* Merchant Rules / AI Suggestions */}
         <div
           id="tour-merchant-rules"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -132,7 +149,6 @@ function DashboardInner() {
           </button>
         </div>
 
-        {/* Referrals */}
         <div
           id="tour-referrals"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -146,7 +162,6 @@ function DashboardInner() {
           </button>
         </div>
 
-        {/* Trust Center */}
         <div
           id="tour-trust-center"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -160,7 +175,6 @@ function DashboardInner() {
           </button>
         </div>
 
-        {/* Payouts */}
         <div
           id="tour-payouts"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
