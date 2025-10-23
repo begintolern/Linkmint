@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import OnboardingTour from "@/app/components/OnboardingTour";
 import WelcomeTourPrompt from "@/app/components/WelcomeTourPrompt";
 
@@ -19,8 +20,10 @@ export default function DashboardPage() {
 }
 
 function DashboardInner() {
+  const router = useRouter();
   const params = useSearchParams();
-  const [user, setUser] = useState<any>(null);
+  const { data: session } = useSession();
+  const [fallbackUser, setFallbackUser] = useState<any>(null);
   const [showTour, setShowTour] = useState(false);
   const [tourKey, setTourKey] = useState<number>(0);
 
@@ -32,21 +35,29 @@ function DashboardInner() {
     [params]
   );
 
-  // Fetch session (CSR only)
+  // Fallback session fetch (in case SessionProvider isn't wired yet)
   useEffect(() => {
+    if (session?.user) return;
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/auth/session");
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled) setUser(data?.user || null);
+        if (!cancelled) setFallbackUser(data?.user || null);
       } catch {}
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [session?.user]);
+
+  const displayName =
+    session?.user?.name ||
+    session?.user?.email ||
+    fallbackUser?.name ||
+    fallbackUser?.email ||
+    "";
 
   const startTour = useCallback(() => {
     if (tourDisabled) return;
@@ -63,6 +74,13 @@ function DashboardInner() {
       window.scrollTo({ top: 0, behavior: "auto" });
     } catch {}
   }, []);
+
+  // Single helper to navigate on click — adds z-index & pointer-events safety
+  const go = useCallback((path: string) => {
+    try {
+      router.push(path);
+    } catch {}
+  }, [router]);
 
   return (
     <div className="p-6">
@@ -104,7 +122,7 @@ function DashboardInner() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">
-          Welcome{user?.email ? `, ${user.email}` : ""}
+          Welcome{displayName ? `, ${displayName}` : ""}
         </h1>
         <div className="flex items-center gap-3">
           {!tourDisabled && (
@@ -119,8 +137,9 @@ function DashboardInner() {
         </div>
       </div>
 
-      {/* Overview cards */}
+      {/* Overview cards (buttons use router.push; high z-index & pointer-events) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Smart Link creation */}
         <div
           id="tour-create-link"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -129,11 +148,17 @@ function DashboardInner() {
           <p className="text-sm text-gray-600 mb-4">
             Generate affiliate links with built-in tracking and compliance.
           </p>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+          <button
+            type="button"
+            onClick={() => go("/dashboard/create-link")}
+            className="relative z-50 pointer-events-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            role="button"
+          >
             Create Link
           </button>
         </div>
 
+        {/* Merchant Rules / AI Suggestions */}
         <div
           id="tour-merchant-rules"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -144,11 +169,17 @@ function DashboardInner() {
           <p className="text-sm text-gray-600 mb-4">
             See merchant policies and use AI to find trending offers.
           </p>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            type="button"
+            onClick={() => go("/dashboard/merchants")}
+            className="relative z-50 pointer-events-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            role="button"
+          >
             Explore Merchants
           </button>
         </div>
 
+        {/* Referrals */}
         <div
           id="tour-referrals"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -157,24 +188,36 @@ function DashboardInner() {
           <p className="text-sm text-gray-600 mb-4">
             Invite friends to earn 5% override bonuses for 90 days.
           </p>
-          <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+          <button
+            type="button"
+            onClick={() => go("/dashboard/referrals")}
+            className="relative z-50 pointer-events-auto px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            role="button"
+          >
             Invite Friends
           </button>
         </div>
 
+        {/* Trust Center (use public page; change to /dashboard/trust-center if you prefer) */}
         <div
-          id="tour-trust-center"
-          className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
+            id="tour-trust-center"
+            className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
         >
           <h2 className="text-lg font-semibold mb-2">Trust Center</h2>
           <p className="text-sm text-gray-600 mb-4">
             Learn about payout rules, verification, and how funds clear.
           </p>
-          <button className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
+          <button
+            type="button"
+            onClick={() => go("/trust-center")}
+            className="relative z-50 pointer-events-auto px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+            role="button"
+          >
             View Details
           </button>
         </div>
 
+        {/* Payouts */}
         <div
           id="tour-payouts"
           className="border rounded-2xl p-4 shadow-sm hover:shadow-md transition"
@@ -183,7 +226,12 @@ function DashboardInner() {
           <p className="text-sm text-gray-600 mb-4">
             Track pending and completed payouts, view PayPal fee details.
           </p>
-          <button className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+          <button
+            type="button"
+            onClick={() => go("/dashboard/payouts")}
+            className="relative z-50 pointer-events-auto px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+            role="button"
+          >
             View Payouts
           </button>
         </div>
