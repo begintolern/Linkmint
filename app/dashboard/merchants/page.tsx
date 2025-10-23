@@ -4,10 +4,12 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import React from "react";
+import Link from "next/link";
 import { headers, cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import AdminDeleteMerchantButton from "@/components/AdminDeleteMerchantButton";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
+import AISuggestionsClient from "./AISuggestionsClient";
 
 type MerchantDTO = {
   id: string;
@@ -131,6 +133,16 @@ export default async function MerchantsPage() {
   if (!data?.ok) {
     return (
       <div className="p-6">
+        {/* Back link */}
+        <div className="mb-3">
+          <Link
+            href="/dashboard/links"
+            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs text-gray-800 hover:bg-gray-50"
+          >
+            ← Back to Smart Links
+          </Link>
+        </div>
+
         <h1 className="text-2xl font-semibold mb-2">Merchants</h1>
         <p className="text-sm text-red-600">
           Failed to load merchant rules{data?.error ? ` — ${data.error}` : ""}.
@@ -144,6 +156,16 @@ export default async function MerchantsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Back link */}
+      <div>
+        <Link
+          href="/dashboard/links"
+          className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs text-gray-800 hover:bg-gray-50"
+        >
+          ← Back to Smart Links
+        </Link>
+      </div>
+
       <DashboardPageHeader
         title="Merchants"
         subtitle={admin ? "Admin view · All regions" : `Your market: ${market} · Region-filtered`}
@@ -153,6 +175,9 @@ export default async function MerchantsPage() {
           </span>
         }
       />
+
+      {/* ✨ AI Suggestions (beta) */}
+      <AISuggestionsClient />
 
       <section className="rounded-xl border bg-white">
         <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
