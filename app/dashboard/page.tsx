@@ -45,11 +45,11 @@ export default function DashboardPage() {
   }
 
   function exitTour() {
-    try { localStorage.setItem("tourDismissed", "1"); } catch {}
-    setShowTour(false);
-    hardCleanup();
-    try { window.scrollTo({ top: 0, behavior: "auto" }); } catch {}
-  }
+  try { localStorage.setItem("tourDismissed", "1"); } catch {}
+  setShowTour(false);
+  try { window.scrollTo({ top: 0, behavior: "auto" }); } catch {}
+}
+
 
   return (
     <div className="p-6">
