@@ -25,7 +25,6 @@ export default function DashboardPage() {
   }, []);
 
   function startTour() {
-    // Remount the tour each time so it always starts at step 1
     setTourKey(Date.now());
     setShowTour(true);
   }
@@ -33,7 +32,13 @@ export default function DashboardPage() {
   return (
     <div className="p-6">
       {/* Render tour ONLY when user clicks a button */}
-      {showTour && <OnboardingTour key={tourKey} replay />}
+      {showTour && (
+        <OnboardingTour
+          key={tourKey}
+          replay
+          onClose={() => setShowTour(false)} // unmount after finish/skip
+        />
+      )}
 
       {/* 🔔 Optional first-login banner that politely offers the tour */}
       <WelcomeTourPrompt />
