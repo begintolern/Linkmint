@@ -5,8 +5,22 @@ export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
 import Link from "next/link";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function CreateLinkPage() {
+  // ✅ useSearchParams() always returns ReadonlyURLSearchParams
+  const searchParams = useSearchParams();
+  const initialUrl = useMemo(() => {
+    return searchParams?.get("url") || "";
+  }, [searchParams]);
+
+  const [url, setUrl] = useState<string>(initialUrl);
+
+  useEffect(() => {
+    setUrl(initialUrl);
+  }, [initialUrl]);
+
   return (
     <div className="p-6 space-y-6">
       {/* Back to Smart Links */}
@@ -26,12 +40,13 @@ export default function CreateLinkPage() {
         </p>
       </div>
 
-      {/* Placeholder form (can be wired up later) */}
       <div className="max-w-xl border rounded-2xl p-4 shadow-sm bg-white">
         <label className="block text-sm font-medium mb-1">Product URL</label>
         <input
           type="url"
           placeholder="https://example.com/product/123"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
           className="w-full rounded-lg border px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-green-500"
         />
 
