@@ -31,14 +31,6 @@ export default async function SmartLinksPage() {
       <DashboardPageHeader
         title="Smart Links"
         subtitle={`Create and manage links · Welcome back, ${name}`}
-        rightSlot={
-          <Link
-            href="/dashboard/merchants"
-            className="inline-flex items-center rounded-lg border px-3 py-2 text-sm text-gray-800 hover:bg-gray-50"
-          >
-            Explore Merchants
-          </Link>
-        }
       />
 
       {/* Primary actions */}
@@ -48,6 +40,13 @@ export default async function SmartLinksPage() {
           className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
         >
           Create Smart Link
+        </Link>
+
+        <Link
+          href="/dashboard/merchants"
+          className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+        >
+          Explore Merchants
         </Link>
       </div>
 
