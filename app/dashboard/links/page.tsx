@@ -1,4 +1,3 @@
-// app/dashboard/links/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -6,7 +5,6 @@ import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth/options";
-
 import Link from "next/link";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
 
@@ -19,9 +17,7 @@ type AppUser = {
 
 export default async function SmartLinksPage() {
   const session = (await getServerSession(authOptions)) as Session | null;
-  if (!session) {
-    redirect("/api/auth/signin?callbackUrl=/dashboard/links");
-  }
+  if (!session) redirect("/api/auth/signin?callbackUrl=/dashboard/links");
 
   const user = (session?.user ?? {}) as AppUser;
   const name = user?.email ? user.email.split("@")[0] : user?.name ?? "there";
@@ -34,7 +30,7 @@ export default async function SmartLinksPage() {
       />
 
       {/* Primary actions */}
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row flex-wrap">
         <Link
           href="/dashboard/create-link"
           className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
@@ -48,9 +44,16 @@ export default async function SmartLinksPage() {
         >
           Explore Merchants
         </Link>
+
+        <Link
+          href="/dashboard/merchants/ai"
+          className="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+        >
+          AI Suggestions (beta)
+        </Link>
       </div>
 
-      {/* (Optional) recent links placeholder – safe to keep empty for now */}
+      {/* Recent links placeholder */}
       <section className="rounded-2xl border bg-white p-4 sm:p-5">
         <h2 className="text-base font-medium sm:text-lg">Your recent links</h2>
         <p className="mt-2 text-sm text-gray-600">
