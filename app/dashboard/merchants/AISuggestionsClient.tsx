@@ -20,7 +20,7 @@ export default function AISuggestionsClient() {
     let cancelled = false;
     (async () => {
       try {
-        // Using your existing finder endpoint so it always works
+        // Uses existing finder endpoint so this works with today’s backend
         const res = await fetch("/api/finder/products?limit=6", { cache: "no-store" });
         const json = await res.json();
         if (!cancelled) {
@@ -37,7 +37,7 @@ export default function AISuggestionsClient() {
 
   return (
     <section className="rounded-2xl border bg-white p-4 sm:p-5 shadow-sm">
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-medium sm:text-lg">✨ AI Suggestions (beta)</h2>
         <span className="rounded-full border px-2 py-0.5 text-[11px] text-gray-700">Preview</span>
       </div>
@@ -53,13 +53,17 @@ export default function AISuggestionsClient() {
               key={it.id}
               href={it.url || "#"}
               className="group rounded-xl border p-3 hover:shadow-sm transition"
-              target="_blank" rel="noreferrer"
+              target="_blank"
+              rel="noreferrer"
             >
               <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-50 mb-3">
                 {it.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={it.image} alt={it.title || it.name || "item"}
-                       className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform" />
+                  <img
+                    src={it.image}
+                    alt={it.title || it.name || "item"}
+                    className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform"
+                  />
                 ) : null}
               </div>
               <div className="text-sm font-medium line-clamp-2">
@@ -76,7 +80,7 @@ export default function AISuggestionsClient() {
       )}
 
       <p className="mt-3 text-[11px] text-gray-500">
-        This beta uses heuristic signals for now. We’ll switch to the full AI engine later.
+        This beta uses heuristic signals for now; we can swap in the full AI engine later.
       </p>
     </section>
   );
