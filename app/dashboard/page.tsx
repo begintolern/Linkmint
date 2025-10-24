@@ -13,9 +13,10 @@ import { formatMoneyPHP, formatMoneyUSD } from "@/lib/currency";
 
 import DashboardPageHeader from "@/components/DashboardPageHeader";
 import HealthStatusCard from "@/components/HealthStatusCard";
-import DashboardCard from "@/components/DashboardCard";
+// import DashboardCard from "@/components/DashboardCard"; // ❌ not needed now
 import RequestPayoutButton from "@/components/RequestPayoutButton";
 import TrendingSmartItem from "@/components/dashboard/TrendingSmartItem";
+import ColoredTile from "@/app/components/ColoredTile"; // ✅ new colored tiles
 import Link from "next/link";
 
 type AppUser = {
@@ -39,7 +40,7 @@ async function getFinderRecommendations(baseUrl: string) {
 }
 
 function resolveBaseUrl() {
-  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL;
+  if (process.env.NEXT_PUBLIC_BASE_URL) return process.env.NEXT_PUBLIC_BASE_URL as string;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   if (process.env.RAILWAY_STATIC_URL) return `https://${process.env.RAILWAY_STATIC_URL}`;
   return "http://localhost:3000";
@@ -72,22 +73,72 @@ export default async function DashboardPage() {
       : formatMoneyUSD(totalUsd);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8">
+    <div className="mx-auto max-w-6xl space-y-6 sm:space-y-8 p-6">
       {/* Header */}
       <DashboardPageHeader title="Overview" subtitle={`Welcome back, ${name}`} />
 
-      {/* Tools Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-        <DashboardCard href="/dashboard/links" title="Smart Links" subtitle="Create and manage links" />
-        <DashboardCard href="/dashboard/referrals" title="Referrals" subtitle="Invite and track bonuses" badge="5% Bonus" />
-        <DashboardCard href="/dashboard/earnings" title="Earnings" subtitle="Commissions and status" />
-        <DashboardCard href="/dashboard/payouts" title="Payouts" subtitle="History and accounts" />
-        <DashboardCard href="/dashboard/opportunities" title="Opportunities" subtitle="AI-powered trending offers" />
-        <DashboardCard href="/dashboard/settings" title="Settings" subtitle="Manage your account" />
+      {/* Colored overview tiles */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ColoredTile
+          href="/dashboard/create-link"
+          title="Create Smart Link"
+          subtitle="Generate a tracked, compliant link"
+          emoji="🔗"
+          tone="emerald"
+        />
+        <ColoredTile
+          href="/dashboard/links"
+          title="Smart Links"
+          subtitle="Manage your links"
+          emoji="🧰"
+          tone="indigo"
+        />
+        <ColoredTile
+          href="/dashboard/merchants"
+          title="Explore Merchants"
+          subtitle="Policies, payouts, rules"
+          emoji="🏬"
+          tone="blue"
+        />
+        <ColoredTile
+          href="/dashboard/merchants/ai"
+          title="AI Suggestions (beta)"
+          subtitle="Heuristic trending offers"
+          emoji="✨"
+          tone="purple"
+        />
+        <ColoredTile
+          href="/dashboard/earnings"
+          title="Earnings"
+          subtitle="Commissions & status"
+          emoji="📈"
+          tone="yellow"
+        />
+        <ColoredTile
+          href="/dashboard/payouts"
+          title="Payouts"
+          subtitle="History & accounts"
+          emoji="💸"
+          tone="rose"
+        />
+        <ColoredTile
+          href="/dashboard/referrals"
+          title="Referrals"
+          subtitle="Invite friends · 5% bonus"
+          emoji="🎁"
+          tone="green"
+        />
+        <ColoredTile
+          href="/dashboard/settings"
+          title="Settings"
+          subtitle="Manage your account"
+          emoji="⚙️"
+          tone="emerald"
+        />
       </div>
 
       {/* Earnings Summary + Request Payout */}
-      <section className="mb-8 rounded-2xl border p-4 sm:p-5">
+      <section className="mb-8 rounded-2xl border p-4 sm:p-5 bg-white">
         <h2 className="mb-3 text-base font-medium sm:text-lg">🪙 Earnings & Payout</h2>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
