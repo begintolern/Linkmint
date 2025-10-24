@@ -1,60 +1,45 @@
-// app/components/ColoredTile.tsx
 "use client";
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 
-type Props = {
+interface Props {
   href: string;
   title: string;
-  subtitle?: string;
-  emoji?: string;
-  tone?: "blue" | "green" | "purple" | "yellow" | "rose" | "indigo" | "emerald";
+  subtitle: string;
+  tone?: "emerald" | "blue" | "purple" | "yellow" | "rose" | "indigo" | "green";
+  icon?: LucideIcon;
+}
+
+const toneMap: Record<string, string> = {
+  emerald: "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700",
+  blue: "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700",
+  purple: "bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700",
+  yellow: "bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700",
+  rose: "bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700",
+  indigo: "bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700",
+  green: "bg-green-50 hover:bg-green-100 border-green-200 text-green-700",
 };
 
-const toneMap: Record<NonNullable<Props["tone"]>, string> = {
-  blue: "bg-blue-50 border-blue-200 hover:bg-blue-100",
-  green: "bg-green-50 border-green-200 hover:bg-green-100",
-  purple: "bg-purple-50 border-purple-200 hover:bg-purple-100",
-  yellow: "bg-yellow-50 border-yellow-200 hover:bg-yellow-100",
-  rose: "bg-rose-50 border-rose-200 hover:bg-rose-100",
-  indigo: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100",
-  emerald: "bg-emerald-50 border-emerald-200 hover:bg-emerald-100",
-};
-
-export default function ColoredTile({
-  href,
-  title,
-  subtitle,
-  emoji,
-  tone = "emerald",
-}: Props) {
-  const toneClasses = toneMap[tone] ?? toneMap.emerald;
+export default function ColoredTile({ href, title, subtitle, tone = "blue", icon: Icon }: Props) {
+  const toneClass = toneMap[tone] ?? toneMap.blue;
 
   return (
     <motion.div
-      whileHover={{ scale: 1.03, rotateZ: 0.5 }}
+      whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
       <Link
         href={href}
-        className={cn(
-          "block rounded-2xl border p-4 shadow-sm transition",
-          "focus:outline-none focus:ring-2 focus:ring-black/10",
-          toneClasses
-        )}
+        className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm transition-all ${toneClass}`}
       >
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-sm font-semibold">{title}</div>
-            {subtitle && (
-              <div className="mt-1 text-xs text-gray-700">{subtitle}</div>
-            )}
-          </div>
-          {emoji && <div className="text-xl">{emoji}</div>}
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold">{title}</h3>
+          {Icon && <Icon className="h-5 w-5 opacity-80" />}
         </div>
+        <p className="mt-1 text-sm opacity-80">{subtitle}</p>
       </Link>
     </motion.div>
   );
