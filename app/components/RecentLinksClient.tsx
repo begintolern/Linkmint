@@ -10,10 +10,27 @@ type RecentLink = {
   createdAt: string;
 };
 
+/** ✅ Helper used by CreateLinkPage to save a new link */
+export function addRecentLink(url: string) {
+  if (!url) return;
+  const newLink = {
+    id: Math.random().toString(36).substring(2, 9),
+    url,
+    createdAt: new Date().toISOString(),
+  };
+  try {
+    const stored = localStorage.getItem("recentLinks");
+    const parsed = stored ? JSON.parse(stored) : [];
+    const updated = [newLink, ...parsed].slice(0, 10);
+    localStorage.setItem("recentLinks", JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+}
+
 export default function RecentLinksClient() {
   const [links, setLinks] = useState<RecentLink[]>([]);
 
-  // Load from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem("recentLinks");
@@ -51,7 +68,10 @@ export default function RecentLinksClient() {
 
       <ul className="divide-y text-sm">
         {links.map((link) => (
-          <li key={link.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <li
+            key={link.id}
+            className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between"
+          >
             <div className="truncate">
               <a
                 href={link.url}
