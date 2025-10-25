@@ -10,10 +10,10 @@ type Lang = "en" | "tl";
 
 const ROUTES = {
   home: "/",
-  signup: "/signup", // 👈 added this route alias
+  signup: "/signup",
   dashboard: "/dashboard",
   trustCenterEn: "/trust-center",
-  tutorial: "/tutorial",
+  tutorial: "/tutorial", // kept in header + footer
 } as const;
 
 const ASSETS = {
@@ -22,78 +22,55 @@ const ASSETS = {
 
 export default function LandingPage() {
   const [lang, setLang] = useState<Lang>("en");
-  const [showReferral, setShowReferral] = useState(false);
 
   const t = useMemo(() => {
     if (lang === "tl") {
+      // Earnings-first Tagalog copy (tutorial lives on /tutorial)
       return {
         nav_dashboard: "Dashboard",
         nav_trust: "Trust Center",
         nav_tutorial: "Paano Kumita",
-        hero_title: "Gawing kita ang simpleng pag-share ng mga link.",
+        hero_title: "Kumita mula sa mga link na sineshare mo.",
         hero_sub:
-          "linkmint.co helps you earn micro-commissions by sharing smart links — transparent rules, real payouts.",
-        cta_primary: "Sumali o Mag-login",
-        cta_secondary: "Buksan ang Dashboard",
-        how_title: "Paano ito gumagana",
-        how_1_t: "1) Gumawa ng Smart Link",
-        how_1_d:
-          "Pumili ng merchant, auto-format ng link, at i-check ang policy bago mo i-share.",
-        how_2_t: "2) I-share at Mag-earn",
-        how_2_d:
-          "Kapag may bumili mula sa link mo, may commission ka — malinaw ang status at timing.",
-        how_3_t: "3) Payout na Klaro",
-        how_3_d:
-          "Nagbabayad lamang kapag na-receive ng linkmint.co ang funds mula sa affiliate partner.",
-        referral_title: "Referral Bonus Rules",
+          "Kapag may bumili gamit ang link mo, may commission ka. Lahat transparent — statuses, approvals, at payouts.",
+        cta_primary: "Simulan ang kita",
+        cta_secondary: "Tingnan ang Trust Center",
+        referral_title: "Palakasin ang kita sa Referrals",
         referral_points: [
-          "Mag-imbita ng mga kaibigan para kumita pa: Tuwing 3 invite, may 5% bonus ka sa kanilang approved earnings sa loob ng 90 araw.",
-          "Awtomatikong magsisimula ang 90-araw na timer kapag aktibo at kumikita na ang iyong tatlong naimbitahan.",
-          "Pagkatapos ng 90 araw, matatapos ang bonus — mag-imbita ulit ng 3 para magsimula ulit.",
-          "Tanging totoong users at valid na earnings lang ang bibilangin para sa bonuses.",
+          "Tuwing 3 invites, may 5% bonus ka sa approved earnings nila sa loob ng 90 araw.",
+          "Nagsisimula ang 90-araw kapag aktibo at kumikita na ang tatlo mong naimbitahan.",
+          "Matatapos ang bonus sa 90 araw — mag-imbita ulit ng 3 para mag-restart.",
+          "Totoong users at legit na earnings lang ang bibilangin.",
         ],
         video_caption: "Preview: Phone-size view (9:16)",
-        trust_line:
-          "Kumpleto ang paliwanag tungkol sa payout timing at rules sa Trust Center.",
+        trust_line: "Trusted payouts, transparent earnings.",
         footer_left: "© " + new Date().getFullYear() + " linkmint.co",
         footer_right: "Built for ethical micro-sales",
-        referral_button_show: "Tingnan ang Referral Bonus Rules",
-        referral_button_hide: "Itago ang Referral Bonus Rules",
+        footer_tutorial: "How it Works",
       };
     }
+    // EN — earnings-first (tutorial lives on /tutorial)
     return {
       nav_dashboard: "Dashboard",
       nav_trust: "Trust Center",
       nav_tutorial: "How it Works",
-      hero_title: "Turn simple link sharing into earnings.",
+      hero_title: "Earn from what you already share.",
       hero_sub:
-        "linkmint.co helps you earn micro-commissions by sharing smart links — transparent rules, real payouts.",
-      cta_primary: "Join or Sign In",
-      cta_secondary: "Open Dashboard",
-      how_title: "How it works",
-      how_1_t: "1) Create a Smart Link",
-      how_1_d:
-        "Pick a merchant, auto-format the link, and run a policy pre-check before sharing.",
-      how_2_t: "2) Share & Earn",
-      how_2_d:
-        "When someone buys through your link, you earn — with clear status and timing.",
-      how_3_t: "3) Payouts You Can Trust",
-      how_3_d:
-        "We only pay out after linkmint.co actually receives funds from the affiliate partner.",
-      referral_title: "Referral Bonus Rules",
+        "When your link drives a purchase, you get credit — with transparent statuses, approvals, and real payouts.",
+      cta_primary: "Start earning",
+      cta_secondary: "See Trust Center",
+      referral_title: "Boost your earnings with referrals",
       referral_points: [
-        "Invite friends, earn more: Every 3 people you invite unlocks a 5% bonus on their approved earnings for 90 days.",
-        "Automatic start: The 90-day timer begins once your 3 invitees are active and earning.",
-        "Temporary reward: After 90 days, the bonus ends automatically — invite 3 more to start again.",
-        "Fair use: Only real users and genuine earnings count toward bonuses.",
+        "Every 3 invitees unlocks a 5% bonus on their approved earnings for 90 days.",
+        "The 90-day window starts once your 3 invitees are active and earning.",
+        "After 90 days, it ends automatically — invite 3 more to start again.",
+        "Only real users and legitimate earnings qualify.",
       ],
       video_caption: "Preview: Phone-size view (9:16)",
-      trust_line:
-        "Full payout timing and rules are explained in the Trust Center.",
+      trust_line: "Trusted payouts, transparent earnings.",
       footer_left: "© " + new Date().getFullYear() + " linkmint.co",
       footer_right: "Built for ethical micro-sales",
-      referral_button_show: "View Referral Bonus Rules",
-      referral_button_hide: "Hide Referral Bonus Rules",
+      footer_tutorial: "How it Works",
     };
   }, [lang]);
 
@@ -118,6 +95,7 @@ export default function LandingPage() {
               >
                 {t.nav_dashboard}
               </Link>
+              {/* Restored: How it Works link in header for quick access */}
               <Link
                 href={ROUTES.tutorial}
                 className="text-sm text-gray-700 hover:text-emerald-600 hover:underline"
@@ -135,7 +113,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section — earnings-first */}
       <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pb-16 pt-10 md:grid-cols-2 md:items-center">
         <div>
           <h1 className="text-3xl font-bold leading-tight md:text-5xl">
@@ -146,34 +124,26 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            {/* Primary CTA now points to /signup */}
+            {/* Primary CTA → /signup */}
             <Link
               href={ROUTES.signup}
               className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
             >
               {t.cta_primary}
             </Link>
-            {/* Secondary CTA also points to /signup */}
+            {/* Secondary CTA → Trust Center (credibility) */}
             <Link
-              href={ROUTES.signup}
+              href={trustHref}
               className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
             >
               {t.cta_secondary}
             </Link>
           </div>
 
-          <p className="mt-3 text-xs text-gray-500">
-            {t.trust_line}{" "}
-            <Link
-              href={trustHref}
-              className="underline decoration-dotted underline-offset-2 hover:text-gray-700"
-            >
-              {t.nav_trust}
-            </Link>.
-          </p>
+          <p className="mt-3 text-xs text-gray-500">{t.trust_line}</p>
         </div>
 
-        {/* Video */}
+        {/* Visual — can be replaced later with an earnings snapshot */}
         <div className="flex justify-center">
           <div className="w-full max-w-[380px] md:max-w-[420px]">
             <div className="relative aspect-[9/16] overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200">
@@ -193,40 +163,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it Works */}
+      {/* Earnings Highlight — Referrals */}
       <section className="border-t bg-gray-50">
         <div className="mx-auto max-w-6xl px-4 py-12">
-          <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <Card title={t.how_1_t} desc={t.how_1_d} />
-            <Card title={t.how_2_t} desc={t.how_2_d} />
-            <Card title={t.how_3_t} desc={t.how_3_d} />
+          <h2 className="text-xl font-semibold md:text-2xl">
+            {t.referral_title}
+          </h2>
+          <ul className="mt-4 list-disc space-y-2 pl-5 text-gray-700">
+            {t.referral_points.map((point, i) => (
+              <li key={i} className="text-base leading-relaxed">
+                {point}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-6">
+            <Link
+              href={ROUTES.signup}
+              className="inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              {t.cta_primary}
+            </Link>
           </div>
-        </div>
-      </section>
-
-      {/* Collapsible Referral Bonus Section */}
-      <section className="border-t bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-12 text-center">
-          <button
-            onClick={() => setShowReferral((prev) => !prev)}
-            className="text-emerald-600 font-semibold hover:underline"
-          >
-            {showReferral ? t.referral_button_hide : t.referral_button_show}
-          </button>
-
-          {showReferral && (
-            <div className="mt-6 text-left max-w-2xl mx-auto">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                {t.referral_title}
-              </h2>
-              <ul className="text-gray-600 space-y-4 text-lg leading-relaxed">
-                {t.referral_points.map((point, i) => (
-                  <li key={i}>{point}</li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       </section>
 
@@ -235,10 +192,11 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
           <span>{t.footer_left}</span>
           <div className="flex items-center gap-4">
-            <Link href="/tutorial" className="hover:underline">
-              {t.nav_tutorial}
+            {/* Keep tutorial discoverable in footer as well */}
+            <Link href={ROUTES.tutorial} className="hover:underline">
+              {t.footer_tutorial}
             </Link>
-            <Link href="/trust-center" className="hover:underline">
+            <Link href={trustHref} className="hover:underline">
               {t.nav_trust}
             </Link>
             <span>{t.footer_right}</span>
@@ -246,15 +204,6 @@ export default function LandingPage() {
         </div>
       </footer>
     </main>
-  );
-}
-
-function Card({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h3 className="text-base font-semibold">{title}</h3>
-      <p className="mt-2 text-sm text-gray-600">{desc}</p>
-    </div>
   );
 }
 
@@ -270,9 +219,7 @@ function LangToggle({
       <button
         onClick={() => setLang("en")}
         className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "en"
-            ? "bg-gray-900 text-white"
-            : "text-gray-700 hover:bg-gray-100"
+          lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
         }`}
         aria-pressed={lang === "en"}
       >
@@ -281,9 +228,7 @@ function LangToggle({
       <button
         onClick={() => setLang("tl")}
         className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "tl"
-            ? "bg-gray-900 text-white"
-            : "text-gray-700 hover:bg-gray-100"
+          lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
         }`}
         aria-pressed={lang === "tl"}
       >
