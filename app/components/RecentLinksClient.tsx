@@ -1,104 +1,79 @@
 // app/components/RecentLinksClient.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-type DemoLink = {
+type RecentLink = {
   id: string;
-  createdAt: number;      // epoch ms
-  sourceUrl: string;      // original product url
-  smartUrl: string;       // fake short link
-  note?: string;
+  url: string;
+  createdAt: string;
 };
 
-const LS_KEY = "lm_recent_links_v1";
-const MAX_ITEMS = 20;
-
-function loadRecent(): DemoLink[] {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as DemoLink[];
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRecent(items: DemoLink[]) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)));
-  } catch {}
-}
-
-export function addRecentLink(item: DemoLink) {
-  try {
-    const items = loadRecent();
-    const next = [item, ...items].slice(0, MAX_ITEMS);
-    saveRecent(next);
-  } catch {}
-}
-
 export default function RecentLinksClient() {
-  const [items, setItems] = useState<DemoLink[]>([]);
+  const [links, setLinks] = useState<RecentLink[]>([]);
 
+  // Load from localStorage
   useEffect(() => {
-    setItems(loadRecent());
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === LS_KEY) setItems(loadRecent());
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    try {
+      const stored = localStorage.getItem("recentLinks");
+      if (stored) setLinks(JSON.parse(stored));
+    } catch {
+      /* ignore */
+    }
   }, []);
 
-  const empty = useMemo(() => items.length === 0, [items]);
-
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      alert("Copied!");
-    } catch {}
-  };
+  if (links.length === 0) {
+    return (
+      <section className="rounded-2xl border bg-white p-4 sm:p-5">
+        <h2 className="text-base font-medium sm:text-lg">Your recent links</h2>
+        <p className="mt-2 text-sm text-gray-600">
+          You haven’t created any smart links yet. Try generating one to see it here.
+        </p>
+      </section>
+    );
+  }
 
   return (
-    <div className="rounded-2xl border bg-white p-4 sm:p-5">
-      <h2 className="text-base font-medium sm:text-lg">Your recent links</h2>
+    <section className="rounded-2xl border bg-white p-4 sm:p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-medium sm:text-lg">Your recent links</h2>
+        <button
+          onClick={() => {
+            localStorage.removeItem("recentLinks");
+            setLinks([]);
+          }}
+          className="text-xs text-red-600 hover:underline"
+        >
+          Clear All
+        </button>
+      </div>
 
-      {empty ? (
-        <p className="mt-2 text-sm text-gray-600">
-          Your last created links will appear here. Create one to get started.
-        </p>
-      ) : (
-        <div className="mt-3 divide-y">
-          {items.map((it) => (
-            <div key={it.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{it.smartUrl}</p>
-                <p className="text-xs text-gray-500 truncate">from {it.sourceUrl}</p>
-                <p className="text-[11px] text-gray-400">
-                  {new Date(it.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={it.smartUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                >
-                  Open
-                </a>
-                <button
-                  onClick={() => copy(it.smartUrl)}
-                  className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                >
-                  Copy
-                </button>
-              </div>
+      <ul className="divide-y text-sm">
+        {links.map((link) => (
+          <li key={link.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="truncate">
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline truncate block"
+              >
+                {link.url}
+              </a>
+              <p className="text-xs text-gray-500">
+                Created {new Date(link.createdAt).toLocaleString()}
+              </p>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+            <Link
+              href={`/dashboard/create-link?url=${encodeURIComponent(link.url)}`}
+              className="text-xs text-gray-700 hover:text-gray-900 mt-1 sm:mt-0"
+            >
+              Edit
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
