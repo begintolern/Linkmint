@@ -106,12 +106,12 @@ export default function SignupPage() {
           .
         </p>
 
-        {/* Payout method notice — now GCash-first */}
+        {/* Payout methods notice — GCash + PayPal (neutral wording) */}
         <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
           💳 Payouts are currently available via{" "}
-          <span className="font-semibold">GCash (PHP)</span> only. Other payout
-          methods (e.g., PayPal USD, Maya/PayMaya, bank transfer) are not
-          supported yet.
+          <span className="font-semibold">GCash (PHP)</span> and{" "}
+          <span className="font-semibold">PayPal (USD)</span>. Other payout methods
+          (e.g., Maya/PayMaya, bank transfer) are not supported yet.
         </div>
 
         {error && (
