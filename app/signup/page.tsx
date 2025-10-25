@@ -16,7 +16,7 @@ export default function SignupPage() {
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
-  // ✅ New: user must acknowledge earning & payout rules
+  // Rule acknowledgment (required)
   const [rulesAck, setRulesAck] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function SignupPage() {
     password === confirm &&
     ageConfirmed &&
     agreeTerms &&
-    rulesAck; // ✅ require rule acknowledgment
+    rulesAck;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,8 +67,7 @@ export default function SignupPage() {
           password,
           ageConfirmed: true,
           tosAccepted: true,
-          // ✅ pass through for server-side logging/auditing (no backend change required)
-          rulesAccepted: true,
+          rulesAccepted: true, // signal only; no backend change required
         }),
       });
 
@@ -107,11 +106,12 @@ export default function SignupPage() {
           .
         </p>
 
-        {/* PayPal-only payout disclaimer */}
+        {/* Payout method notice — now GCash-first */}
         <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
           💳 Payouts are currently available via{" "}
-          <span className="font-semibold">PayPal (USD)</span> only. Other payout
-          methods (e.g., GCash, Maya/PayMaya, bank transfer) are not supported yet.
+          <span className="font-semibold">GCash (PHP)</span> only. Other payout
+          methods (e.g., PayPal USD, Maya/PayMaya, bank transfer) are not
+          supported yet.
         </div>
 
         {error && (
@@ -180,7 +180,7 @@ export default function SignupPage() {
             />
           </div>
 
-          {/* Age confirmation (existing policy) */}
+          {/* Age confirmation */}
           <label className="flex gap-2 items-start text-sm select-none">
             <input
               type="checkbox"
@@ -191,7 +191,7 @@ export default function SignupPage() {
             <span>I am 18 years of age or older.</span>
           </label>
 
-          {/* Terms of Service + Privacy Policy agreement */}
+          {/* Terms of Service + Privacy Policy */}
           <label className="flex gap-2 items-start text-sm select-none">
             <input
               type="checkbox"
@@ -220,7 +220,7 @@ export default function SignupPage() {
             </span>
           </label>
 
-          {/* ✅ Rule acknowledgment */}
+          {/* Rule acknowledgment */}
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
             <p className="text-xs text-gray-700 mb-2 font-medium">
               Earning & payout rules (summary):
