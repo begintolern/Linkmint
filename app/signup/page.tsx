@@ -15,6 +15,10 @@ export default function SignupPage() {
   const [confirm, setConfirm] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+
+  // ✅ New: user must acknowledge earning & payout rules
+  const [rulesAck, setRulesAck] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -26,7 +30,8 @@ export default function SignupPage() {
     password.length >= 8 &&
     password === confirm &&
     ageConfirmed &&
-    agreeTerms;
+    agreeTerms &&
+    rulesAck; // ✅ require rule acknowledgment
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -45,6 +50,10 @@ export default function SignupPage() {
       setError("You must agree to the Terms of Service and Privacy Policy.");
       return;
     }
+    if (!rulesAck) {
+      setError("You must acknowledge the earning & payout rules.");
+      return;
+    }
 
     try {
       setLoading(true);
@@ -57,8 +66,9 @@ export default function SignupPage() {
           email,
           password,
           ageConfirmed: true,
-          // Important: pass through for server-side enforcement/logging
           tosAccepted: true,
+          // ✅ pass through for server-side logging/auditing (no backend change required)
+          rulesAccepted: true,
         }),
       });
 
@@ -77,6 +87,7 @@ export default function SignupPage() {
       setConfirm("");
       setAgeConfirmed(false);
       setAgreeTerms(false);
+      setRulesAck(false);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -89,7 +100,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md rounded-2xl shadow-lg p-6 md:p-8 bg-white">
         <h1 className="text-2xl font-semibold mb-2">Create your account</h1>
         <p className="text-sm text-gray-600 mb-6">
-          Share smart links, earn commissions. Already have an account?{" "}
+          Share smart links, earn commissions. Already have an account{" "}
           <Link href="/login" className="text-blue-600 hover:underline">
             Log in
           </Link>
@@ -208,6 +219,47 @@ export default function SignupPage() {
               .
             </span>
           </label>
+
+          {/* ✅ Rule acknowledgment */}
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <p className="text-xs text-gray-700 mb-2 font-medium">
+              Earning & payout rules (summary):
+            </p>
+            <ul className="mb-3 list-disc pl-5 text-xs text-gray-700 space-y-1">
+              <li>Payouts only after affiliate funds are received by Linkmint.</li>
+              <li>No self-purchase, bot traffic, or spam clicks.</li>
+              <li>Unauthorized coupons and gift cards are typically excluded.</li>
+              <li>Respect allowed platforms, geo restrictions, and cookie windows.</li>
+              <li>Some purchases may be disqualified (reason shown in your dashboard).</li>
+            </ul>
+            <label className="flex gap-2 items-start text-sm select-none">
+              <input
+                type="checkbox"
+                checked={rulesAck}
+                onChange={(e) => setRulesAck(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                I understand these rules.{" "}
+                <Link
+                  href="/trust-center"
+                  className="text-blue-600 hover:underline"
+                  target="_blank"
+                >
+                  Learn more in the Trust Center
+                </Link>{" "}
+                or{" "}
+                <Link
+                  href="/tutorial"
+                  className="text-blue-600 hover:underline"
+                  target="_blank"
+                >
+                  see how it works
+                </Link>
+                .
+              </span>
+            </label>
+          </div>
 
           <button
             type="submit"
