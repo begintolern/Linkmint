@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +10,10 @@ type Lang = "en" | "tl";
 
 const ROUTES = {
   home: "/",
+  signup: "/signup", // 👈 added this route alias
   dashboard: "/dashboard",
   trustCenterEn: "/trust-center",
-  tutorial: "/tutorial", // 👈 Added
+  tutorial: "/tutorial",
 } as const;
 
 const ASSETS = {
@@ -146,14 +146,16 @@ export default function LandingPage() {
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
+            {/* Primary CTA now points to /signup */}
             <Link
-              href="/dashboard"
+              href={ROUTES.signup}
               className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
             >
               {t.cta_primary}
             </Link>
+            {/* Secondary CTA also points to /signup */}
             <Link
-              href={ROUTES.dashboard}
+              href={ROUTES.signup}
               className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
             >
               {t.cta_secondary}
@@ -192,18 +194,16 @@ export default function LandingPage() {
       </section>
 
       {/* How it Works */}
-      {/* How it Works */}
-<section className="border-t bg-gray-50">
-  <div className="mx-auto max-w-6xl px-4 py-12">
-    <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
-    <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-      <Card title={t.how_1_t} desc={t.how_1_d} />
-      <Card title={t.how_2_t} desc={t.how_2_d} />  {/* ← fixed here */}
-      <Card title={t.how_3_t} desc={t.how_3_d} />
-    </div>
-  </div>
-</section>
-
+      <section className="border-t bg-gray-50">
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
+          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <Card title={t.how_1_t} desc={t.how_1_d} />
+            <Card title={t.how_2_t} desc={t.how_2_d} />
+            <Card title={t.how_3_t} desc={t.how_3_d} />
+          </div>
+        </div>
+      </section>
 
       {/* Collapsible Referral Bonus Section */}
       <section className="border-t bg-white">
@@ -270,7 +270,9 @@ function LangToggle({
       <button
         onClick={() => setLang("en")}
         className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+          lang === "en"
+            ? "bg-gray-900 text-white"
+            : "text-gray-700 hover:bg-gray-100"
         }`}
         aria-pressed={lang === "en"}
       >
@@ -279,7 +281,9 @@ function LangToggle({
       <button
         onClick={() => setLang("tl")}
         className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
+          lang === "tl"
+            ? "bg-gray-900 text-white"
+            : "text-gray-700 hover:bg-gray-100"
         }`}
         aria-pressed={lang === "tl"}
       >
