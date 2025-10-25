@@ -9,12 +9,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { addRecentLink } from "@/app/components/RecentLinksClient";
 
 function makeDemoSmartUrl(sourceUrl: string) {
-  // tiny fake shortener: https://lm.to/<6-char>-t<unix>
+  // tiny fake shortener: https://lm.to/<6-char>?t=<unix>&m=<host>
   const id = Math.random().toString(36).slice(2, 8);
   const t = Math.floor(Date.now() / 1000);
   const u = new URL("https://lm.to/" + id);
   u.searchParams.set("t", String(t));
-  // include origin domain for later debugging
   try {
     const src = new URL(sourceUrl);
     u.searchParams.set("m", src.hostname.replace(/^www\./, ""));
@@ -42,13 +41,8 @@ export default function CreateLinkClient() {
     }
     const smartUrl = makeDemoSmartUrl(sourceUrl);
 
-    addRecentLink({
-      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      createdAt: Date.now(),
-      sourceUrl,
-      smartUrl,
-      note: note.trim() || undefined,
-    });
+    // ✅ Save just the smart URL (matches RecentLinksClient API)
+    addRecentLink(smartUrl);
 
     // Go back to Smart Links so they immediately see it in the list
     router.push("/dashboard/links");
