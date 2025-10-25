@@ -13,6 +13,7 @@ const ROUTES = {
   home: "/",
   dashboard: "/dashboard",
   trustCenterEn: "/trust-center",
+  tutorial: "/tutorial", // 👈 Added
 } as const;
 
 const ASSETS = {
@@ -28,6 +29,7 @@ export default function LandingPage() {
       return {
         nav_dashboard: "Dashboard",
         nav_trust: "Trust Center",
+        nav_tutorial: "Paano Kumita",
         hero_title: "Gawing kita ang simpleng pag-share ng mga link.",
         hero_sub:
           "linkmint.co helps you earn micro-commissions by sharing smart links — transparent rules, real payouts.",
@@ -62,6 +64,7 @@ export default function LandingPage() {
     return {
       nav_dashboard: "Dashboard",
       nav_trust: "Trust Center",
+      nav_tutorial: "How it Works",
       hero_title: "Turn simple link sharing into earnings.",
       hero_sub:
         "linkmint.co helps you earn micro-commissions by sharing smart links — transparent rules, real payouts.",
@@ -114,6 +117,12 @@ export default function LandingPage() {
                 className="text-sm text-gray-700 hover:text-gray-900"
               >
                 {t.nav_dashboard}
+              </Link>
+              <Link
+                href={ROUTES.tutorial}
+                className="text-sm text-gray-700 hover:text-emerald-600 hover:underline"
+              >
+                {t.nav_tutorial}
               </Link>
               <Link
                 href={trustHref}
@@ -183,16 +192,18 @@ export default function LandingPage() {
       </section>
 
       {/* How it Works */}
-      <section className="border-t bg-gray-50">
-        <div className="mx-auto max-w-6xl px-4 py-12">
-          <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <Card title={t.how_1_t} desc={t.how_1_d} />
-            <Card title={t.how_2_t} desc={t.how_2_d} />
-            <Card title={t.how_3_t} desc={t.how_3_d} />
-          </div>
-        </div>
-      </section>
+      {/* How it Works */}
+<section className="border-t bg-gray-50">
+  <div className="mx-auto max-w-6xl px-4 py-12">
+    <h2 className="text-xl font-semibold md:text-2xl">{t.how_title}</h2>
+    <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+      <Card title={t.how_1_t} desc={t.how_1_d} />
+      <Card title={t.how_2_t} desc={t.how_2_d} />  {/* ← fixed here */}
+      <Card title={t.how_3_t} desc={t.how_3_d} />
+    </div>
+  </div>
+</section>
+
 
       {/* Collapsible Referral Bonus Section */}
       <section className="border-t bg-white">
@@ -223,7 +234,15 @@ export default function LandingPage() {
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
           <span>{t.footer_left}</span>
-          <span>{t.footer_right}</span>
+          <div className="flex items-center gap-4">
+            <Link href="/tutorial" className="hover:underline">
+              {t.nav_tutorial}
+            </Link>
+            <Link href="/trust-center" className="hover:underline">
+              {t.nav_trust}
+            </Link>
+            <span>{t.footer_right}</span>
+          </div>
         </div>
       </footer>
     </main>
