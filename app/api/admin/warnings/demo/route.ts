@@ -1,10 +1,11 @@
 // app/api/admin/warnings/demo/route.ts
-export const runtime = "nodejs"; // ✅ Ensure Prisma runs in Node.js runtime
+export const runtime = "nodejs"; // Ensure Prisma runs in Node.js runtime
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { safeAuditLog } from "@/lib/auditLog";
+import { notifyWarning } from "@/lib/notify"; // 👈 NEW: optional Telegram notifier
 
 const prisma = new PrismaClient();
 
@@ -45,8 +46,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Write a USER_WARNING entry into your system/audit log (or SQL fallback)
-    await safeAuditLog(prisma, {
-      type: "USER_WARNING",
+    const payload = {
+      type: "USER_WARNING" as const,
       message,
       json: {
         userId,
@@ -56,16 +57,21 @@ export async function POST(req: NextRequest) {
           evidence: { demo: true },
         },
       },
+    };
+
+    await safeAuditLog(prisma, payload);
+
+    // 🔔 Optional: Telegram alert (no-op if env missing)
+    await notifyWarning({
+      userId,
+      type,
+      message,
+      evidence: { demo: true },
+      createdAt: new Date().toISOString(),
     });
 
     return NextResponse.json(
-      {
-        ok: true,
-        demo: true,
-        userId,
-        type,
-        message,
-      },
+      { ok: true, demo: true, userId, type, message },
       { status: 200 }
     );
   } catch (err: any) {
