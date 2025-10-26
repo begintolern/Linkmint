@@ -4,8 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // TEMPORARY hardcode for Prisma Studio test
-  url      = "postgresql://postgres:<YOUR_PASSWORD>@maglev.proxy.rlwy.net:20064/railway?schema=public&sslmode=require"
+  url      = env("DATABASE_URL")
 }
 
 model User {
