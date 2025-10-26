@@ -17,34 +17,32 @@ function isAdmin(req: NextRequest): boolean {
 }
 
 /**
- * Attempts to read USER_WARNING entries from common log models.
- * Returns [] if none exist (keeps things resilient).
+ * Attempts to read USER_WARNING entries from:
+ * 1) Prisma models (systemLog/auditLog)
+ * 2) Raw SQL table "SystemLog" (fallback created by safeAuditLog)
  */
 async function readWarnings(limit: number) {
-  // Try common model names: systemLog or auditLog
   const anyp = prisma as any;
 
-  // Helper to normalize rows into a common shape
   const normalize = (rows: any[]) =>
-    rows
-      .filter(Boolean)
-      .map((r) => {
-        let json: any = undefined;
-        try {
-          json = r.json ? (typeof r.json === "string" ? JSON.parse(r.json) : r.json) : undefined;
-        } catch (_) {
-          json = r.json;
-        }
-        return {
-          id: r.id ?? r.ID ?? r.pk ?? undefined,
-          createdAt: r.createdAt ?? r.created_at ?? r.timestamp ?? undefined,
-          type: (r.type ?? "").toString(),
-          message: r.message ?? "",
-          json,
-        };
-      });
+    rows.map((r) => {
+      let parsed: any = undefined;
+      try {
+        parsed =
+          r.json && typeof r.json === "string" ? JSON.parse(r.json) : r.json;
+      } catch {
+        parsed = r.json;
+      }
+      return {
+        id: r.id ?? r.ID ?? r.pk ?? undefined,
+        createdAt: r.createdAt ?? r.created_at ?? r.timestamp ?? r.createdat ?? undefined,
+        type: (r.type ?? "").toString(),
+        message: r.message ?? "",
+        json: parsed,
+      };
+    });
 
-  // Try systemLog first
+  // 1) Try Prisma systemLog
   try {
     if (anyp.systemLog?.findMany) {
       const rows = await anyp.systemLog.findMany({
@@ -54,9 +52,9 @@ async function readWarnings(limit: number) {
       });
       return normalize(rows);
     }
-  } catch (_) {}
+  } catch {}
 
-  // Try auditLog next
+  // 2) Try Prisma auditLog
   try {
     if (anyp.auditLog?.findMany) {
       const rows = await anyp.auditLog.findMany({
@@ -66,15 +64,40 @@ async function readWarnings(limit: number) {
       });
       return normalize(rows);
     }
-  } catch (_) {}
+  } catch {}
 
-  // If neither model exists, return empty array
+  // 3) Raw SQL fallback to "SystemLog"
+  try {
+    // Ensure table exists (noop if it already does)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SystemLog" (
+        "id" TEXT PRIMARY KEY,
+        "type" TEXT NOT NULL,
+        "message" TEXT NOT NULL,
+        "json" TEXT,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      `SELECT "id","type","message","json","createdAt"
+       FROM "SystemLog"
+       WHERE "type" = 'USER_WARNING'
+       ORDER BY "createdAt" DESC
+       LIMIT ${Number(limit) || 50}`
+    );
+
+    return normalize(rows);
+  } catch {
+    // Final fallback: nothing
+  }
+
   return [];
 }
 
 /**
  * GET /api/admin/warnings/list?limit=50
- * Lists the most recent USER_WARNING entries (read-only).
+ * Lists recent USER_WARNING entries from logs. Read-only.
  */
 export async function GET(req: NextRequest) {
   if (!isAdmin(req)) {
