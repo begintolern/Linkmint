@@ -1,9 +1,12 @@
 // app/api/admin/warnings/scan/route.ts
+export const runtime = "nodejs"; // ensure Prisma runs in Node.js
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { scanWarnings } from "@/lib/warnings";
 import { safeAuditLog } from "@/lib/auditLog";
+import { notifyWarning } from "@/lib/notify"; // 👈 send optional Telegram alerts
 
 const prisma = new PrismaClient();
 
@@ -19,8 +22,8 @@ function isAdmin(req: NextRequest): boolean {
 }
 
 /**
- * POST /api/admin/warnings/scan
- * Manually triggers a read-only warnings scan.
+ * POST /api/admin/warnings/scan?lookbackHours=24&limit=200
+ * Manually triggers a read-only warnings scan and emits alerts.
  */
 export async function POST(req: NextRequest) {
   if (!isAdmin(req)) {
@@ -34,11 +37,26 @@ export async function POST(req: NextRequest) {
   try {
     const warnings = await scanWarnings(prisma, { lookbackHours, limit });
 
+    // audit log summary
     await safeAuditLog(prisma, {
       type: "USER_WARNING",
       message: `Manual warnings scan complete – ${warnings.length} found`,
-      json: { lookbackHours, limit, count: warnings.length, warnings },
+      json: { lookbackHours, limit, count: warnings.length },
     });
+
+    // fire-and-forget Telegram alerts (no-op if env not set)
+    // intentionally not awaited in series to avoid blocking; still awaited as a group for Node runtimes
+    await Promise.all(
+      warnings.map((w) =>
+        notifyWarning({
+          userId: w.userId,
+          type: w.type,
+          message: w.message,
+          evidence: w.evidence,
+          createdAt: w.createdAt,
+        })
+      )
+    );
 
     return NextResponse.json({ ok: true, count: warnings.length, warnings }, { status: 200 });
   } catch (err: any) {
