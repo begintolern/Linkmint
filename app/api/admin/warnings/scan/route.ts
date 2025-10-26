@@ -1,5 +1,5 @@
 // app/api/admin/warnings/scan/route.ts
-export const runtime = "nodejs"; // ensure Prisma runs in Node.js
+export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -8,12 +8,10 @@ import { scanWarnings } from "@/lib/warnings";
 import { safeAuditLog } from "@/lib/auditLog";
 import { notifyWarning } from "@/lib/notify";
 import { detectSharedPayoutEmails } from "@/lib/detectors/sharedPayoutEmail";
+import { detectSelfPurchase } from "@/lib/detectors/selfPurchase";
 
 const prisma = new PrismaClient();
 
-/**
- * Auth helper: checks x-admin-key header or cookie against ADMIN_API_KEY.
- */
 function isAdmin(req: NextRequest): boolean {
   const adminKey = process.env.ADMIN_API_KEY || "";
   if (!adminKey) return false;
@@ -30,10 +28,6 @@ type Finding = {
   createdAt?: string | Date;
 };
 
-/**
- * POST /api/admin/warnings/scan?lookbackHours=24&limit=200
- * Manually triggers a read-only warnings scan + shared payout email detector, and emits alerts.
- */
 export async function POST(req: NextRequest) {
   if (!isAdmin(req)) {
     return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
@@ -44,28 +38,35 @@ export async function POST(req: NextRequest) {
   const limit = Number(url.searchParams.get("limit") ?? "200");
 
   try {
-    // 1) Existing detectors (whatever you already had in scanWarnings)
+    // --- 1️⃣ Base findings
     const baseFindings = await scanWarnings(prisma, { lookbackHours, limit });
 
-    // 2) New detector: shared payout email clusters (schema-agnostic)
+    // --- 2️⃣ Shared payout email detector
     const sharedEmailFindings = await detectSharedPayoutEmails(prisma, {
       minAccounts: 2,
       limitEmails: 200,
       limitRows: 10000,
     });
 
-    // 3) Merge + de-dup (by userId+type+message)
+    // --- 3️⃣ Self-purchase detector
+    const selfPurchaseFindings = await detectSelfPurchase(prisma, {
+      lookbackDays: 90,
+      minHits: 1,
+      maxRows: 20000,
+    });
+
+    // --- 4️⃣ Merge + de-dup (by userId + type + message)
     const key = (f: Finding) => `${f.userId}|${f.type}|${f.message}`;
     const map = new Map<string, Finding>();
-    for (const f of [...baseFindings, ...sharedEmailFindings]) {
+    for (const f of [...baseFindings, ...sharedEmailFindings, ...selfPurchaseFindings]) {
       map.set(key(f), f);
     }
     const findings = Array.from(map.values());
 
-    // 4) Audit summary
+    // --- 5️⃣ Log + summarize
     await safeAuditLog(prisma, {
       type: "USER_WARNING",
-      message: `Manual warnings scan complete – ${findings.length} total findings (base: ${baseFindings.length}, sharedPayout: ${sharedEmailFindings.length})`,
+      message: `Manual warnings scan – total ${findings.length} findings (base:${baseFindings.length}, shared:${sharedEmailFindings.length}, self:${selfPurchaseFindings.length})`,
       json: {
         lookbackHours,
         limit,
@@ -73,11 +74,12 @@ export async function POST(req: NextRequest) {
         breakdown: {
           base: baseFindings.length,
           sharedPayoutEmail: sharedEmailFindings.length,
+          selfPurchase: selfPurchaseFindings.length,
         },
       },
     });
 
-    // 5) Telegram alerts (no-op if env missing)
+    // --- 6️⃣ Send Telegram alerts for all findings
     await Promise.all(
       findings.map((w) =>
         notifyWarning({
