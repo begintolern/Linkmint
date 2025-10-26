@@ -1,4 +1,6 @@
 // app/api/admin/db-tables/route.ts
+export const runtime = "nodejs"; // ✅ ensure Prisma can access the DB
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
