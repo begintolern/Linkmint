@@ -1,24 +1,25 @@
 // app/api/cron/warnings/scan/route.ts
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { scanWarnings } from "@/lib/warnings";
 import { safeAuditLog } from "@/lib/auditLog";
+import { notifyWarning } from "@/lib/notify";
 
 const prisma = new PrismaClient();
 
-/**
- * Auth helper: checks x-cron-secret header against CRON_SECRET env.
- */
 function isCron(req: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET || "";
-  const headerSecret = req.headers.get("x-cron-secret") || "";
-  return !!cronSecret && headerSecret === cronSecret;
+  const secret = process.env.CRON_SECRET || "";
+  if (!secret) return false;
+  const header = req.headers.get("x-cron-secret") || "";
+  return header === secret;
 }
 
 /**
- * POST /api/cron/warnings/scan
- * Scheduled, read-only warnings scan (for Railway/Cloud cron).
+ * POST /api/cron/warnings/scan?lookbackHours=24&limit=200
+ * Triggered by your scheduler; emits Telegram alerts for findings.
  */
 export async function POST(req: NextRequest) {
   if (!isCron(req)) {
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   const limit = Number(url.searchParams.get("limit") ?? "200");
 
   try {
-    const warnings = await scanWarnings(new PrismaClient(), { lookbackHours, limit });
+    const warnings = await scanWarnings(prisma, { lookbackHours, limit });
 
     await safeAuditLog(prisma, {
       type: "USER_WARNING",
@@ -38,7 +39,19 @@ export async function POST(req: NextRequest) {
       json: { lookbackHours, limit, count: warnings.length },
     });
 
-    return NextResponse.json({ ok: true, count: warnings.length }, { status: 200 });
+    await Promise.all(
+      warnings.map((w) =>
+        notifyWarning({
+          userId: w.userId,
+          type: w.type,
+          message: w.message,
+          evidence: w.evidence,
+          createdAt: w.createdAt,
+        })
+      )
+    );
+
+    return NextResponse.json({ ok: true, count: warnings.length, warnings }, { status: 200 });
   } catch (err: any) {
     await safeAuditLog(prisma, {
       type: "ERROR",
