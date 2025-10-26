@@ -1,4 +1,6 @@
 // app/api/admin/warnings/list/route.ts
+export const runtime = "nodejs"; // ✅ ensure Prisma DB access
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
@@ -35,7 +37,12 @@ async function readWarnings(limit: number) {
       }
       return {
         id: r.id ?? r.ID ?? r.pk ?? undefined,
-        createdAt: r.createdAt ?? r.created_at ?? r.timestamp ?? r.createdat ?? undefined,
+        createdAt:
+          r.createdAt ??
+          r.created_at ??
+          r.timestamp ??
+          r.createdat ??
+          undefined,
         type: (r.type ?? "").toString(),
         message: r.message ?? "",
         json: parsed,
@@ -88,9 +95,7 @@ async function readWarnings(limit: number) {
     );
 
     return normalize(rows);
-  } catch {
-    // Final fallback: nothing
-  }
+  } catch {}
 
   return [];
 }
@@ -101,15 +106,24 @@ async function readWarnings(limit: number) {
  */
 export async function GET(req: NextRequest) {
   if (!isAdmin(req)) {
-    return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "UNAUTHORIZED" },
+      { status: 401 }
+    );
   }
 
   const url = new URL(req.url);
-  const limit = Math.max(1, Math.min(500, Number(url.searchParams.get("limit") || "50")));
+  const limit = Math.max(
+    1,
+    Math.min(500, Number(url.searchParams.get("limit") || "50"))
+  );
 
   try {
     const warnings = await readWarnings(limit);
-    return NextResponse.json({ ok: true, count: warnings.length, warnings }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, count: warnings.length, warnings },
+      { status: 200 }
+    );
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: "LIST_FAILED", message: String(err?.message || err) },
