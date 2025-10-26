@@ -3,7 +3,7 @@ import type { PrismaClient } from "@prisma/client";
 
 /**
  * PHASE 1.1: Add a small, read-only detector so scans return real warnings.
- * - Detector implemented: RATE_LIMIT_LINK_CREATION
+ * - Detector: RATE_LIMIT_LINK_CREATION
  * - Heuristic: users who created > RATE_LIMIT_COUNT links within RATE_LIMIT_HOURS
  * - Safe: catches missing models/tables and returns [] in that case
  */
@@ -34,10 +34,25 @@ export type ScanOptions = {
 
 /**
  * Configurable detector thresholds (tune these as needed).
+ * Lowered to 5/hour so it’s easier to test.
  */
 const RATE_LIMIT_HOURS = 1; // lookback window in hours
-const RATE_LIMIT_COUNT = 10; // links created in the window considered suspicious
-const DEFAULT_LIMIT = 200;
+const RATE_LIMIT_COUNT = 5; // ↓ easier to trip during testing
+const DEFAULT_LIMIT = 500;
+
+/**
+ * Try to resolve a link-like model by common names.
+ */
+function getLinkModel(prisma: PrismaClient) {
+  const anyp = prisma as any;
+  return (
+    anyp.smartLink ||
+    anyp.SmartLink ||
+    anyp.link ||
+    anyp.Link ||
+    null
+  );
+}
 
 /**
  * Primary scan function — runs lightweight detectors and returns warnings.
@@ -54,38 +69,28 @@ export async function scanWarnings(
   const results: UserWarning[] = [];
 
   // Detector: RATE_LIMIT_LINK_CREATION
-  // Heuristic: users who created more than RATE_LIMIT_COUNT smart links within lookbackHours
   try {
-    // Support common Prisma model names by checking for existence.
-    // We try `smartLink` and `SmartLink` (project schemas vary).
-    // @ts-ignore
-    const model = (prisma as any).smartLink || (prisma as any).SmartLink;
-
+    const model = getLinkModel(prisma);
     if (model && typeof model.findMany === "function") {
-      // Query recent links grouped by userId (lightweight, capped by `limit`)
-      // Using raw query would be fastest but we keep ORM calls for safety.
-      // Note: adapt field names if your model uses different property names.
       const recentLinks = await model.findMany({
-        where: {
-          createdAt: { gte: since },
-        },
-        select: {
-          id: true,
-          userId: true,
-          createdAt: true,
-        },
+        where: { createdAt: { gte: since } },
+        select: { id: true, userId: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: limit,
       });
 
-      // Tally per user
       const counts: Record<string, { count: number; sampleIds: string[] }> = {};
       for (const l of recentLinks) {
-        const uid = l.userId ?? l.user_id ?? (l as any).ownerId ?? null;
+        // Support common field variants
+        const uid =
+          (l as any).userId ??
+          (l as any).user_id ??
+          (l as any).ownerId ??
+          null;
         if (!uid) continue;
         if (!counts[uid]) counts[uid] = { count: 0, sampleIds: [] };
         counts[uid].count += 1;
-        if (counts[uid].sampleIds.length < 5) counts[uid].sampleIds.push(l.id);
+        if (counts[uid].sampleIds.length < 5) counts[uid].sampleIds.push((l as any).id);
       }
 
       for (const [userId, info] of Object.entries(counts)) {
@@ -93,7 +98,7 @@ export async function scanWarnings(
           results.push({
             userId,
             type: "RATE_LIMIT_LINK_CREATION",
-            message: `Created ${info.count} smart links in the last ${lookbackHours} hour(s).`,
+            message: `Created ${info.count} links in the last ${lookbackHours} hour(s).`,
             evidence: {
               count: info.count,
               sampleLinkIds: info.sampleIds,
@@ -103,15 +108,12 @@ export async function scanWarnings(
           });
         }
       }
-    } else {
-      // If model not found, fail silently for this detector.
     }
   } catch (err) {
-    // Detector failed — do not throw (keeps scan resilient).
     // eslint-disable-next-line no-console
     console.warn("warnings: rate-limit detector error:", String((err as any)?.message || err));
   }
 
-  // Future detectors (SELF_PURCHASE, DUPLICATE_IP_REFERRAL, etc.) will be added in later steps.
+  // Future detectors will be added in later steps.
   return results;
 }
