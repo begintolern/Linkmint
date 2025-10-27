@@ -1,82 +1,27 @@
+// app/admin/login/page.tsx
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function AdminLoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+export default function AdminLoginRedirect() {
+  const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setErr(null);
-    setLoading(true);
-    try {
-      const res = await signIn("credentials", {
-        redirect: true,
-        callbackUrl: "/admin",
-        email,
-        password,
-      });
-      if ((res as any)?.error) {
-        setErr((res as any).error);
-      }
-    } catch (e: any) {
-      setErr(e.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    // Immediately redirect to the new admin access page
+    router.replace("/admin/enter-key");
+  }, [router]);
 
   return (
-    <main className="mx-auto max-w-md px-6 py-12">
-      <h1 className="text-2xl font-bold mb-6">Admin Login</h1>
-      {err && (
-        <div className="mb-4 rounded-md bg-red-50 text-red-800 p-3 text-sm">
-          {err}
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="admin-email" className="block text-sm font-medium text-slate-700">
-            Email
-          </label>
-          <input
-            id="admin-email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm ring-1 ring-slate-300"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="admin-password" className="block text-sm font-medium text-slate-700">
-            Password
-          </label>
-          <input
-            id="admin-password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border px-3 py-2 text-sm ring-1 ring-slate-300"
-            required
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {loading ? "Signing in..." : "Login"}
-        </button>
-      </form>
+    <main className="flex min-h-screen flex-col items-center justify-center px-4">
+      <div className="max-w-sm text-center">
+        <h1 className="text-xl font-semibold mb-2">Redirecting…</h1>
+        <p className="text-sm text-gray-600">
+          Admin login has been replaced by key-based access. <br />
+          You’ll be redirected to{" "}
+          <span className="font-medium text-blue-600">/admin/enter-key</span> automatically.
+        </p>
+      </div>
     </main>
   );
 }
