@@ -1,3 +1,4 @@
+// app/admin/warnings/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -35,8 +36,7 @@ export default function AdminWarningsPage() {
       const res = await fetch(`/api/admin/warnings/list?limit=${limit}`, {
         headers: {
           // If you’ve set the admin cookie via /admin/enter-key, cookie will auth.
-          // If not, you can temporarily add x-admin-key here for local testing:
-          // "x-admin-key": "linkmint-maint-key-2025",
+          // For local testing you could temporarily add x-admin-key here.
         },
         cache: "no-store",
       });
@@ -70,6 +70,41 @@ export default function AdminWarningsPage() {
       return true;
     });
   }, [data, qUser, qType]);
+
+  function exportCsv() {
+    // Build CSV from the currently filtered set
+    const rows = filtered;
+    const header = ["id", "userId", "type", "message", "createdAt", "evidenceJSON"];
+    const csvLines = [header.join(",")];
+
+    for (const w of rows) {
+      const id = safeCsv(w.id ?? "");
+      const userId = safeCsv(w.userId);
+      const type = safeCsv(w.type);
+      const message = safeCsv(w.message);
+      const created = safeCsv(w.createdAt ? new Date(w.createdAt).toISOString() : "");
+      const evidence = safeCsv(JSON.stringify(w.evidence ?? null));
+      csvLines.push([id, userId, type, message, created, evidence].join(","));
+    }
+
+    const csv = csvLines.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    a.href = url;
+    a.download = `warnings-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function safeCsv(val: string) {
+    // Escape double-quotes and wrap in quotes; avoids commas/linebreaks issues
+    const s = (val ?? "").toString().replace(/"/g, '""');
+    return `"${s}"`;
+  }
 
   return (
     <main className="min-h-screen bg-white text-gray-900">
@@ -116,6 +151,15 @@ export default function AdminWarningsPage() {
             <span>Auto-refresh (30s)</span>
           </label>
 
+          {/* Export CSV for filtered rows */}
+          <button
+            onClick={exportCsv}
+            className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
+            title="Download filtered warnings as CSV"
+          >
+            Export CSV
+          </button>
+
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <input
               value={qUser}
@@ -155,9 +199,7 @@ export default function AdminWarningsPage() {
                   filtered.map((w, i) => (
                     <tr key={w.id ?? `${w.userId}-${w.type}-${i}`} className="border-t">
                       <td className="px-3 py-2 align-top">
-                        {w.createdAt
-                          ? new Date(w.createdAt).toLocaleString()
-                          : "—"}
+                        {w.createdAt ? new Date(w.createdAt).toLocaleString() : "—"}
                       </td>
                       <td className="px-3 py-2 align-top">
                         <span className="rounded-md bg-amber-100 px-2 py-1 font-mono text-xs text-amber-700">
@@ -183,6 +225,12 @@ export default function AdminWarningsPage() {
             Showing {filtered.length} of {data.length} loaded (limit {limit}).
           </p>
         </div>
+
+        {err && (
+          <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {err}
+          </div>
+        )}
       </section>
     </main>
   );
