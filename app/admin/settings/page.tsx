@@ -1,109 +1,93 @@
-"use client";
-
+// app/admin/settings/page.tsx
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
-import { useEffect, useState } from "react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-type ToggleResp = { success: boolean; enabled?: boolean; error?: string };
+const ADMIN_KEY_NAME = "admin_key";
 
-export default function AdminSettingsPage() {
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  const [autoPayout, setAutoPayout] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(false);
+export default async function AdminSettingsPage() {
+  // Check admin cookie (middleware also enforces this, but we render-friendly guard here)
+  const cookieStore = await cookies();
+  const cookieKey = cookieStore.get(ADMIN_KEY_NAME)?.value;
+  const envKey = process.env.ADMIN_API_KEY || "";
 
-  async function load() {
-    try {
-      setLoading(true);
-      setErr(null);
-      const res = await fetch("/api/admin/auto-payout-toggle", { cache: "no-store" });
-      const json: ToggleResp = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
-      setAutoPayout(!!json.enabled);
-    } catch (e: any) {
-      setErr(e.message || "Failed to load settings");
-    } finally {
-      setLoading(false);
-    }
+  if (!envKey || cookieKey !== envKey) {
+    // No valid admin cookie → send to enter-key
+    redirect("/admin/enter-key?next=/admin/settings");
   }
-
-  async function setToggle(next: boolean) {
-    try {
-      setBusy(true);
-      setErr(null);
-      const res = await fetch("/api/admin/auto-payout-toggle", {
-        method: "POST", // changed from PATCH to POST
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: next }),
-      });
-      const json: ToggleResp = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
-      setAutoPayout(!!json.enabled);
-    } catch (e: any) {
-      setErr(e.message || "Failed to update setting");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   return (
-    <main className="mx-auto max-w-3xl p-6 space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold">Admin · Settings</h1>
-        <p className="text-sm text-slate-600 mt-1">
-          Core platform toggles and thresholds
-        </p>
+    <main className="min-h-screen bg-white text-gray-900">
+      <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+        <div className="mx-auto max-w-6xl px-4 py-3">
+          <h1 className="text-lg font-semibold">Admin · Settings</h1>
+        </div>
       </header>
 
-      {err && (
-        <div className="rounded-xl bg-red-50 text-red-800 ring-1 ring-red-200 p-3 text-sm">
-          {err}
-        </div>
-      )}
+      <section className="mx-auto max-w-6xl px-4 py-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <Card title="Access">
+            <Row label="Admin key cookie">
+              <Badge ok={cookieKey === envKey}>
+                {cookieKey === envKey ? "Present" : "Missing"}
+              </Badge>
+            </Row>
+            <Row label="ADMIN_API_KEY in env">
+              <Badge ok={!!envKey}>{envKey ? "Set" : "Not set"}</Badge>
+            </Row>
+          </Card>
 
-      {/* Auto Payout */}
-      <section className="rounded-xl border p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-semibold">Auto Payout Engine</div>
-            <div className="text-sm text-slate-600">
-              When enabled, approved commissions (and eligible users) are paid automatically.
-            </div>
-          </div>
-          <span className="text-xs rounded-md border px-2 py-0.5">
-            {loading || autoPayout === null ? "…" : autoPayout ? "ENABLED" : "DISABLED"}
-          </span>
+          <Card title="Cron">
+            <Row label="CRON_SECRET in env">
+              <Badge ok={!!process.env.CRON_SECRET}>
+                {process.env.CRON_SECRET ? "Set" : "Not set"}
+              </Badge>
+            </Row>
+          </Card>
         </div>
-        <div className="flex gap-2">
-          <button
-            disabled={busy || loading || autoPayout === true}
-            onClick={() => setToggle(true)}
-            className="text-sm rounded-md px-3 py-2 ring-1 ring-emerald-300 disabled:opacity-50 hover:bg-emerald-50"
+
+        <div className="mt-8">
+          <a
+            href="/admin/enter-key?next=/admin/settings"
+            className="inline-block rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
           >
-            Enable
-          </button>
-          <button
-            disabled={busy || loading || autoPayout === false}
-            onClick={() => setToggle(false)}
-            className="text-sm rounded-md px-3 py-2 ring-1 ring-red-300 disabled:opacity-50 hover:bg-red-50"
-          >
-            Disable
-          </button>
-          <button
-            disabled={busy || loading}
-            onClick={load}
-            className="text-sm rounded-md px-3 py-2 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
-          >
-            Refresh
-          </button>
+            Update admin key cookie
+          </a>
         </div>
       </section>
     </main>
+  );
+}
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border p-4">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="mt-3 space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-sm text-gray-600">{label}</span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function Badge({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  return (
+    <span
+      className={`rounded-md px-2 py-1 text-xs font-medium ${
+        ok ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+      }`}
+    >
+      {children}
+    </span>
   );
 }
