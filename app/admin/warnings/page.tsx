@@ -35,6 +35,10 @@ export default function AdminWarningsPage() {
   const [qUser, setQUser] = useState("");
   const [qType, setQType] = useState("");
 
+  // details modal
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Warning | null>(null);
+
   async function load() {
     setLoading(true);
     setErr(null);
@@ -129,9 +133,31 @@ export default function AdminWarningsPage() {
 
   function stringifySafe(obj: unknown) {
     try {
-      return JSON.stringify(obj ?? null);
+      return JSON.stringify(obj ?? null, null, 2);
     } catch {
       return '"[unstringifiable]"';
+    }
+  }
+
+  function openDetails(w: Warning) {
+    setSelected(w);
+    setOpen(true);
+  }
+
+  async function copyJson() {
+    try {
+      const payload = {
+        id: selected?.id ?? null,
+        userId: selected?.userId ?? null,
+        type: selected?.type ?? null,
+        message: selected?.message ?? null,
+        createdAt: selected?.createdAt ?? null,
+        evidence: selected?.evidence ?? null,
+      };
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      alert("Copied JSON to clipboard");
+    } catch {
+      alert("Copy failed");
     }
   }
 
@@ -239,7 +265,12 @@ export default function AdminWarningsPage() {
                   </tr>
                 ) : (
                   filtered.map((w, i) => (
-                    <tr key={w.id ?? `${w.userId}-${w.type}-${i}`} className="border-t">
+                    <tr
+                      key={w.id ?? `${w.userId}-${w.type}-${i}`}
+                      className="border-t hover:bg-gray-50 cursor-pointer"
+                      onClick={() => openDetails(w)}
+                      title="Click to view details"
+                    >
                       <td className="px-3 py-2 align-top">
                         {w?.createdAt ? new Date(w.createdAt).toLocaleString() : "—"}
                       </td>
@@ -253,7 +284,7 @@ export default function AdminWarningsPage() {
                       </td>
                       <td className="px-3 py-2 align-top">{(w?.message ?? "—").toString()}</td>
                       <td className="px-3 py-2 align-top">
-                        <pre className="max-h-32 overflow-auto rounded-md bg-gray-50 p-2 text-xs">
+                        <pre className="max-h-24 overflow-auto rounded-md bg-gray-50 p-2 text-xs">
 {stringifySafe(w?.evidence)}
                         </pre>
                       </td>
@@ -274,6 +305,84 @@ export default function AdminWarningsPage() {
           </div>
         )}
       </section>
+
+      {/* Details Modal */}
+      {open && selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-[min(92vw,720px)] rounded-2xl bg-white p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Warning details</h2>
+              <button
+                className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                onClick={() => setOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <Field label="ID" value={selected?.id ?? "—"} />
+              <Field label="User" value={selected?.userId ?? "—"} />
+              <Field label="Type" value={selected?.type ?? "—"} />
+              <Field
+                label="Created"
+                value={
+                  selected?.createdAt
+                    ? new Date(selected.createdAt).toLocaleString()
+                    : "—"
+                }
+              />
+              <div className="col-span-2">
+                <div className="text-xs text-gray-600 mb-1">Message</div>
+                <div className="rounded-md border bg-gray-50 p-2 text-sm">
+                  {(selected?.message ?? "—").toString()}
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-gray-600 mb-1">Evidence (JSON)</div>
+                  <button
+                    onClick={copyJson}
+                    className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                    title="Copy JSON"
+                  >
+                    Copy JSON
+                  </button>
+                </div>
+                <pre className="max-h-[50vh] overflow-auto rounded-md border bg-gray-50 p-2 text-xs">
+{stringifySafe({
+  id: selected?.id ?? null,
+  userId: selected?.userId ?? null,
+  type: selected?.type ?? null,
+  message: selected?.message ?? null,
+  createdAt: selected?.createdAt ?? null,
+  evidence: selected?.evidence ?? null,
+})}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-xs text-gray-600">{label}</span>
+      <span className="text-sm font-medium text-gray-900 truncate max-w-[60%]">
+        {value}
+      </span>
+    </div>
   );
 }
