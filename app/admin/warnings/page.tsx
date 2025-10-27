@@ -4,11 +4,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 type Warning = {
-  id?: string;
-  userId: string;
-  type: string;
-  message: string;
-  createdAt?: string;
+  id?: string | null;
+  userId?: string | null;
+  type?: string | null;
+  message?: string | null;
+  createdAt?: string | null;
   evidence?: unknown;
 };
 
@@ -35,14 +35,13 @@ export default function AdminWarningsPage() {
     try {
       const res = await fetch(`/api/admin/warnings/list?limit=${limit}`, {
         headers: {
-          // If you’ve set the admin cookie via /admin/enter-key, cookie will auth.
-          // For local testing you could temporarily add x-admin-key here.
+          // admin cookie is used by middleware; no header needed here
         },
         cache: "no-store",
       });
       const json: ApiListResponse = await res.json();
       if (!json.ok) throw new Error(json.error || "Failed to load warnings");
-      setData(json.warnings || []);
+      setData(Array.isArray(json.warnings) ? json.warnings : []);
       setLastRefreshed(new Date().toLocaleString());
     } catch (e: any) {
       setErr(e?.message || "Failed to load warnings");
@@ -58,52 +57,70 @@ export default function AdminWarningsPage() {
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const id = setInterval(load, 30_000); // refresh every 30s
+    const id = setInterval(load, 30_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, limit]);
 
   const filtered = useMemo(() => {
-    return data.filter((w) => {
-      if (qUser && !w.userId.toLowerCase().includes(qUser.toLowerCase())) return false;
-      if (qType && !w.type.toLowerCase().includes(qType.toLowerCase())) return false;
+    const u = (qUser || "").toLowerCase();
+    const t = (qType || "").toLowerCase();
+
+    return (data || []).filter((w) => {
+      const userId = ((w?.userId ?? "") + "").toLowerCase();
+      const type = ((w?.type ?? "") + "").toLowerCase();
+
+      if (u && !userId.includes(u)) return false;
+      if (t && !type.includes(t)) return false;
       return true;
     });
   }, [data, qUser, qType]);
 
   function exportCsv() {
-    // Build CSV from the currently filtered set
-    const rows = filtered;
-    const header = ["id", "userId", "type", "message", "createdAt", "evidenceJSON"];
-    const csvLines = [header.join(",")];
+    try {
+      const rows = filtered || [];
+      const header = ["id", "userId", "type", "message", "createdAt", "evidenceJSON"];
+      const csvLines = [header.join(",")];
 
-    for (const w of rows) {
-      const id = safeCsv(w.id ?? "");
-      const userId = safeCsv(w.userId);
-      const type = safeCsv(w.type);
-      const message = safeCsv(w.message);
-      const created = safeCsv(w.createdAt ? new Date(w.createdAt).toISOString() : "");
-      const evidence = safeCsv(JSON.stringify(w.evidence ?? null));
-      csvLines.push([id, userId, type, message, created, evidence].join(","));
+      for (const w of rows) {
+        const id = csvSafe(w?.id ?? "");
+        const userId = csvSafe(w?.userId ?? "");
+        const type = csvSafe(w?.type ?? "");
+        const message = csvSafe(w?.message ?? "");
+        const created = csvSafe(w?.createdAt ? new Date(w.createdAt).toISOString() : "");
+        const evidence = csvSafe(stringifySafe(w?.evidence));
+
+        csvLines.push([id, userId, type, message, created, evidence].join(","));
+      }
+
+      const csv = csvLines.join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      a.href = url;
+      a.download = `warnings-${stamp}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export CSV failed:", e);
+      alert("Export failed. See console for details.");
     }
-
-    const csv = csvLines.join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-    a.href = url;
-    a.download = `warnings-${stamp}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 
-  function safeCsv(val: string) {
-    // Escape double-quotes and wrap in quotes; avoids commas/linebreaks issues
+  function csvSafe(val: unknown) {
     const s = (val ?? "").toString().replace(/"/g, '""');
     return `"${s}"`;
+  }
+
+  function stringifySafe(obj: unknown) {
+    try {
+      return JSON.stringify(obj ?? null);
+    } catch {
+      return '"[unstringifiable]"';
+    }
   }
 
   return (
@@ -151,7 +168,6 @@ export default function AdminWarningsPage() {
             <span>Auto-refresh (30s)</span>
           </label>
 
-          {/* Export CSV for filtered rows */}
           <button
             onClick={exportCsv}
             className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50"
@@ -199,20 +215,20 @@ export default function AdminWarningsPage() {
                   filtered.map((w, i) => (
                     <tr key={w.id ?? `${w.userId}-${w.type}-${i}`} className="border-t">
                       <td className="px-3 py-2 align-top">
-                        {w.createdAt ? new Date(w.createdAt).toLocaleString() : "—"}
+                        {w?.createdAt ? new Date(w.createdAt).toLocaleString() : "—"}
                       </td>
                       <td className="px-3 py-2 align-top">
                         <span className="rounded-md bg-amber-100 px-2 py-1 font-mono text-xs text-amber-700">
-                          {w.type}
+                          {(w?.type ?? "—").toString()}
                         </span>
                       </td>
                       <td className="px-3 py-2 align-top">
-                        <span className="font-mono text-xs">{w.userId}</span>
+                        <span className="font-mono text-xs">{(w?.userId ?? "—").toString()}</span>
                       </td>
-                      <td className="px-3 py-2 align-top">{w.message}</td>
+                      <td className="px-3 py-2 align-top">{(w?.message ?? "—").toString()}</td>
                       <td className="px-3 py-2 align-top">
                         <pre className="max-h-32 overflow-auto rounded-md bg-gray-50 p-2 text-xs">
-{JSON.stringify(w.evidence ?? null, null, 2)}
+{stringifySafe(w?.evidence)}
                         </pre>
                       </td>
                     </tr>
