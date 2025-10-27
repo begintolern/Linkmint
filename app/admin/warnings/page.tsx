@@ -35,6 +35,9 @@ export default function AdminWarningsPage() {
   const [qUser, setQUser] = useState("");
   const [qType, setQType] = useState("");
 
+  // modal state
+  const [selected, setSelected] = useState<Warning | null>(null);
+
   async function load() {
     setLoading(true);
     setErr(null);
@@ -64,6 +67,14 @@ export default function AdminWarningsPage() {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, limit]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelected(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const filtered = useMemo(() => {
     const u = (qUser || "").toLowerCase();
@@ -129,9 +140,18 @@ export default function AdminWarningsPage() {
 
   function stringifySafe(obj: unknown) {
     try {
-      return JSON.stringify(obj ?? null);
+      return JSON.stringify(obj ?? null, null, 2);
     } catch {
       return '"[unstringifiable]"';
+    }
+  }
+
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Copied!");
+    } catch {
+      alert("Copy failed");
     }
   }
 
@@ -227,7 +247,7 @@ export default function AdminWarningsPage() {
                   <th className="px-3 py-2">Type</th>
                   <th className="px-3 py-2">User</th>
                   <th className="px-3 py-2">Message</th>
-                  <th className="px-3 py-2">Evidence</th>
+                  <th className="px-3 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -239,7 +259,11 @@ export default function AdminWarningsPage() {
                   </tr>
                 ) : (
                   filtered.map((w, i) => (
-                    <tr key={w.id ?? `${w.userId}-${w.type}-${i}`} className="border-t">
+                    <tr
+                      key={w.id ?? `${w.userId}-${w.type}-${i}`}
+                      className="border-t hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelected(w)}
+                    >
                       <td className="px-3 py-2 align-top">
                         {w?.createdAt ? new Date(w.createdAt).toLocaleString() : "—"}
                       </td>
@@ -251,11 +275,19 @@ export default function AdminWarningsPage() {
                       <td className="px-3 py-2 align-top">
                         <span className="font-mono text-xs">{(w?.userId ?? "—").toString()}</span>
                       </td>
-                      <td className="px-3 py-2 align-top">{(w?.message ?? "—").toString()}</td>
                       <td className="px-3 py-2 align-top">
-                        <pre className="max-h-24 overflow-auto rounded-md bg-gray-50 p-2 text-xs">
-{stringifySafe(w?.evidence)}
-                        </pre>
+                        {(w?.message ?? "—").toString()}
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelected(w);
+                          }}
+                          className="rounded-md border px-2 py-1 text-xs hover:bg-gray-100"
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -274,6 +306,107 @@ export default function AdminWarningsPage() {
           </div>
         )}
       </section>
+
+      {/* Details Modal */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl bg-white shadow-xl ring-1 ring-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <h2 className="text-sm font-semibold">Warning Details</h2>
+              <button
+                onClick={() => setSelected(null)}
+                className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                aria-label="Close"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="px-4 py-3 space-y-3 text-sm">
+              <Row label="ID">
+                <Mono>{selected.id || "—"}</Mono>
+                <CopyBtn value={selected.id || ""} onCopy={copy} />
+              </Row>
+
+              <Row label="Created">
+                {selected.createdAt ? new Date(selected.createdAt).toLocaleString() : "—"}
+              </Row>
+
+              <Row label="Type">
+                <span className="rounded-md bg-amber-100 px-2 py-1 font-mono text-xs text-amber-700">
+                  {(selected.type ?? "—").toString()}
+                </span>
+                <CopyBtn value={String(selected.type ?? "")} onCopy={copy} />
+              </Row>
+
+              <Row label="User ID">
+                <Mono>{selected.userId || "—"}</Mono>
+                <CopyBtn value={selected.userId || ""} onCopy={copy} />
+              </Row>
+
+              <Row label="Message">
+                <span className="break-words">{selected.message || "—"}</span>
+                <CopyBtn value={selected.message || ""} onCopy={copy} />
+              </Row>
+
+              <div>
+                <div className="mb-1 text-xs font-semibold text-gray-500">Evidence (raw)</div>
+                <pre className="max-h-72 overflow-auto rounded-md bg-gray-50 p-3 text-xs">
+{stringifySafe(selected.evidence)}
+                </pre>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
+              <button
+                onClick={() => setSelected(null)}
+                className="rounded-md border px-3 py-2 text-xs hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+/* ---------- tiny UI helpers ---------- */
+
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-24 shrink-0 text-xs font-medium text-gray-500">{label}</div>
+      <div className="flex items-center gap-2">{children}</div>
+    </div>
+  );
+}
+
+function Mono({ children }: { children: React.ReactNode }) {
+  return <span className="font-mono text-xs">{children}</span>;
+}
+
+function CopyBtn({ value, onCopy }: { value: string; onCopy: (v: string) => Promise<void> }) {
+  return (
+    <button
+      onClick={() => onCopy(value)}
+      className="rounded-md border px-2 py-1 text-xs hover:bg-gray-100"
+      title="Copy to clipboard"
+    >
+      Copy
+    </button>
   );
 }
