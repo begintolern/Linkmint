@@ -1,4 +1,5 @@
 // app/api/commissions/route.ts
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -10,20 +11,27 @@ import { prisma } from "@/lib/db";
 export async function GET() {
   try {
     const session = (await getServerSession(authOptions as any)) as any;
+
     if (!session?.user?.email) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const me = await prisma.user.findUnique({
       where: { email: session.user.email as string },
       select: { id: true },
     });
+
     if (!me) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    // Example: return recent payout records as “commissions” placeholder
-    // (Adjust to your real Commission model if needed)
+    // Fetch last 100 payouts (as commissions placeholder)
     const commissions = await prisma.payout.findMany({
       where: { userId: me.id },
       orderBy: { createdAt: "desc" },
@@ -38,8 +46,11 @@ export async function GET() {
     });
 
     return NextResponse.json({ ok: true, rows: commissions });
-  } catch (e) {
+  } catch (e: any) {
     console.error("GET /api/commissions error:", e);
-    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: e.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
