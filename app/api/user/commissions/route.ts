@@ -1,4 +1,5 @@
 // app/api/user/commissions/route.ts
+export const runtime = "nodejs";           // Fix TLS cert issue by forcing Node runtime
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -22,7 +23,7 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Pull recent Commission rows for this user
+    // Return recent commissions for the logged-in user
     const rows = await prisma.commission.findMany({
       where: { userId: me.id },
       orderBy: { createdAt: "desc" },
@@ -30,18 +31,16 @@ export async function GET() {
       select: {
         id: true,
         createdAt: true,
-        amount: true,           // Float
-        type: true,             // CommissionType enum
-        status: true,           // string in your schema
-        paidOut: true,          // boolean
-        source: true,
-        description: true,
+        status: true,
       },
     });
 
-    return NextResponse.json({ ok: true, rows });
-  } catch (e) {
+    return NextResponse.json({ ok: true, rows }, { status: 200 });
+  } catch (e: any) {
     console.error("GET /api/user/commissions error:", e);
-    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: e?.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
