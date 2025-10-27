@@ -1,41 +1,22 @@
 // lib/db.ts
+// Force the Node.js Prisma client everywhere (NOT the Edge client).
+// This prevents TLS "self-signed certificate in chain" errors when connecting
+// through Railway's public proxy with Prisma on Edge.
+
 import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
 
-// In dev, relax Node's TLS checks (Windows quirk). Prod stays strict unless we explicitly set ssl:false.
-if (process.env.NODE_ENV !== "production") {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+declare global {
+  // eslint-disable-next-line no-var
+  var __PRISMA_NODE_CLIENT__: PrismaClient | undefined;
 }
-
-function buildPoolFromEnv() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set");
-
-  const host = new URL(url).hostname;
-  const isRailwayInternal = host.endsWith("railway.internal");
-
-  return new pg.Pool({
-    connectionString: url,
-    // ✅ Internal Railway DB doesn’t need TLS over the private network
-    ssl: isRailwayInternal ? false : { require: true, rejectUnauthorized: false },
-    max: 5,
-  });
-}
-
-const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 
 export const prisma =
-  globalForPrisma.prisma ??
-  (() => {
-    const pool = buildPoolFromEnv();
-    const adapter = new PrismaPg(pool);
-    return new PrismaClient({
-      adapter,
-      log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
-    });
-  })();
+  global.__PRISMA_NODE_CLIENT__ ??
+  new PrismaClient({
+    log: ["error"], // add "query","warn" during debugging if needed
+  });
 
+// Preserve a single instance in dev to avoid hot-reload leaks
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  global.__PRISMA_NODE_CLIENT__ = prisma;
 }
