@@ -24,19 +24,22 @@ export default function AdminWarningsPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [limit, setLimit] = useState(200);
-  const [qUser, setQUser] = useState("");
-  const [qType, setQType] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<string>("");
+
+  // form inputs (not applied until "Apply")
+  const [qUserInput, setQUserInput] = useState("");
+  const [qTypeInput, setQTypeInput] = useState("");
+
+  // applied filters (used by table)
+  const [qUser, setQUser] = useState("");
+  const [qType, setQType] = useState("");
 
   async function load() {
     setLoading(true);
     setErr(null);
     try {
       const res = await fetch(`/api/admin/warnings/list?limit=${limit}`, {
-        headers: {
-          // admin cookie is used by middleware; no header needed here
-        },
         cache: "no-store",
       });
       const json: ApiListResponse = await res.json();
@@ -65,16 +68,26 @@ export default function AdminWarningsPage() {
   const filtered = useMemo(() => {
     const u = (qUser || "").toLowerCase();
     const t = (qType || "").toLowerCase();
-
     return (data || []).filter((w) => {
       const userId = ((w?.userId ?? "") + "").toLowerCase();
       const type = ((w?.type ?? "") + "").toLowerCase();
-
       if (u && !userId.includes(u)) return false;
       if (t && !type.includes(t)) return false;
       return true;
     });
   }, [data, qUser, qType]);
+
+  function applyFilters() {
+    setQUser(qUserInput.trim());
+    setQType(qTypeInput.trim());
+  }
+
+  function clearFilters() {
+    setQUserInput("");
+    setQTypeInput("");
+    setQUser("");
+    setQType("");
+  }
 
   function exportCsv() {
     try {
@@ -89,7 +102,6 @@ export default function AdminWarningsPage() {
         const message = csvSafe(w?.message ?? "");
         const created = csvSafe(w?.createdAt ? new Date(w.createdAt).toISOString() : "");
         const evidence = csvSafe(stringifySafe(w?.evidence));
-
         csvLines.push([id, userId, type, message, created, evidence].join(","));
       }
 
@@ -178,17 +190,31 @@ export default function AdminWarningsPage() {
 
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <input
-              value={qUser}
-              onChange={(e) => setQUser(e.target.value)}
+              value={qUserInput}
+              onChange={(e) => setQUserInput(e.target.value)}
               placeholder="Filter by userId"
               className="w-48 rounded-lg border px-3 py-2 text-sm"
             />
             <input
-              value={qType}
-              onChange={(e) => setQType(e.target.value)}
+              value={qTypeInput}
+              onChange={(e) => setQTypeInput(e.target.value)}
               placeholder="Filter by type (e.g. RATE_LIMIT…)"
               className="w-60 rounded-lg border px-3 py-2 text-sm"
             />
+            <button
+              onClick={applyFilters}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+              title="Apply current filters"
+            >
+              Apply
+            </button>
+            <button
+              onClick={clearFilters}
+              className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+              title="Clear filters"
+            >
+              Clear
+            </button>
           </div>
         </div>
 
