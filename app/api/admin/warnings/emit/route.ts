@@ -4,6 +4,7 @@ export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { randomUUID } from "crypto";
 
 const ADMIN_KEY = process.env.ADMIN_API_KEY || "";
 
@@ -14,32 +15,46 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
     }
 
-    // accept either JSON body or query params
     const url = new URL(req.url);
     const isJson = (req.headers.get("content-type") || "").includes("application/json");
     const payload = isJson ? await req.json().catch(() => ({})) : {};
-    const userId = String(payload.userId ?? url.searchParams.get("userId") ?? "");
-    const type = String(payload.type ?? url.searchParams.get("type") ?? "TEST_WARNING");
-    const message = String(payload.message ?? url.searchParams.get("message") ?? "Emit test");
+
+    const userIdRaw =
+      payload.userId ?? url.searchParams.get("userId") ?? "";
+    const type =
+      String(payload.type ?? url.searchParams.get("type") ?? "TEST_WARNING");
+    const message =
+      String(payload.message ?? url.searchParams.get("message") ?? "Emit test");
+
     const evidenceRaw = payload.evidence ?? url.searchParams.get("evidence");
-    let evidence: any = undefined;
+    let meta: any = undefined;
     try {
-      evidence = typeof evidenceRaw === "string" ? JSON.parse(evidenceRaw) : evidenceRaw;
+      meta = typeof evidenceRaw === "string" ? JSON.parse(evidenceRaw) : evidenceRaw;
     } catch {
-      evidence = String(evidenceRaw ?? "");
+      meta = String(evidenceRaw ?? "");
     }
 
-    // Store into the same table used by warnings list (complianceEvent)
+    // IMPORTANT:
+    // - Many Prisma models require an explicit id if @default(cuid()) is not set.
+    // - Use undefined (not null) for optional fields unless schema allows nulls.
     const row = await prisma.complianceEvent.create({
       data: {
+        id: randomUUID(),
         type,
         message,
         severity: 1,
-        userId: userId || null,
-        merchantId: null,
-        meta: evidence ?? undefined,
+        userId: userIdRaw ? String(userIdRaw) : undefined,
+        merchantId: undefined,
+        meta: meta as any,
       },
-      select: { id: true, type: true, message: true, userId: true, createdAt: true, meta: true },
+      select: {
+        id: true,
+        type: true,
+        message: true,
+        userId: true,
+        createdAt: true,
+        meta: true,
+      },
     });
 
     return NextResponse.json({ ok: true, created: row });
