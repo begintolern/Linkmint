@@ -12,12 +12,11 @@ const ADMIN_USER_ID = "clwzud5zr0000v4l5gnkz1oz3";
 
 // Helper: lightweight admin gate using either session or cookie "role=admin"
 async function assertAdmin(request: Request) {
-  // 1) Try session (preferred)
+  // 1) Try session (preferred). Cast to any to avoid TS narrowing to {}.
   try {
-    const session = await getServerSession(authOptions as any);
+    const session: any = await getServerSession(authOptions as any);
     if (session?.user?.id === ADMIN_USER_ID) return true;
-    // Some installs attach role; keep it permissive to your setup
-    if ((session as any)?.user?.role === "admin") return true;
+    if (session?.user?.role === "admin") return true;
   } catch {
     // fall through to cookie check
   }
@@ -40,7 +39,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { userId, email, resetTrustScore = true } = body || {};
+    const { userId, email, resetTrustScore = true } = (body ?? {}) as {
+      userId?: string;
+      email?: string;
+      resetTrustScore?: boolean;
+    };
 
     if (!userId && !email) {
       return NextResponse.json(
@@ -60,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     // Prepare update data
-    const data: any = { disabled: false };
+    const data: Record<string, any> = { disabled: false };
     if (resetTrustScore) data.trustScore = 0;
 
     const updated = await prisma.user.update({
