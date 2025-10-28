@@ -9,19 +9,39 @@ import { authOptions } from "@/lib/auth/options";
 
 const ADMIN_USER_ID = "clwzud5zr0000v4l5gnkz1oz3";
 
+/** Non-blocking Telegram notifier (no-op if env not set). */
+async function notifyAdmin(text: string) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID; // e.g. "8097899242"
+    if (!token || !chatId) return;
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+    }).catch(() => {});
+  } catch {}
+}
+
 // Lightweight admin check: session OR cookie role=admin
 async function assertAdmin(request: Request) {
   try {
     const session: any = await getServerSession(authOptions as any);
-    if (session?.user?.id === ADMIN_USER_ID) return true;
-    if (session?.user?.role === "admin") return true;
+    if (session?.user?.id === ADMIN_USER_ID) return { ok: true, actor: session.user.email || "admin-session" };
+    if (session?.user?.role === "admin") return { ok: true, actor: session.user.email || "admin-role" };
   } catch {}
   const cookieHeader = request.headers.get("cookie") || "";
   const isAdminCookie = cookieHeader
     .split(";")
     .map((s) => s.trim().toLowerCase())
     .some((s) => s.startsWith("role=admin"));
-  return isAdminCookie;
+  if (isAdminCookie) return { ok: true, actor: "admin-cookie" };
+  return { ok: false, actor: "unknown" };
 }
 
 /**
@@ -30,10 +50,8 @@ async function assertAdmin(request: Request) {
  * - List: ?q=...&disabled=true|false&limit=25&page=1
  */
 export async function GET(request: Request) {
-  const isAdmin = await assertAdmin(request);
-  if (!isAdmin) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = await assertAdmin(request);
+  if (!gate.ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId") || undefined;
@@ -62,7 +80,6 @@ export async function GET(request: Request) {
   const where: any = {};
   if (disabledParam === "true") where.disabled = true;
   if (disabledParam === "false") where.disabled = false;
-
   if (q) {
     where.OR = [
       { email: { contains: q, mode: "insensitive" } },
@@ -80,30 +97,22 @@ export async function GET(request: Request) {
 
   const total = await prisma.user.count({ where });
 
-  return NextResponse.json({
-    ok: true,
-    total,
-    page,
-    limit,
-    users,
-  });
+  return NextResponse.json({ ok: true, total, page, limit, users });
 }
 
 /**
  * POST /api/admin/users
  * Body:
- *  {
- *    "action": "enable" | "disable" | "setTrustScore" | "unfreeze",
- *    "userId"?: string,
- *    "email"?: string,
- *    "trustScore"?: number    // used for setTrustScore
- *  }
+ * {
+ *   "action": "enable" | "disable" | "setTrustScore" | "unfreeze",
+ *   "userId"?: string,
+ *   "email"?: string,
+ *   "trustScore"?: number
+ * }
  */
 export async function POST(request: Request) {
-  const isAdmin = await assertAdmin(request);
-  if (!isAdmin) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+  const gate = await assertAdmin(request);
+  if (!gate.ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json().catch(() => ({}));
   const { action, userId, email, trustScore } = (body ?? {}) as {
@@ -113,20 +122,14 @@ export async function POST(request: Request) {
     trustScore?: number;
   };
 
-  if (!action) {
-    return NextResponse.json({ ok: false, error: "Missing action" }, { status: 400 });
-  }
-  if (!userId && !email) {
-    return NextResponse.json({ ok: false, error: "Provide userId or email" }, { status: 400 });
-  }
+  if (!action) return NextResponse.json({ ok: false, error: "Missing action" }, { status: 400 });
+  if (!userId && !email) return NextResponse.json({ ok: false, error: "Provide userId or email" }, { status: 400 });
 
   const target = await prisma.user.findFirst({
     where: { OR: [{ id: userId ?? undefined }, { email: email ?? undefined }] },
-    select: { id: true },
+    select: { id: true, email: true, name: true, disabled: true, trustScore: true },
   });
-  if (!target) {
-    return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
-  }
+  if (!target) return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
 
   if (action === "enable" || action === "disable") {
     const updated = await prisma.user.update({
@@ -134,6 +137,9 @@ export async function POST(request: Request) {
       data: { disabled: action === "disable" },
       select: { id: true, email: true, name: true, disabled: true, trustScore: true },
     });
+    notifyAdmin(
+      `🔐 <b>User ${action}</b>\nID: <code>${updated.id}</code>\nEmail: ${updated.email}\nBy: ${gate.actor}`
+    );
     return NextResponse.json({ ok: true, user: updated });
   }
 
@@ -146,6 +152,9 @@ export async function POST(request: Request) {
       data: { trustScore },
       select: { id: true, email: true, name: true, disabled: true, trustScore: true },
     });
+    notifyAdmin(
+      `📊 <b>TrustScore set</b>\nID: <code>${updated.id}</code>\nEmail: ${updated.email}\nNew TS: ${updated.trustScore}\nBy: ${gate.actor}`
+    );
     return NextResponse.json({ ok: true, user: updated });
   }
 
@@ -155,6 +164,9 @@ export async function POST(request: Request) {
       data: { disabled: false, trustScore: 0 },
       select: { id: true, email: true, name: true, disabled: true, trustScore: true },
     });
+    notifyAdmin(
+      `🧊 <b>Unfreeze</b>\nID: <code>${updated.id}</code>\nEmail: ${updated.email}\nResult: disabled=false, trustScore=0\nBy: ${gate.actor}`
+    );
     return NextResponse.json({ ok: true, user: updated });
   }
 
