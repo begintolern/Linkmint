@@ -1,218 +1,290 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
+import React, { useEffect, useMemo, useState } from "react";
 
-import { useEffect, useState } from "react";
-
-type Row = {
+type User = {
   id: string;
-  name: string | null;
   email: string | null;
-  role: string | null;
-  trustScore: number | null;
-  createdAt: string;
-  emailVerifiedAt: string | null;
+  name: string | null;
+  disabled: boolean;
+  trustScore: number;
 };
 
-function parseIntSafe(x: string | null): number | null {
-  if (!x) return null;
-  const n = parseInt(x, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
+type ListResp = {
+  ok: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  users: User[];
+  error?: string;
+};
+
+async function apiGetUsers(params: Record<string, string | number | boolean | undefined>) {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null) continue;
+    sp.set(k, String(v));
+  }
+  const res = await fetch(`/api/admin/users?${sp.toString()}`, { cache: "no-store" });
+  return (await res.json()) as ListResp;
+}
+
+async function apiPost(action: string, payload: Record<string, any>) {
+  const res = await fetch(`/api/admin/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, ...payload }),
+  });
+  return res.json();
 }
 
 export default function AdminUsersPage() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
+  // query & paging
+  const [q, setQ] = useState("");
+  const [disabledFilter, setDisabledFilter] = useState<"all" | "true" | "false">("all");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(25);
+
+  // data
+  const [rows, setRows] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  async function load(next?: string | null) {
+  // local trust edits
+  const [trustDraft, setTrustDraft] = useState<Record<string, string>>({});
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
+
+  async function load() {
+    setLoading(true);
+    setErr(null);
     try {
-      setLoading(true);
-      setErr(null);
-      const url = new URL("/api/admin/users", window.location.origin);
-      url.searchParams.set("limit", "10");
-      if (next) url.searchParams.set("cursor", next);
-      const res = await fetch(url.toString(), { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
-      setRows((prev) => (next ? [...prev, ...json.rows] : json.rows));
-      setCursor(json.nextCursor ?? null);
+      const params: Record<string, any> = { page, limit };
+      if (q.trim()) params.q = q.trim();
+      if (disabledFilter !== "all") params.disabled = disabledFilter;
+      const data = await apiGetUsers(params);
+      if (!data.ok) {
+        setErr(data.error || "Failed to load users");
+      } else {
+        setRows(data.users || []);
+        setTotal(data.total || 0);
+      }
     } catch (e: any) {
-      setErr(e.message || "Failed to load users");
+      setErr(e?.message || "Network error");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    load(null);
+    load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [page, disabledFilter]);
 
-  // Auto-refresh every 15s so new signups appear without clicking Refresh
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (document.visibilityState === "visible" && !loading) {
-        load(null);
-      }
-    }, 15000);
-    return () => clearInterval(id);
-  }, [loading]);
+  function resetPagingAndLoad() {
+    setPage(1);
+    // load will auto-run via effect when page changes
+    setTimeout(() => load(), 0);
+  }
 
-  async function patchUser(id: string, body: any) {
+  async function doAction(
+    idOrEmail: { userId?: string; email?: string },
+    action: "enable" | "disable" | "unfreeze" | "setTrustScore",
+    trustScore?: number
+  ) {
+    const key = idOrEmail.userId || idOrEmail.email || "";
+    setBusyId(key);
+    setErr(null);
     try {
-      setBusyId(id);
-      const res = await fetch(`/api/admin/users/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
-      const updated = json.user as Row;
-      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...updated } : r)));
+      const payload: any = { ...idOrEmail };
+      if (action === "setTrustScore") payload.trustScore = trustScore;
+      const res = await apiPost(action, payload);
+      if (!res?.ok) {
+        setErr(res?.error || `Action ${action} failed`);
+      } else {
+        // refresh list inline
+        setRows((prev) =>
+          prev.map((u) => (u.id === res.user.id ? { ...u, ...res.user } : u))
+        );
+      }
     } catch (e: any) {
-      alert(e.message || "Update failed");
+      setErr(e?.message || `Action ${action} failed`);
     } finally {
       setBusyId(null);
     }
   }
 
   return (
-    <main className="mx-auto max-w-7xl p-6 space-y-6">
+    <div className="p-6 space-y-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Admin · Users</h1>
-        <button
-          onClick={() => load(null)}
-          className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 hover:bg-zinc-50"
-        >
-          Refresh
-        </button>
+        <h1 className="text-2xl font-semibold">Admin · Users</h1>
+        <div className="text-sm text-gray-500">
+          Total: {total} | Page {page} / {totalPages}
+        </div>
       </header>
 
+      {/* Controls */}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600">Search (name/email)</label>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && resetPagingAndLoad()}
+            placeholder="Type and press Enter…"
+            className="border rounded-lg px-3 py-2 w-64"
+          />
+        </div>
+        <div className="flex flex-col">
+          <label className="text-sm text-gray-600">Disabled</label>
+          <select
+            value={disabledFilter}
+            onChange={(e) => setDisabledFilter(e.target.value as any)}
+            className="border rounded-lg px-3 py-2"
+          >
+            <option value="all">All</option>
+            <option value="true">Only Disabled</option>
+            <option value="false">Only Enabled</option>
+          </select>
+        </div>
+        <button
+          onClick={resetPagingAndLoad}
+          className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90"
+          disabled={loading}
+        >
+          {loading ? "Loading…" : "Refresh"}
+        </button>
+      </div>
+
+      {/* Error */}
       {err && (
-        <div className="rounded-xl bg-red-50 text-red-800 ring-1 ring-red-200 p-3 text-sm">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
           {err}
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-2xl ring-1 ring-zinc-200">
-        <table className="min-w-full text-sm">
-          <thead className="bg-zinc-50">
-            <tr className="text-left">
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Trust</th>
-              <th className="px-4 py-3">Verified</th>
-              <th className="px-4 py-3">Actions</th>
-              <th className="px-4 py-3">ID</th>
+      {/* Table */}
+      <div className="overflow-auto">
+        <table className="min-w-full border rounded-xl overflow-hidden">
+          <thead className="bg-gray-100 text-sm">
+            <tr>
+              <th className="text-left p-3 border-b">ID</th>
+              <th className="text-left p-3 border-b">Email</th>
+              <th className="text-left p-3 border-b">Name</th>
+              <th className="text-left p-3 border-b">Disabled</th>
+              <th className="text-left p-3 border-b">TrustScore</th>
+              <th className="text-left p-3 border-b">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {rows.length === 0 && !loading ? (
+          <tbody className="text-sm">
+            {rows.map((u) => {
+              const key = u.id;
+              const draft = trustDraft[key] ?? String(u.trustScore);
+              const disabled = busyId === key;
+
+              return (
+                <tr key={u.id} className="hover:bg-gray-50">
+                  <td className="p-3 border-b align-top">
+                    <div className="font-mono text-xs break-all">{u.id}</div>
+                  </td>
+                  <td className="p-3 border-b align-top">{u.email}</td>
+                  <td className="p-3 border-b align-top">{u.name}</td>
+                  <td className="p-3 border-b align-top">
+                    {u.disabled ? (
+                      <span className="inline-block px-2 py-1 text-xs rounded bg-red-100 text-red-700">
+                        disabled
+                      </span>
+                    ) : (
+                      <span className="inline-block px-2 py-1 text-xs rounded bg-green-100 text-green-700">
+                        active
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-3 border-b align-top">
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="border rounded px-2 py-1 w-20"
+                        value={draft}
+                        onChange={(e) =>
+                          setTrustDraft((s) => ({ ...s, [key]: e.target.value }))
+                        }
+                      />
+                      <button
+                        disabled={disabled}
+                        onClick={() =>
+                          doAction({ userId: u.id }, "setTrustScore", Number(draft))
+                        }
+                        className="px-2 py-1 rounded bg-gray-800 text-white text-xs hover:opacity-90"
+                      >
+                        {disabled ? "…" : "Set"}
+                      </button>
+                    </div>
+                  </td>
+                  <td className="p-3 border-b align-top">
+                    <div className="flex flex-wrap gap-2">
+                      {u.disabled ? (
+                        <button
+                          disabled={disabled}
+                          onClick={() => doAction({ userId: u.id }, "enable")}
+                          className="px-3 py-1 rounded-xl bg-green-600 text-white text-xs hover:opacity-90"
+                        >
+                          {disabled ? "…" : "Enable"}
+                        </button>
+                      ) : (
+                        <button
+                          disabled={disabled}
+                          onClick={() => doAction({ userId: u.id }, "disable")}
+                          className="px-3 py-1 rounded-xl bg-red-600 text-white text-xs hover:opacity-90"
+                        >
+                          {disabled ? "…" : "Disable"}
+                        </button>
+                      )}
+                      <button
+                        disabled={disabled}
+                        onClick={() => doAction({ userId: u.id }, "unfreeze")}
+                        className="px-3 py-1 rounded-xl bg-blue-600 text-white text-xs hover:opacity-90"
+                      >
+                        {disabled ? "…" : "Unfreeze (0)"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {rows.length === 0 && !loading && (
               <tr>
-                <td className="px-4 py-6 text-zinc-500" colSpan={8}>
+                <td className="p-6 text-center text-gray-500" colSpan={6}>
                   No users found.
                 </td>
               </tr>
-            ) : (
-              rows.map((u) => {
-                const verified = !!u.emailVerifiedAt;
-                const isAdmin = (u.role ?? "user").toUpperCase() === "ADMIN";
-                return (
-                  <tr key={u.id} className="border-t border-zinc-200 align-middle">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {new Date(u.createdAt).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3">{u.email ?? "—"}</td>
-                    <td className="px-4 py-3">{u.name ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs">
-                        {u.role ?? "user"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">{u.trustScore ?? 0}</td>
-                    <td className="px-4 py-3">
-                      {verified ? new Date(u.emailVerifiedAt!).toLocaleDateString() : "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => patchUser(u.id, { verifyEmail: true })}
-                          disabled={busyId === u.id || verified}
-                          className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
-                          title={verified ? "Already verified" : "Mark email verified"}
-                        >
-                          Verify
-                        </button>
-                        <button
-                          onClick={() => patchUser(u.id, { makeAdmin: true })}
-                          disabled={busyId === u.id || isAdmin}
-                          className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
-                          title={isAdmin ? "Already admin" : "Make admin"}
-                        >
-                          Make Admin
-                        </button>
-                        <button
-                          onClick={() => patchUser(u.id, { makeUser: true })}
-                          disabled={busyId === u.id || !isAdmin}
-                          className="text-xs rounded-md px-2 py-1 ring-1 ring-zinc-300 disabled:opacity-50 hover:bg-zinc-50"
-                          title={!isAdmin ? "Already user" : "Revoke admin"}
-                        >
-                          Make User
-                        </button>
-                        <button
-                          onClick={() => {
-                            const inc = prompt("Increase trust by (positive integer):", "5");
-                            const n = parseIntSafe(inc);
-                            if (n) patchUser(u.id, { bumpTrust: n });
-                          }}
-                          disabled={busyId === u.id}
-                          className="text-xs rounded-md px-2 py-1 ring-1 ring-green-300 disabled:opacity-50 hover:bg-green-50"
-                          title="Increase trust score"
-                        >
-                          Bump Trust
-                        </button>
-                        <button
-                          onClick={() => {
-                            const dec = prompt("Reduce trust by (positive integer):", "5");
-                            const n = parseIntSafe(dec);
-                            if (n) patchUser(u.id, { dropTrust: n });
-                          }}
-                          disabled={busyId === u.id}
-                          className="text-xs rounded-md px-2 py-1 ring-1 ring-red-300 disabled:opacity-50 hover:bg-red-50"
-                          title="Reduce trust score"
-                        >
-                          Reduce Trust
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs max-w-[32ch] truncate" title={u.id}>
-                      {u.id}
-                    </td>
-                  </tr>
-                );
-              })
             )}
           </tbody>
         </table>
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
         <button
-          onClick={() => load(cursor)}
-          disabled={!cursor || loading}
-          className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 disabled:opacity-50"
+          className="px-4 py-2 rounded-xl border"
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page <= 1 || loading}
         >
-          {loading ? "Loading..." : cursor ? "Load more" : "No more"}
+          Prev
+        </button>
+        <div className="text-sm text-gray-600">
+          Page {page} / {totalPages}
+        </div>
+        <button
+          className="px-4 py-2 rounded-xl border"
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page >= totalPages || loading}
+        >
+          Next
         </button>
       </div>
-    </main>
+    </div>
   );
 }
