@@ -1,92 +1,40 @@
 // app/api/admin/unfreeze/route.ts
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 
-// Your hardcoded admin user id (per project context)
-const ADMIN_USER_ID = "clwzud5zr0000v4l5gnkz1oz3";
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "clwzud5zr0000v4l5gnkz1oz3";
 
-// Helper: lightweight admin gate using either session or cookie "role=admin"
-async function assertAdmin(request: Request) {
-  // 1) Try session (preferred). Cast to any to avoid TS narrowing to {}.
-  try {
-    const session: any = await getServerSession(authOptions as any);
-    if (session?.user?.id === ADMIN_USER_ID) return true;
-    if (session?.user?.role === "admin") return true;
-  } catch {
-    // fall through to cookie check
+type AdminSession = {
+  user?: { id?: string; role?: string; email?: string | null } | null;
+} | null;
+
+async function requireAdmin(): Promise<{ ok: boolean; actor?: string }> {
+  const session = (await getServerSession(authOptions as any)) as AdminSession;
+  const uid = session?.user?.id;
+  const role = session?.user?.role;
+  const email = session?.user?.email ?? "admin";
+
+  if (uid && (uid === ADMIN_USER_ID || role === "admin")) {
+    return { ok: true, actor: String(email) };
   }
-
-  // 2) Fallback cookie check: role=admin
-  const cookieHeader = request.headers.get("cookie") || "";
-  const isAdminCookie = cookieHeader
-    .split(";")
-    .map((s) => s.trim().toLowerCase())
-    .some((s) => s.startsWith("role=admin"));
-
-  return isAdminCookie;
+  return { ok: false };
 }
 
-export async function POST(request: Request) {
-  try {
-    const isAdmin = await assertAdmin(request);
-    if (!isAdmin) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+export async function POST(req: Request) {
+  const gate = await requireAdmin();
+  if (!gate.ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
-    const body = await request.json().catch(() => ({}));
-    const { userId, email, resetTrustScore = true } = (body ?? {}) as {
-      userId?: string;
-      email?: string;
-      resetTrustScore?: boolean;
-    };
+  const body = await req.json().catch(() => ({} as any));
+  const userId = body?.userId as string | undefined;
+  if (!userId) return NextResponse.json({ ok: false, error: "Missing userId" }, { status: 400 });
 
-    if (!userId && !email) {
-      return NextResponse.json(
-        { ok: false, error: "Provide either userId or email" },
-        { status: 400 }
-      );
-    }
-
-    // Locate the target user first (for clearer errors)
-    const target = await prisma.user.findFirst({
-      where: { OR: [{ id: userId ?? undefined }, { email: email ?? undefined }] },
-      select: { id: true, email: true, name: true, disabled: true, trustScore: true },
-    });
-
-    if (!target) {
-      return NextResponse.json({ ok: false, error: "User not found" }, { status: 404 });
-    }
-
-    // Prepare update data
-    const data: Record<string, any> = { disabled: false };
-    if (resetTrustScore) data.trustScore = 0;
-
-    const updated = await prisma.user.update({
-      where: { id: target.id },
-      data,
-      select: { id: true, email: true, name: true, disabled: true, trustScore: true },
-    });
-
-    // (Optional) TODO: write to your internal event log / Telegram alert here
-
-    return NextResponse.json({ ok: true, user: updated });
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err?.message ?? "Server error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET() {
-  // Simple health check / doc hint
-  return NextResponse.json({
-    ok: true,
-    info: "POST { userId?: string, email?: string, resetTrustScore?: boolean } to unfreeze a user.",
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { disabled: false, trustScore: 0 },
+    select: { id: true, email: true, name: true, disabled: true, trustScore: true },
   });
+
+  return NextResponse.json({ ok: true, user });
 }
