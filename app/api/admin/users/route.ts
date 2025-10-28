@@ -15,9 +15,7 @@ async function assertAdmin(request: Request) {
     const session: any = await getServerSession(authOptions as any);
     if (session?.user?.id === ADMIN_USER_ID) return true;
     if (session?.user?.role === "admin") return true;
-  } catch {
-    // fall through
-  }
+  } catch {}
   const cookieHeader = request.headers.get("cookie") || "";
   const isAdminCookie = cookieHeader
     .split(";")
@@ -76,7 +74,7 @@ export async function GET(request: Request) {
     where,
     take: limit,
     skip,
-    orderBy: { id: "desc" }, // id is safe; avoids assuming createdAt exists
+    orderBy: { id: "desc" },
     select: { id: true, email: true, name: true, disabled: true, trustScore: true },
   });
 
@@ -95,10 +93,10 @@ export async function GET(request: Request) {
  * POST /api/admin/users
  * Body:
  *  {
- *    "action": "enable" | "disable" | "setTrustScore",
+ *    "action": "enable" | "disable" | "setTrustScore" | "unfreeze",
  *    "userId"?: string,
  *    "email"?: string,
- *    "trustScore"?: number
+ *    "trustScore"?: number    // used for setTrustScore
  *  }
  */
 export async function POST(request: Request) {
@@ -109,7 +107,7 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   const { action, userId, email, trustScore } = (body ?? {}) as {
-    action?: "enable" | "disable" | "setTrustScore";
+    action?: "enable" | "disable" | "setTrustScore" | "unfreeze";
     userId?: string;
     email?: string;
     trustScore?: number;
@@ -146,6 +144,15 @@ export async function POST(request: Request) {
     const updated = await prisma.user.update({
       where: { id: target.id },
       data: { trustScore },
+      select: { id: true, email: true, name: true, disabled: true, trustScore: true },
+    });
+    return NextResponse.json({ ok: true, user: updated });
+  }
+
+  if (action === "unfreeze") {
+    const updated = await prisma.user.update({
+      where: { id: target.id },
+      data: { disabled: false, trustScore: 0 },
       select: { id: true, email: true, name: true, disabled: true, trustScore: true },
     });
     return NextResponse.json({ ok: true, user: updated });
