@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import FreezeUserButton from "@/components/admin/FreezeUserButton";
 
 type Warning = {
   id?: string | null;
@@ -364,6 +365,8 @@ export default function AdminWarningsPage() {
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
+              {/* Freeze action appears only if we have a valid userId */}
+              {selected.userId ? <FreezeUserButton userId={selected.userId} /> : null}
               <button
                 onClick={() => setSelected(null)}
                 className="rounded-md border px-3 py-2 text-xs hover:bg-gray-50"
