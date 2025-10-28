@@ -17,7 +17,7 @@ model User {
   referredById             String?
   verifyToken              String?       @unique
   verifyTokenExpiry        DateTime?
-  trustScore               Int?          @default(0)
+  trustScore               Int           @default(0)       // make non-optional (remove ?)
   referralBadge            String?
   referralCode             String?       @unique
   role                     String?       @default("user")
@@ -27,6 +27,7 @@ model User {
   ageConfirmedAt           DateTime?
   deletedAt                DateTime?
   dob                      DateTime?
+  disabled                 Boolean       @default(false)   // ✅ confirmed
   tosAcceptedAt            DateTime?
   tosAcceptedIp            String?       @db.VarChar(64)
   bonusCents               Int           @default(0)
@@ -43,27 +44,28 @@ model User {
   hasCompletedWalkthrough  Boolean       @default(false)
   defaultPayoutMethod      PayoutMethod?
 
-  commissions            Commission[]
-  eventLogs              EventLog[]
-  commissionsFromInvites OverrideCommission[] @relation("InviteeOverride")
-  overrideEarnings       OverrideCommission[] @relation("ReferrerOverride")
-  passwordResetTokens    PasswordResetToken[] @relation("UserToPasswordResetTokens")
-  payouts                Payout[]
-  payoutAccounts         PayoutAccount[]
-  payoutLogs             PayoutLog[]
-  payoutRequests         PayoutRequest[]
-  pinCredentials         PinCredential[]      @relation("UserPinCredentials")
-  referralBatches        ReferralBatch[]      @relation("UserReferralBatches")
-  referralGroupsCreated  ReferralGroup[]      @relation("UsersInGroupReferrer")
-  smartLinks             SmartLink[]          @relation("UserToSmartLink")
-  referralGroup          ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
-  referredBy             User?                @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals              User[]               @relation("UserReferrals")
-  verificationTokens     VerificationToken[]  @relation("UserToVerificationTokens")
-  policyCheckLogs        PolicyCheckLog[]     @relation("UserToPolicyCheckLogs")
+  commissions              Commission[]
+  eventLogs                EventLog[]
+  commissionsFromInvites   OverrideCommission[] @relation("InviteeOverride")
+  overrideEarnings         OverrideCommission[] @relation("ReferrerOverride")
+  passwordResetTokens      PasswordResetToken[] @relation("UserToPasswordResetTokens")
+  payouts                  Payout[]
+  payoutAccounts           PayoutAccount[]
+  payoutLogs               PayoutLog[]
+  payoutRequests           PayoutRequest[]
+  pinCredentials           PinCredential[]      @relation("UserPinCredentials")
+  referralBatches          ReferralBatch[]      @relation("UserReferralBatches")
+  referralGroupsCreated    ReferralGroup[]      @relation("UsersInGroupReferrer")
+  smartLinks               SmartLink[]          @relation("UserToSmartLink")
+  referralGroup            ReferralGroup?       @relation("UsersInGroup", fields: [referralGroupId], references: [id])
+  referredBy               User?                @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals                User[]               @relation("UserReferrals")
+  verificationTokens       VerificationToken[]  @relation("UserToVerificationTokens")
+  policyCheckLogs          PolicyCheckLog[]     @relation("UserToPolicyCheckLogs")
 
   @@index([deletedAt])
 }
+
 
 model PayoutRequest {
   id                String         @id @default(cuid())
