@@ -8,42 +8,41 @@ datasource db {
 }
 
 model User {
-  id                       String        @id @default(cuid())
-  email                    String        @unique
+  id                       String               @id @default(cuid())
+  email                    String               @unique
   name                     String?
   password                 String?
-  createdAt                DateTime      @default(now())
+  createdAt                DateTime             @default(now())
   referralGroupId          String?
   referredById             String?
-  verifyToken              String?       @unique
+  verifyToken              String?              @unique
   verifyTokenExpiry        DateTime?
-  trustScore               Int           @default(0)       // make non-optional (remove ?)
+  trustScore               Int                  @default(0)
   referralBadge            String?
-  referralCode             String?       @unique
-  role                     String?       @default("user")
+  referralCode             String?              @unique
+  role                     String?              @default("user")
   emailVerifiedAt          DateTime?
-  updatedAt                DateTime      @updatedAt
-  ageConfirmed             Boolean       @default(false)
+  updatedAt                DateTime             @updatedAt
+  ageConfirmed             Boolean              @default(false)
   ageConfirmedAt           DateTime?
   deletedAt                DateTime?
   dob                      DateTime?
-  disabled                 Boolean       @default(false)   // ✅ confirmed
   tosAcceptedAt            DateTime?
-  tosAcceptedIp            String?       @db.VarChar(64)
-  bonusCents               Int           @default(0)
+  tosAcceptedIp            String?              @db.VarChar(64)
+  bonusCents               Int                  @default(0)
   bonusEligibleUntil       DateTime?
-  bonusTier                Int           @default(0)
-  countryCode              String        @default("PH") @db.VarChar(2)
-  allowedCountries         String[]      @default([])
-  blockedCountries         String[]      @default([])
-  permanentOverrideBps     Int           @default(0)
-  totalReferrals           Int           @default(0)
-  defaultBankAccountNumber String?       @db.VarChar(40)
-  defaultBankName          String?       @db.VarChar(80)
-  defaultGcashNumber       String?       @db.VarChar(20)
-  hasCompletedWalkthrough  Boolean       @default(false)
+  bonusTier                Int                  @default(0)
+  countryCode              String               @default("PH") @db.VarChar(2)
+  allowedCountries         String[]             @default([])
+  blockedCountries         String[]             @default([])
+  permanentOverrideBps     Int                  @default(0)
+  totalReferrals           Int                  @default(0)
+  defaultBankAccountNumber String?              @db.VarChar(40)
+  defaultBankName          String?              @db.VarChar(80)
+  defaultGcashNumber       String?              @db.VarChar(20)
   defaultPayoutMethod      PayoutMethod?
-
+  disabled                 Boolean              @default(false)
+  hasCompletedWalkthrough  Boolean              @default(false)
   commissions              Commission[]
   eventLogs                EventLog[]
   commissionsFromInvites   OverrideCommission[] @relation("InviteeOverride")
@@ -54,6 +53,7 @@ model User {
   payoutLogs               PayoutLog[]
   payoutRequests           PayoutRequest[]
   pinCredentials           PinCredential[]      @relation("UserPinCredentials")
+  policyCheckLogs          PolicyCheckLog[]     @relation("UserToPolicyCheckLogs")
   referralBatches          ReferralBatch[]      @relation("UserReferralBatches")
   referralGroupsCreated    ReferralGroup[]      @relation("UsersInGroupReferrer")
   smartLinks               SmartLink[]          @relation("UserToSmartLink")
@@ -61,11 +61,9 @@ model User {
   referredBy               User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals                User[]               @relation("UserReferrals")
   verificationTokens       VerificationToken[]  @relation("UserToVerificationTokens")
-  policyCheckLogs          PolicyCheckLog[]     @relation("UserToPolicyCheckLogs")
 
   @@index([deletedAt])
 }
-
 
 model PayoutRequest {
   id                String         @id @default(cuid())
@@ -156,9 +154,9 @@ model Commission {
   merchantRuleId String?
   updatedAt      DateTime         @updatedAt
   status         CommissionStatus @default(UNVERIFIED)
+  finalizedAt    DateTime?
   merchant       MerchantRule?    @relation(fields: [merchantRuleId], references: [id])
   user           User             @relation(fields: [userId], references: [id])
-  finalizedAt    DateTime?
 
   @@index([merchantRuleId])
   @@index([userId, status])
@@ -222,11 +220,11 @@ model SmartLink {
 model ReferralGroup {
   id         String   @id @default(cuid())
   referrerId String
-  active     Boolean  @default(true)
-  windowDays Int      @default(90)
-  startedAt  DateTime @default(now())
   expiresAt  DateTime
   createdAt  DateTime @default(now())
+  startedAt  DateTime @default(now())
+  active     Boolean  @default(true)
+  windowDays Int      @default(90)
   referrer   User     @relation("UsersInGroupReferrer", fields: [referrerId], references: [id])
   users      User[]   @relation("UsersInGroup")
 
@@ -417,9 +415,31 @@ model Waitlist {
   createdAt DateTime @default(now())
 }
 
-/**
- * ---------- NEW: Policy Pre-Check logging ----------
- */
+model PolicyCheckLog {
+  id         String         @id @default(cuid())
+  createdAt  DateTime       @default(now())
+  userId     String?
+  ip         String?
+  userAgent  String?
+  inputChars Int
+  engine     String
+  severity   PolicySeverity
+  categories String[]
+  findings   Json?
+  rawResult  Json?
+  sampleText String?
+  user       User?          @relation("UserToPolicyCheckLogs", fields: [userId], references: [id])
+
+  @@index([createdAt])
+}
+
+model SystemLog {
+  id        String   @id
+  type      String
+  message   String
+  json      String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+}
 
 enum PolicySeverity {
   NONE
@@ -427,38 +447,6 @@ enum PolicySeverity {
   MEDIUM
   HIGH
 }
-
-model PolicyCheckLog {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-
-  // who ran it
-  userId String?
-  user   User?   @relation("UserToPolicyCheckLogs", fields: [userId], references: [id])
-
-  // request context
-  ip        String?
-  userAgent String?
-
-  // input + engine info
-  inputChars Int
-  engine     String
-
-  // result summary
-  severity   PolicySeverity
-  categories String[]
-  findings   Json?
-  rawResult  Json?
-
-  // sample of the checked text
-  sampleText String? @db.Text
-
-  @@index([createdAt])
-}
-
-/**
- * ---------- Enums ----------
- */
 
 enum PayoutProvider {
   PAYPAL
@@ -517,4 +505,16 @@ enum MerchantStatus {
   PENDING
   ACTIVE
   REJECTED
+}
+
+model AdminActionLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  actorId    String?
+  actorEmail String?
+  action     String
+  targetType String
+  targetId   String?
+  details    Json?
 }
