@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 type User = {
   id: string;
@@ -40,7 +40,8 @@ async function apiPost(action: string, payload: Record<string, any>) {
 
 export default function AdminUsersPage() {
   // query & paging
-  const [q, setQ] = useState("");
+  const [qInput, setQInput] = useState("");
+  const [qDebounced, setQDebounced] = useState("");
   const [disabledFilter, setDisabledFilter] = useState<"all" | "true" | "false">("all");
   const [page, setPage] = useState(1);
   const [limit] = useState(25);
@@ -55,14 +56,33 @@ export default function AdminUsersPage() {
   // local trust edits
   const [trustDraft, setTrustDraft] = useState<Record<string, string>>({});
 
+  // toasts
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  function showToast(type: "success" | "error", msg: string) {
+    setToast({ type, msg });
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2000);
+  }
+
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      setQDebounced(qInput.trim());
+    }, 400);
+    return () => clearTimeout(t);
+  }, [qInput]);
 
   async function load() {
     setLoading(true);
     setErr(null);
     try {
       const params: Record<string, any> = { page, limit };
-      if (q.trim()) params.q = q.trim();
+      if (qDebounced) params.q = qDebounced;
       if (disabledFilter !== "all") params.disabled = disabledFilter;
       const data = await apiGetUsers(params);
       if (!data.ok) {
@@ -81,13 +101,7 @@ export default function AdminUsersPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, disabledFilter]);
-
-  function resetPagingAndLoad() {
-    setPage(1);
-    // load will auto-run via effect when page changes
-    setTimeout(() => load(), 0);
-  }
+  }, [page, disabledFilter, qDebounced]);
 
   async function doAction(
     idOrEmail: { userId?: string; email?: string },
@@ -102,15 +116,26 @@ export default function AdminUsersPage() {
       if (action === "setTrustScore") payload.trustScore = trustScore;
       const res = await apiPost(action, payload);
       if (!res?.ok) {
-        setErr(res?.error || `Action ${action} failed`);
+        const message = res?.error || `Action ${action} failed`;
+        setErr(message);
+        showToast("error", message);
       } else {
-        // refresh list inline
-        setRows((prev) =>
-          prev.map((u) => (u.id === res.user.id ? { ...u, ...res.user } : u))
-        );
+        // inline refresh
+        setRows((prev) => prev.map((u) => (u.id === res.user.id ? { ...u, ...res.user } : u)));
+        const actionLabel =
+          action === "unfreeze"
+            ? "Unfrozen (TS→0)"
+            : action === "enable"
+            ? "Enabled"
+            : action === "disable"
+            ? "Disabled"
+            : `Trust set → ${res.user?.trustScore ?? trustScore ?? ""}`;
+        showToast("success", `${actionLabel} — ${res.user?.email || res.user?.id}`);
       }
     } catch (e: any) {
-      setErr(e?.message || `Action ${action} failed`);
+      const message = e?.message || `Action ${action} failed`;
+      setErr(message);
+      showToast("error", message);
     } finally {
       setBusyId(null);
     }
@@ -118,6 +143,19 @@ export default function AdminUsersPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Toast */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow ${
+            toast.type === "success"
+              ? "bg-green-600 text-white"
+              : "bg-red-600 text-white"
+          }`}
+        >
+          {toast.msg}
+        </div>
+      )}
+
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Admin · Users</h1>
         <div className="text-sm text-gray-500">
@@ -130,10 +168,9 @@ export default function AdminUsersPage() {
         <div className="flex flex-col">
           <label className="text-sm text-gray-600">Search (name/email)</label>
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && resetPagingAndLoad()}
-            placeholder="Type and press Enter…"
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
+            placeholder="Type to search…"
             className="border rounded-lg px-3 py-2 w-64"
           />
         </div>
@@ -150,7 +187,7 @@ export default function AdminUsersPage() {
           </select>
         </div>
         <button
-          onClick={resetPagingAndLoad}
+          onClick={load}
           className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:opacity-90"
           disabled={loading}
         >
@@ -182,7 +219,7 @@ export default function AdminUsersPage() {
             {rows.map((u) => {
               const key = u.id;
               const draft = trustDraft[key] ?? String(u.trustScore);
-              const disabled = busyId === key;
+              const isBusy = busyId === key;
 
               return (
                 <tr key={u.id} className="hover:bg-gray-50">
@@ -212,13 +249,13 @@ export default function AdminUsersPage() {
                         }
                       />
                       <button
-                        disabled={disabled}
+                        disabled={isBusy}
                         onClick={() =>
                           doAction({ userId: u.id }, "setTrustScore", Number(draft))
                         }
                         className="px-2 py-1 rounded bg-gray-800 text-white text-xs hover:opacity-90"
                       >
-                        {disabled ? "…" : "Set"}
+                        {isBusy ? "…" : "Set"}
                       </button>
                     </div>
                   </td>
@@ -226,27 +263,27 @@ export default function AdminUsersPage() {
                     <div className="flex flex-wrap gap-2">
                       {u.disabled ? (
                         <button
-                          disabled={disabled}
+                          disabled={isBusy}
                           onClick={() => doAction({ userId: u.id }, "enable")}
                           className="px-3 py-1 rounded-xl bg-green-600 text-white text-xs hover:opacity-90"
                         >
-                          {disabled ? "…" : "Enable"}
+                          {isBusy ? "…" : "Enable"}
                         </button>
                       ) : (
                         <button
-                          disabled={disabled}
+                          disabled={isBusy}
                           onClick={() => doAction({ userId: u.id }, "disable")}
                           className="px-3 py-1 rounded-xl bg-red-600 text-white text-xs hover:opacity-90"
                         >
-                          {disabled ? "…" : "Disable"}
+                          {isBusy ? "…" : "Disable"}
                         </button>
                       )}
                       <button
-                        disabled={disabled}
+                        disabled={isBusy}
                         onClick={() => doAction({ userId: u.id }, "unfreeze")}
                         className="px-3 py-1 rounded-xl bg-blue-600 text-white text-xs hover:opacity-90"
                       >
-                        {disabled ? "…" : "Unfreeze (0)"}
+                        {isBusy ? "…" : "Unfreeze (0)"}
                       </button>
                     </div>
                   </td>
