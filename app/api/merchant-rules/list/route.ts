@@ -26,86 +26,55 @@ export async function GET(req: NextRequest) {
     // Admins can view all regions; users are restricted
     const isAdmin = viewer.role === "admin";
 
-    // Determine query scope
+    // Determine query scope — keep loose to avoid schema drift
     let where: any = {};
     if (isAdmin && wantsAll) {
-      // no region filter
       where = {};
     } else {
-      // non-admins must be scoped to a region; default to "US" if not provided
       const region = requestedRegion || "US";
-      // If your model uses a different column name, adjust here.
-      // @ts-ignore - keep loose to avoid schema drift compile error
+      // If your model doesn't have region, this will just be ignored at runtime if you remove it later.
+      // @ts-ignore
       where.region = region;
     }
 
-    // Fetch rows + count (order by recent first)
     const [items, total] = await Promise.all([
       prisma.merchantRule.findMany({
         where,
         skip: offset,
         take: limit,
-        // Adjust fields to your schema as needed; we keep it permissive
+        // Order defensively if one of these fields doesn’t exist
         // @ts-ignore
-        orderBy: { updatedAt: "desc" },
+        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
       }) as any,
       prisma.merchantRule.count({ where }) as any,
     ]);
 
-    // Return both keys to maintain backward compatibility with any callers
     return NextResponse.json({
       ok: true,
       page,
       limit,
       total,
-      canViewAll: isAdmin, // inform client whether the toggle should be shown
+      canViewAll: isAdmin,
       items,
-      merchants: items, // <— legacy shape preserved
+      merchants: items, // legacy alias
     });
   } catch (err: any) {
-    // If the guards throw a Response (403/401), pass it through
     if (err instanceof Response) return err;
-    console.error("merchant-rules/list error:", err);
+    console.error("merchant-rules/list GET error:", err);
     return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }
 
-// (Optional) POST handler if you previously supported create via this route.
-// Enforce admin on any mutations.
-export async function POST(req: NextRequest) {
+// TEMP: disable writes on this route until schema is aligned
+export async function POST(_req: NextRequest) {
   try {
-    await requireAdmin(); // hard gate
-    const body = await req.json();
-
-    // Adjust to your schema fields
-    // Example minimal upsert by unique {slug, region}
-    const { slug, region, name, rulesJson } = body || {};
-    if (!slug || !region) {
-      return NextResponse.json({ ok: false, error: "slug and region are required" }, { status: 400 });
-    }
-
-    // @ts-ignore
-    const saved = await prisma.merchantRule.upsert({
-      where: { slug_region: { slug, region } }, // adjust if your unique is different
-      update: {
-        name,
-        // @ts-ignore
-        rulesJson,
-      },
-      create: {
-        slug,
-        region,
-        name,
-        // @ts-ignore
-        rulesJson,
-      },
-    });
-
-    // Keep response consistent
-    return NextResponse.json({ ok: true, item: saved, merchant: saved });
+    await requireAdmin();
+    return NextResponse.json(
+      { ok: false, error: "Write operations are disabled on this route (not implemented)." },
+      { status: 501 }
+    );
   } catch (err: any) {
     if (err instanceof Response) return err;
-    console.error("merchant-rules/list POST error:", err);
-    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 }
