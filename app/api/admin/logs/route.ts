@@ -42,10 +42,36 @@ export async function GET(req: Request) {
   if (email) where.actorEmail = email;
   if (targetId) where.targetId = targetId;
 
+  // --- robust UTC day range parsing ---
+  function ymdToUtcStart(d: string) {
+    // Accept "YYYY-MM-DD" from <input type="date">
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    if (m) {
+      const [, Y, M, D] = m;
+      return new Date(Date.UTC(Number(Y), Number(M) - 1, Number(D), 0, 0, 0, 0));
+    }
+    const t = new Date(d);
+    return isNaN(+t) ? null : new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), 0, 0, 0, 0));
+  }
+
+  function ymdToUtcEnd(d: string) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    if (m) {
+      const [, Y, M, D] = m;
+      return new Date(Date.UTC(Number(Y), Number(M) - 1, Number(D), 23, 59, 59, 999));
+    }
+    const t = new Date(d);
+    return isNaN(+t) ? null : new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), 23, 59, 59, 999));
+  }
+
   if (from || to) {
-    where.createdAt = {};
-    if (from) where.createdAt.gte = new Date(from + "T00:00:00.000Z");
-    if (to) where.createdAt.lte = new Date(to + "T23:59:59.999Z");
+    const gte = from ? ymdToUtcStart(from) : null;
+    const lte = to ? ymdToUtcEnd(to) : null;
+    if (gte || lte) {
+      where.createdAt = {};
+      if (gte) where.createdAt.gte = gte;
+      if (lte) where.createdAt.lte = lte;
+    }
   }
 
   const total = await prisma.adminActionLog.count({ where });
