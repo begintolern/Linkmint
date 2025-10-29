@@ -1,52 +1,64 @@
 // app/api/merchant-rules/list/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getViewer, requireAdmin } from "@/lib/auth/guards";
+import { getViewer } from "@/lib/auth/guards";
 
-// Utility: parse ints safely
+// Safe int parsing
 function toInt(v: string | null, def: number) {
   const n = v ? parseInt(v, 10) : NaN;
   return Number.isFinite(n) && n > 0 ? n : def;
 }
 
+// Helper: simple admin check from cookie (used only for debug echo)
+function isCookieAdmin(req: NextRequest) {
+  const cookie = req.headers.get("cookie") || "";
+  return /(?:^|;\s*)role=admin(?:;|$)/i.test(cookie);
+}
+
 export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const page = toInt(url.searchParams.get("page"), 1);
+  const limit = Math.min(100, toInt(url.searchParams.get("limit"), 25));
+  const offset = (page - 1) * limit;
+  const wantDebug = (url.searchParams.get("debug") || "").toLowerCase() === "1";
+
   try {
+    // Soft viewer (doesn't throw); we still scope UI options based on role
     const viewer = await getViewer();
-
-    const { searchParams } = new URL(req.url);
-    const page = toInt(searchParams.get("page"), 1);
-    const limit = Math.min(100, toInt(searchParams.get("limit"), 25));
-    const offset = (page - 1) * limit;
-
-    const requestedRegion = (searchParams.get("region") || "").toUpperCase();
-    const wantsAll = ["1", "true"].includes(
-      (searchParams.get("all") || "").toLowerCase()
-    );
-
-    // Admins can view all regions; users are restricted
     const isAdmin = viewer.role === "admin";
 
-    // Determine query scope — keep loose to avoid schema drift
-    let where: any = {};
-    if (isAdmin && wantsAll) {
-      where = {};
-    } else {
-      const region = requestedRegion || "US";
-      // If your model doesn't have region, this will just be ignored at runtime if you remove it later.
-      // @ts-ignore
-      where.region = region;
+    // --- Try the Prisma model dynamically (no TS complaints) ---
+    const client: any = prisma as any;
+    const model =
+      client.merchantRule ||
+      client.merchantRules ||
+      client.MerchantRule ||
+      client.Merchantrule ||
+      null;
+
+    if (!model) {
+      // Give a helpful message in debug for admins
+      if (wantDebug && isCookieAdmin(req)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "ModelNotFound",
+            hint:
+              "Prisma client has no merchantRule* model. Run /api/admin/db-tables to see table names or share the MerchantRule model from prisma/schema.prisma.",
+          },
+          { status: 500 }
+        );
+      }
+      throw new Error("Merchant model not found in Prisma client");
     }
 
+    // Minimal, schema-agnostic read: no where, no orderBy assumptions
     const [items, total] = await Promise.all([
-      prisma.merchantRule.findMany({
-        where,
+      model.findMany({
         skip: offset,
         take: limit,
-        // Order defensively if one of these fields doesn’t exist
-        // @ts-ignore
-        orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      }) as any,
-      prisma.merchantRule.count({ where }) as any,
+      }),
+      model.count(),
     ]);
 
     return NextResponse.json({
@@ -56,25 +68,29 @@ export async function GET(req: NextRequest) {
       total,
       canViewAll: isAdmin,
       items,
-      merchants: items, // legacy alias
+      merchants: items, // legacy alias for older clients
     });
   } catch (err: any) {
-    if (err instanceof Response) return err;
-    console.error("merchant-rules/list GET error:", err);
+    // For admins with ?debug=1, show the real message to speed up diagnosis
+    if (wantDebug && isCookieAdmin(req)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: String(err?.message || err),
+          stack: err?.stack || null,
+        },
+        { status: 500 }
+      );
+    }
+    // Generic for everyone else
     return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }
 
-// TEMP: disable writes on this route until schema is aligned
+// Writes disabled until schema alignment
 export async function POST(_req: NextRequest) {
-  try {
-    await requireAdmin();
-    return NextResponse.json(
-      { ok: false, error: "Write operations are disabled on this route (not implemented)." },
-      { status: 501 }
-    );
-  } catch (err: any) {
-    if (err instanceof Response) return err;
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+  return NextResponse.json(
+    { ok: false, error: "Write operations are disabled on this route (not implemented)." },
+    { status: 501 }
+  );
 }
