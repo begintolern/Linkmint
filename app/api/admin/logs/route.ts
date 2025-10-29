@@ -21,7 +21,7 @@ async function requireAdmin() {
   return false;
 }
 
-// GET /api/admin/logs?action=USER_DISABLE&email=...&page=1&limit=20&from=2025-10-01&to=2025-10-31
+// GET /api/admin/logs?action=...&email=...&targetId=...&page=1&limit=20&from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(req: Request) {
   const ok = await requireAdmin();
   if (!ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -42,31 +42,20 @@ export async function GET(req: Request) {
   if (email) where.actorEmail = email;
   if (targetId) where.targetId = targetId;
 
-  // --- robust UTC day range parsing ---
-  function ymdToUtcStart(d: string) {
-    // Accept "YYYY-MM-DD" from <input type="date">
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-    if (m) {
-      const [, Y, M, D] = m;
-      return new Date(Date.UTC(Number(Y), Number(M) - 1, Number(D), 0, 0, 0, 0));
-    }
-    const t = new Date(d);
-    return isNaN(+t) ? null : new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), 0, 0, 0, 0));
+  // Interpret date picker values as LOCAL day ranges (so 10/28 includes your local 00:00–23:59).
+  function localDayStart(d: string) {
+    // d like "2025-10-28" from <input type="date">, interpreted as local midnight
+    const t = new Date(`${d}T00:00:00`);
+    return isNaN(+t) ? null : t;
   }
-
-  function ymdToUtcEnd(d: string) {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-    if (m) {
-      const [, Y, M, D] = m;
-      return new Date(Date.UTC(Number(Y), Number(M) - 1, Number(D), 23, 59, 59, 999));
-    }
-    const t = new Date(d);
-    return isNaN(+t) ? null : new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate(), 23, 59, 59, 999));
+  function localDayEnd(d: string) {
+    const t = new Date(`${d}T23:59:59.999`);
+    return isNaN(+t) ? null : t;
   }
 
   if (from || to) {
-    const gte = from ? ymdToUtcStart(from) : null;
-    const lte = to ? ymdToUtcEnd(to) : null;
+    const gte = from ? localDayStart(from) : null;
+    const lte = to ? localDayEnd(to) : null;
     if (gte || lte) {
       where.createdAt = {};
       if (gte) where.createdAt.gte = gte;
