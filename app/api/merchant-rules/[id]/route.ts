@@ -1,31 +1,30 @@
 // app/api/merchant-rules/[id]/route.ts
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth/guards";
 
-// If you already have GET/DELETE here, just ADD this PATCH export below them.
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const id = params.id;
-  const body = await req.json().catch(() => ({} as any));
-  const status = body?.status as "PENDING" | "ACTIVE" | "REJECTED" | undefined;
+export async function DELETE(_req: NextRequest, ctx: { params: { id: string } }) {
+  try {
+    // Hard admin gate (throws 401/403 as needed)
+    await requireAdmin();
 
-  if (!status || !["PENDING", "ACTIVE", "REJECTED"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    const id = ctx.params?.id;
+    if (!id) {
+      return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+    }
+
+    // Ensure the record exists before delete (optional but clearer errors)
+    const existing = await prisma.merchantRule.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    }
+
+    await prisma.merchantRule.delete({ where: { id } });
+    return NextResponse.json({ ok: true, id });
+  } catch (err: any) {
+    // If requireAdmin threw a Response, return it
+    if (err instanceof Response) return err;
+    console.error("merchant-rules/[id] DELETE error:", err);
+    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
-
-  const updated = await prisma.merchantRule.update({
-    where: { id },
-    data: { status },
-    select: {
-      id: true,
-      status: true,
-    },
-  });
-
-  return NextResponse.json(updated);
 }
