@@ -1,286 +1,180 @@
-// app/dashboard/merchants/page.tsx
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+"use client";
 
-import React from "react";
-import Link from "next/link";
-import { headers, cookies } from "next/headers";
-import { prisma } from "@/lib/db";
-import AdminDeleteMerchantButton from "@/components/AdminDeleteMerchantButton";
-import DashboardPageHeader from "@/components/DashboardPageHeader";
-import AISuggestionsClient from "./AISuggestionsClient";
+import { useEffect, useState } from "react";
 
-type MerchantDTO = {
+type MerchantRule = {
   id: string;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-  merchantName: string;
-  active: boolean;
+  merchantName: string | null;
   network: string | null;
-  domainPattern: string | null;
-  allowedSources: string[] | null;
-  disallowedSources: string[] | null;
-  cookieWindowDays: number | null;
-  payoutDelayDays: number | null;
-  baseCommissionBps: number | null;
-  market?: string | null;
-  status?: string | null;
-  notes: string | null;
+  market: string | null;
+  allowedRegions?: string[] | null;
+  updatedAt?: string;
 };
 
-type ListResponse = {
+type ListResp = {
   ok: boolean;
-  merchants: MerchantDTO[];
-  error?: string;
+  page: number;
+  limit: number;
+  total: number;
+  canViewAll: boolean;   // ← drives admin UI
+  items: MerchantRule[];
 };
 
-function fmtPercentFromBps(bps: number | null) {
-  if (bps == null) return "—";
-  const pct = bps / 100;
-  return `${pct.toFixed(pct % 1 === 0 ? 0 : 2)}%`;
-}
+export default function MerchantsPage() {
+  const [rows, setRows] = useState<MerchantRule[]>([]);
+  const [canViewAll, setCanViewAll] = useState(false);
+  const [region, setRegion] = useState<string>("US");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 25;
 
-function renderCommission(m: MerchantDTO) {
-  return fmtPercentFromBps(m.baseCommissionBps);
-}
+  async function load() {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", String(limit));
+    // Only send region when not an admin (server ignores for admins + all=1)
+    if (!canViewAll && region) params.set("region", region);
+    // Always ask debug=1 while we tune; harmless in prod
+    params.set("debug", "1");
 
-function joinOrDash(arr: string[] | null) {
-  if (!arr || arr.length === 0) return "—";
-  return arr.join(", ");
-}
-
-function getBaseUrl() {
-  const h = headers();
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const host = h.get("host") ?? "linkmint.co";
-  return `${proto}://${host}`;
-}
-
-function readMarketFromCookies(store: ReturnType<typeof cookies>) {
-  const raw =
-    store.get("market")?.value ||
-    store.get("lm_market")?.value ||
-    store.get("mkt")?.value ||
-    "PH";
-  const v = raw.toUpperCase();
-  return v === "PH" ? "PH" : "US";
-}
-
-function resolveRegion(m: MerchantDTO): "US" | "PH" | "GLOBAL" {
-  const mk = (m.market || "").toUpperCase();
-  if (mk === "US" || mk === "PH" || mk === "GLOBAL") return mk as any;
-  const d = (m.domainPattern || "").toLowerCase();
-  if (d.endsWith(".ph") || d.endsWith(".com.ph")) return "PH";
-  return "GLOBAL";
-}
-
-function userCanSeeMerchantStrict(m: MerchantDTO, userMarket: "US" | "PH") {
-  if (!m.active) return false;
-  const region = resolveRegion(m);
-  if (region === "GLOBAL") return true;
-  return region === userMarket;
-}
-
-async function isAdmin(store: ReturnType<typeof cookies>): Promise<boolean> {
-  const cookieRole = (store.get("role")?.value ?? "").toLowerCase();
-  if (cookieRole === "admin") return true;
-
-  const email = store.get("email")?.value || "";
-  const uid =
-    store.get("uid")?.value ||
-    store.get("userId")?.value ||
-    "";
-
-  const allowList = (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  if (email && allowList.includes(email.toLowerCase())) return true;
-
-  try {
-    if (uid) {
-      const u = await prisma.user.findUnique({ where: { id: uid }, select: { role: true } });
-      if (u?.role && String(u.role).toLowerCase() === "admin") return true;
-    }
-    if (email) {
-      const u = await prisma.user.findUnique({ where: { email }, select: { role: true } });
-      if (u?.role && String(u.role).toLowerCase() === "admin") return true;
-    }
-  } catch {
-    // ignore
-  }
-
-  return false;
-}
-
-export default async function MerchantsPage() {
-  const baseUrl = getBaseUrl();
-  const store = cookies();
-  const market = readMarketFromCookies(store);
-  const admin = await isAdmin(store);
-
-  let data: ListResponse | null = null;
-  try {
-    const res = await fetch(`${baseUrl}/api/merchant-rules/list`, {
+    const res = await fetch(`/api/merchant-rules/list?${params.toString()}`, {
       cache: "no-store",
-      headers: { accept: "application/json" },
     });
-    data = (await res.json()) as ListResponse;
-  } catch {
-    data = { ok: false, merchants: [], error: "Failed to fetch." };
+    const data: ListResp = await res.json();
+    if (!data.ok) throw new Error("Failed to load merchants");
+
+    setRows(data.items || []);
+    setTotal(data.total || 0);
+    setCanViewAll(!!data.canViewAll);
   }
 
-  if (!data?.ok) {
-    return (
-      <div className="p-6">
-        <div className="mb-3">
-          <Link
-            href="/dashboard/links"
-            className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs text-gray-800 hover:bg-gray-50"
-          >
-            ← Back to Smart Links
-          </Link>
-        </div>
-        <h1 className="text-2xl font-semibold mb-2">Merchants</h1>
-        <p className="text-sm text-red-600">
-          Failed to load merchant rules{data?.error ? ` — ${data.error}` : ""}.
-        </p>
-      </div>
-    );
+  useEffect(() => {
+    load().catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, region]);
+
+  // Admin-only delete handler (UI only; API must also enforce admin)
+  async function handleDelete(id: string) {
+    if (!canViewAll) return; // double-guard UI
+    if (!confirm("Delete this merchant rule?")) return;
+    const res = await fetch(`/api/merchant-rules/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+    });
+    const j = await res.json();
+    if (!j.ok) {
+      alert(j.error || "Delete failed");
+      return;
+    }
+    // refresh list
+    load().catch(console.error);
   }
 
-  const all = data.merchants;
-  const merchants = admin ? all : all.filter((m) => userCanSeeMerchantStrict(m, market));
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <Link
-          href="/dashboard/links"
-          className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs text-gray-800 hover:bg-gray-50"
-        >
-          ← Back to Smart Links
-        </Link>
-      </div>
+    <div className="p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Merchants</h1>
 
-      <DashboardPageHeader
-        title="Merchants"
-        subtitle={admin ? "Admin view · All regions" : `Your market: ${market} · Region-filtered`}
-        rightSlot={
-          <span className="hidden sm:inline-flex items-center rounded-full border px-3 py-1 text-xs text-gray-700">
-            Total: {merchants.length.toLocaleString()}
-          </span>
-        }
-      />
-
-      {/* ✨ AI Suggestions (beta) */}
-      <AISuggestionsClient />
-
-      <section className="rounded-xl border bg-white">
-        <div className="flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4">
-          <h2 className="text-sm sm:text-base font-medium">Catalog</h2>
-          {!admin && (
-            <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] text-gray-700">
-              Region: {market}
+        {/* Admin-only controls */}
+        {canViewAll ? (
+          <div className="flex items-center gap-3">
+            <span className="text-xs px-2 py-1 rounded bg-blue-50 border border-blue-200">
+              Admin view: All regions
             </span>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <label className="text-sm">Region</label>
+            <select
+              className="border rounded px-2 py-1 text-sm"
+              value={region}
+              onChange={(e) => {
+                setPage(1);
+                setRegion(e.target.value.toUpperCase());
+              }}
+            >
+              <option value="US">US</option>
+              <option value="PH">PH</option>
+              <option value="ES">ES</option>
+            </select>
+          </div>
+        )}
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 text-left z-10">
-              <tr className="text-left">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Region</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Network</th>
-                <th className="px-4 py-3 hidden md:table-cell">Domain</th>
-                <th className="px-4 py-3 hidden md:table-cell">Cookie</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Payout Delay</th>
-                <th className="px-4 py-3">Commission</th>
-                <th className="px-4 py-3 hidden lg:table-cell">Status</th>
-                <th className="px-4 py-3 hidden xl:table-cell">Allowed</th>
-                <th className="px-4 py-3 hidden xl:table-cell">Disallowed</th>
-                <th className="px-4 py-3 hidden 2xl:table-cell">Notes</th>
-                {admin && <th className="px-4 py-3 text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {merchants.length ? (
-                merchants.map((m) => {
-                  const region = resolveRegion(m);
-                  return (
-                    <tr key={m.id} className="border-t align-top">
-                      <td className="px-4 py-3">
-                        <div className="font-medium">{m.merchantName}</div>
-                        <div className="sm:hidden text-xs text-gray-500 mt-0.5">
-                          {m.network ?? "—"} · {m.domainPattern ?? "—"}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <MarketBadge region={region} />
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">{m.network ?? "—"}</td>
-                      <td className="px-4 py-3 hidden md:table-cell">{m.domainPattern ?? "—"}</td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        {m.cookieWindowDays != null ? `${m.cookieWindowDays}d` : "—"}
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        {m.payoutDelayDays != null ? `${m.payoutDelayDays}d` : "—"}
-                      </td>
-                      <td className="px-4 py-3">{renderCommission(m)}</td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs">
-                          {m.status ?? "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden xl:table-cell">{joinOrDash(m.allowedSources)}</td>
-                      <td className="px-4 py-3 hidden xl:table-cell">{joinOrDash(m.disallowedSources)}</td>
-                      <td className="px-4 py-3 hidden 2xl:table-cell max-w-[24rem]">
-                        <div className="truncate" title={m.notes ?? ""}>
-                          {m.notes ?? "—"}
-                        </div>
-                      </td>
-                      {admin && (
-                        <td className="px-4 py-3 text-right whitespace-nowrap">
-                          <AdminDeleteMerchantButton id={m.id} name={m.merchantName} />
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td className="px-4 py-6 text-center text-gray-500" colSpan={admin ? 12 : 11}>
-                    No merchants for your region yet.
+      <div className="border rounded overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left p-2">Merchant</th>
+              <th className="text-left p-2">Network</th>
+              <th className="text-left p-2">Market</th>
+              <th className="text-left p-2">Regions</th>
+              <th className="text-left p-2">Updated</th>
+              {/* Admin-only column */}
+              {canViewAll && <th className="text-left p-2">Actions</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} className="border-t">
+                <td className="p-2">{r.merchantName || "-"}</td>
+                <td className="p-2">{r.network || "-"}</td>
+                <td className="p-2">{r.market || "-"}</td>
+                <td className="p-2">
+                  {(r.allowedRegions && r.allowedRegions.length > 0)
+                    ? r.allowedRegions.join(", ")
+                    : "—"}
+                </td>
+                <td className="p-2">
+                  {r.updatedAt ? new Date(r.updatedAt).toLocaleString() : "—"}
+                </td>
+                {/* Admin-only actions */}
+                {canViewAll && (
+                  <td className="p-2">
+                    <button
+                      onClick={() => handleDelete(r.id)}
+                      className="text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
                   </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tr>
+            ))}
+
+            {rows.length === 0 && (
+              <tr>
+                <td className="p-4 text-gray-500" colSpan={canViewAll ? 6 : 5}>
+                  No merchants found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center gap-3">
+        <button
+          className="px-3 py-1 border rounded disabled:opacity-50"
+          disabled={page <= 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >
+          Prev
+        </button>
+        <div className="text-sm">
+          Page {page} of {totalPages} ({total} total)
         </div>
-      </section>
-
-      {!admin && (
-        <p className="mt-3 text-xs text-gray-500">
-          Market filter is active. Switch markets in the header to view other regions.
-        </p>
-      )}
+        <button
+          className="px-3 py-1 border rounded disabled:opacity-50"
+          disabled={page >= totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+        >
+          Next
+        </button>
+      </div>
     </div>
-  );
-}
-
-function MarketBadge({ region }: { region: "US" | "PH" | "GLOBAL" }) {
-  const tone =
-    region === "PH"
-      ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-      : region === "US"
-      ? "bg-blue-50 text-blue-700 border-blue-200"
-      : "bg-emerald-50 text-emerald-700 border-emerald-200";
-
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs ${tone}`}>
-      {region}
-    </span>
   );
 }
