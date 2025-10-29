@@ -1,7 +1,7 @@
 // app/admin/logs/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Row = {
   id: string;
@@ -37,6 +37,12 @@ export default function AdminLogsPage() {
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
 
+  // auto-refresh
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const intervalMs = 10_000; // 10s
+  const isMounted = useRef(false);
+
   const qs = useMemo(() => {
     const sp = new URLSearchParams();
     sp.set("page", String(page));
@@ -46,6 +52,7 @@ export default function AdminLogsPage() {
     if (targetId.trim()) sp.set("targetId", targetId.trim());
     if (from.trim()) sp.set("from", from.trim());
     if (to.trim()) sp.set("to", to.trim());
+    // Send client timezone offset in minutes (e.g., 420 for PDT)
     sp.set("tzOffset", String(new Date().getTimezoneOffset()));
     return sp.toString();
   }, [page, limit, action, email, targetId, from, to]);
@@ -53,11 +60,12 @@ export default function AdminLogsPage() {
   async function fetchLogs() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/logs?${qs}`);
+      const res = await fetch(`/api/admin/logs?${qs}`, { cache: "no-store" });
       const data: ApiResp = await res.json();
       if (!data.ok) throw new Error(data.error || "Failed to fetch logs");
       setRows(data.rows || []);
       setTotal(data.total || 0);
+      setLastUpdated(new Date());
     } catch (e) {
       console.error(e);
       setRows([]);
@@ -67,10 +75,29 @@ export default function AdminLogsPage() {
     }
   }
 
+  // initial + on any query string change
   useEffect(() => {
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qs]);
+
+  // auto-refresh current page
+  useEffect(() => {
+    // avoid double-fire on first mount toggles
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    if (!autoRefresh) return;
+
+    const id = setInterval(() => {
+      // don’t stack requests
+      if (!loading) fetchLogs();
+    }, intervalMs);
+
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRefresh, qs, loading]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -121,7 +148,16 @@ export default function AdminLogsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Admin Action Logs</h1>
+      <div className="flex items-baseline justify-between gap-4 flex-wrap">
+        <h1 className="text-2xl font-semibold">Admin Action Logs</h1>
+        <div className="text-sm text-gray-600">
+          {lastUpdated ? (
+            <>Last updated: {lastUpdated.toLocaleTimeString()}</>
+          ) : (
+            "—"
+          )}
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="grid gap-3 md:grid-cols-6">
@@ -209,8 +245,18 @@ export default function AdminLogsPage() {
         >
           Copy JSON
         </button>
+
+        <label className="ml-2 inline-flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={autoRefresh}
+            onChange={(e) => setAutoRefresh(e.target.checked)}
+          />
+          Auto-refresh (10s)
+        </label>
+
         <div className="text-sm text-gray-600">
-          Showing {rows.length} of {total} • Page {page} / {totalPages}
+          Showing {rows.length} of {total} • Page {page} / {Math.max(1, Math.ceil(total / limit))}
         </div>
       </div>
 
@@ -278,8 +324,8 @@ export default function AdminLogsPage() {
         </button>
         <button
           className="px-3 py-2 rounded border disabled:opacity-50"
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page >= totalPages || loading}
+          onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / limit)), p + 1))}
+          disabled={page >= Math.max(1, Math.ceil(total / limit)) || loading}
         >
           Next
         </button>
