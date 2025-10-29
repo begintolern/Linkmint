@@ -21,14 +21,14 @@ async function requireAdmin() {
   return false;
 }
 
-// GET /api/admin/logs?action=...&email=...&targetId=...&page=1&limit=20&from=YYYY-MM-DD&to=YYYY-MM-DD
+// GET /api/admin/logs?action=...&email=...&targetId=...&page=1&limit=20&from=YYYY-MM-DD|MM/DD/YYYY&to=YYYY-MM-DD|MM/DD/YYYY
 export async function GET(req: Request) {
   const ok = await requireAdmin();
   if (!ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action") || undefined;
-  const email = searchParams.get("email") || undefined; // actorEmail filter
+  const email = searchParams.get("email") || undefined; // actorEmail exact match
   const targetId = searchParams.get("targetId") || undefined;
 
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
@@ -42,26 +42,51 @@ export async function GET(req: Request) {
   if (email) where.actorEmail = email;
   if (targetId) where.targetId = targetId;
 
-  // Interpret date picker values as LOCAL day ranges (so 10/28 includes your local 00:00–23:59).
-  function localDayStart(d: string) {
-    // d like "2025-10-28" from <input type="date">, interpreted as local midnight
-    const t = new Date(`${d}T00:00:00`);
-    return isNaN(+t) ? null : t;
-  }
-  function localDayEnd(d: string) {
-    const t = new Date(`${d}T23:59:59.999`);
-    return isNaN(+t) ? null : t;
+  // ----- Robust LOCAL-day parsing (supports YYYY-MM-DD and MM/DD/YYYY) -----
+  function parseLocalDay(d: string): { start: Date; end: Date } | null {
+    // 1) YYYY-MM-DD
+    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    if (iso) {
+      const [, Y, M, D] = iso;
+      const start = new Date(Number(Y), Number(M) - 1, Number(D), 0, 0, 0, 0);
+      const end = new Date(Number(Y), Number(M) - 1, Number(D), 23, 59, 59, 999);
+      return { start, end };
+    }
+    // 2) MM/DD/YYYY
+    const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(d);
+    if (us) {
+      const [, m, dd, y] = us;
+      const Y = Number(y), M = Number(m) - 1, D = Number(dd);
+      const start = new Date(Y, M, D, 0, 0, 0, 0);
+      const end = new Date(Y, M, D, 23, 59, 59, 999);
+      return { start, end };
+    }
+    // 3) Fallback native Date (local)
+    const t = new Date(d);
+    if (!isNaN(+t)) {
+      const Y = t.getFullYear(), M = t.getMonth(), D = t.getDate();
+      const start = new Date(Y, M, D, 0, 0, 0, 0);
+      const end = new Date(Y, M, D, 23, 59, 59, 999);
+      return { start, end };
+    }
+    return null;
   }
 
   if (from || to) {
-    const gte = from ? localDayStart(from) : null;
-    const lte = to ? localDayEnd(to) : null;
+    const fromSpan = from ? parseLocalDay(from) : null;
+    const toSpan = to ? parseLocalDay(to) : null;
+
+    // If only one bound provided, use that day's start or end
+    const gte = fromSpan ? fromSpan.start : toSpan ? toSpan.start : null;
+    const lte = toSpan ? toSpan.end : fromSpan ? fromSpan.end : null;
+
     if (gte || lte) {
       where.createdAt = {};
       if (gte) where.createdAt.gte = gte;
       if (lte) where.createdAt.lte = lte;
     }
   }
+  // ------------------------------------------------------------------------
 
   const total = await prisma.adminActionLog.count({ where });
   const rows = await prisma.adminActionLog.findMany({
