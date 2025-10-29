@@ -46,6 +46,8 @@ export default function AdminLogsPage() {
     if (targetId.trim()) sp.set("targetId", targetId.trim());
     if (from.trim()) sp.set("from", from.trim());
     if (to.trim()) sp.set("to", to.trim());
+    // Send client timezone offset in minutes (e.g., 420 for PDT)
+    sp.set("tzOffset", String(new Date().getTimezoneOffset()));
     return sp.toString();
   }, [page, limit, action, email, targetId, from, to]);
 
@@ -83,38 +85,60 @@ export default function AdminLogsPage() {
           className="border rounded p-2"
           placeholder="Action (e.g. USER_DISABLE)"
           value={action}
-          onChange={(e) => { setPage(1); setAction(e.target.value); }}
+          onChange={(e) => {
+            setPage(1);
+            setAction(e.target.value);
+          }}
         />
         <input
           className="border rounded p-2"
           placeholder="Actor Email"
           value={email}
-          onChange={(e) => { setPage(1); setEmail(e.target.value); }}
+          onChange={(e) => {
+            setPage(1);
+            setEmail(e.target.value);
+          }}
         />
         <input
           className="border rounded p-2"
           placeholder="Target ID"
           value={targetId}
-          onChange={(e) => { setPage(1); setTargetId(e.target.value); }}
+          onChange={(e) => {
+            setPage(1);
+            setTargetId(e.target.value);
+          }}
         />
         <input
           type="date"
           className="border rounded p-2"
           value={from}
-          onChange={(e) => { setPage(1); setFrom(e.target.value); }}
+          onChange={(e) => {
+            setPage(1);
+            setFrom(e.target.value);
+          }}
         />
         <input
           type="date"
           className="border rounded p-2"
           value={to}
-          onChange={(e) => { setPage(1); setTo(e.target.value); }}
+          onChange={(e) => {
+            setPage(1);
+            setTo(e.target.value);
+          }}
         />
         <select
           className="border rounded p-2"
           value={limit}
-          onChange={(e) => { setPage(1); setLimit(parseInt(e.target.value, 10)); }}
+          onChange={(e) => {
+            setPage(1);
+            setLimit(parseInt(e.target.value, 10));
+          }}
         >
-          {[10, 20, 50, 100].map(n => <option key={n} value={n}>{n} / page</option>)}
+          {[10, 20, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n} / page
+            </option>
+          ))}
         </select>
       </div>
 
@@ -145,7 +169,7 @@ export default function AdminLogsPage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map(row => (
+            {rows.map((row) => (
               <tr key={row.id} className="border-t">
                 <td className="p-2 whitespace-nowrap">
                   {new Date(row.createdAt).toLocaleString()}
@@ -156,13 +180,17 @@ export default function AdminLogsPage() {
                 <td className="p-2">
                   <div className="flex flex-col">
                     <span>{row.actorEmail || "—"}</span>
-                    <span className="text-xs text-gray-500">{row.actorId || "—"}</span>
+                    <span className="text-xs text-gray-500">
+                      {row.actorId || "—"}
+                    </span>
                   </div>
                 </td>
                 <td className="p-2">
                   <div className="flex flex-col">
                     <span>{row.targetType}</span>
-                    <span className="text-xs text-gray-500">{row.targetId || "—"}</span>
+                    <span className="text-xs text-gray-500">
+                      {row.targetId || "—"}
+                    </span>
                   </div>
                 </td>
                 <td className="p-2">
@@ -174,7 +202,9 @@ export default function AdminLogsPage() {
             ))}
             {!rows.length && !loading && (
               <tr>
-                <td className="p-4 text-gray-500" colSpan={5}>No logs found for the current filters.</td>
+                <td className="p-4 text-gray-500" colSpan={5}>
+                  No logs found for the current filters.
+                </td>
               </tr>
             )}
           </tbody>
@@ -185,14 +215,14 @@ export default function AdminLogsPage() {
       <div className="flex items-center gap-2">
         <button
           className="px-3 py-2 rounded border disabled:opacity-50"
-          onClick={() => setPage(p => Math.max(1, p - 1))}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
           disabled={page <= 1 || loading}
         >
           Prev
         </button>
         <button
           className="px-3 py-2 rounded border disabled:opacity-50"
-          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
           disabled={page >= totalPages || loading}
         >
           Next
@@ -204,7 +234,6 @@ export default function AdminLogsPage() {
 
 function safeStringify(v: unknown) {
   try {
-    // if details is already JSON from the DB, render compact
     if (typeof v === "string") {
       return v;
     }

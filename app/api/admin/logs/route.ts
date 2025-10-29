@@ -21,14 +21,14 @@ async function requireAdmin() {
   return false;
 }
 
-// GET /api/admin/logs?action=...&email=...&targetId=...&page=1&limit=20&from=YYYY-MM-DD|MM/DD/YYYY&to=YYYY-MM-DD|MM/DD/YYYY
+// GET /api/admin/logs?action=...&email=...&targetId=...&page=1&limit=20&from=YYYY-MM-DD&to=YYYY-MM-DD&tzOffset=420
 export async function GET(req: Request) {
   const ok = await requireAdmin();
   if (!ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const action = searchParams.get("action") || undefined;
-  const email = searchParams.get("email") || undefined; // actorEmail exact match
+  const email = searchParams.get("email") || undefined;
   const targetId = searchParams.get("targetId") || undefined;
 
   const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
@@ -36,49 +36,35 @@ export async function GET(req: Request) {
 
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+  const tzOffsetMin = Number(searchParams.get("tzOffset") ?? "0"); // minutes, e.g. 420 for PDT
 
   const where: any = {};
   if (action) where.action = action;
   if (email) where.actorEmail = email;
   if (targetId) where.targetId = targetId;
 
-  // ----- Robust LOCAL-day parsing (supports YYYY-MM-DD and MM/DD/YYYY) -----
-  function parseLocalDay(d: string): { start: Date; end: Date } | null {
-    // 1) YYYY-MM-DD
-    const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-    if (iso) {
-      const [, Y, M, D] = iso;
-      const start = new Date(Number(Y), Number(M) - 1, Number(D), 0, 0, 0, 0);
-      const end = new Date(Number(Y), Number(M) - 1, Number(D), 23, 59, 59, 999);
-      return { start, end };
-    }
-    // 2) MM/DD/YYYY
-    const us = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(d);
-    if (us) {
-      const [, m, dd, y] = us;
-      const Y = Number(y), M = Number(m) - 1, D = Number(dd);
-      const start = new Date(Y, M, D, 0, 0, 0, 0);
-      const end = new Date(Y, M, D, 23, 59, 59, 999);
-      return { start, end };
-    }
-    // 3) Fallback native Date (local)
-    const t = new Date(d);
-    if (!isNaN(+t)) {
-      const Y = t.getFullYear(), M = t.getMonth(), D = t.getDate();
-      const start = new Date(Y, M, D, 0, 0, 0, 0);
-      const end = new Date(Y, M, D, 23, 59, 59, 999);
-      return { start, end };
-    }
-    return null;
+  // Parse YYYY-MM-DD as a LOCAL date (from the user's browser),
+  // then convert to the correct UTC instants using tzOffset from the client.
+  function parseYMDToUtcRange(ymd: string): { startUtc: Date; endUtc: Date } | null {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+    if (!m) return null;
+    const [, Y, M, D] = m;
+    const y = Number(Y), mo = Number(M) - 1, d = Number(D);
+
+    // Local midnight start/end expressed as UTC instants:
+    // UTC = local + offset (offset is minutes behind UTC, e.g. 420)
+    const startUtcMs = Date.UTC(y, mo, d, 0, 0, 0, 0) + tzOffsetMin * 60_000;
+    const endUtcMs   = Date.UTC(y, mo, d, 23, 59, 59, 999) + tzOffsetMin * 60_000;
+
+    return { startUtc: new Date(startUtcMs), endUtc: new Date(endUtcMs) };
   }
 
   if (from || to) {
-    const fromSpan = from ? parseLocalDay(from) : null;
-    const toSpan = to ? parseLocalDay(to) : null;
+    const fromSpan = from ? parseYMDToUtcRange(from) : null;
+    const toSpan   = to   ? parseYMDToUtcRange(to)   : null;
 
-    // If only one bound provided, use that day's start or end
-    const gte = fromSpan ? fromSpan.start : toSpan ? toSpan.start : null;
-    const lte = toSpan ? toSpan.end : fromSpan ? fromSpan.end : null;
+    const gte = fromSpan ? fromSpan.startUtc : toSpan ? toSpan.startUtc : null;
+    const lte = toSpan ? toSpan.endUtc : fromSpan ? fromSpan.endUtc : null;
 
     if (gte || lte) {
       where.createdAt = {};
@@ -86,7 +72,6 @@ export async function GET(req: Request) {
       if (lte) where.createdAt.lte = lte;
     }
   }
-  // ------------------------------------------------------------------------
 
   const total = await prisma.adminActionLog.count({ where });
   const rows = await prisma.adminActionLog.findMany({
