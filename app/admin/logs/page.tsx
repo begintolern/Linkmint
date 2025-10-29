@@ -46,7 +46,6 @@ export default function AdminLogsPage() {
     if (targetId.trim()) sp.set("targetId", targetId.trim());
     if (from.trim()) sp.set("from", from.trim());
     if (to.trim()) sp.set("to", to.trim());
-    // Send client timezone offset in minutes (e.g., 420 for PDT)
     sp.set("tzOffset", String(new Date().getTimezoneOffset()));
     return sp.toString();
   }, [page, limit, action, email, targetId, from, to]);
@@ -74,6 +73,51 @@ export default function AdminLogsPage() {
   }, [qs]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  // --- CSV Export ---
+  const handleExportCSV = () => {
+    if (!rows.length) return;
+    const header = [
+      "Time",
+      "Action",
+      "ActorEmail",
+      "ActorID",
+      "TargetType",
+      "TargetID",
+      "Details",
+    ];
+    const csvRows = rows.map((r) => [
+      new Date(r.createdAt).toLocaleString(),
+      r.action,
+      r.actorEmail || "",
+      r.actorId || "",
+      r.targetType,
+      r.targetId || "",
+      JSON.stringify(r.details),
+    ]);
+    const csv = [header, ...csvRows]
+      .map((row) =>
+        row
+          .map((val) => `"${String(val).replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `admin-logs-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // --- Copy JSON ---
+  const handleCopyJSON = () => {
+    if (!rows.length) return;
+    navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
+    alert("Copied JSON of current rows to clipboard!");
+  };
 
   return (
     <div className="p-6 space-y-4">
@@ -143,13 +187,27 @@ export default function AdminLogsPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           className="px-3 py-2 rounded bg-black text-white disabled:opacity-50"
           onClick={fetchLogs}
           disabled={loading}
         >
           {loading ? "Loading…" : "Refresh"}
+        </button>
+        <button
+          className="px-3 py-2 rounded border"
+          onClick={handleExportCSV}
+          disabled={!rows.length}
+        >
+          Export CSV
+        </button>
+        <button
+          className="px-3 py-2 rounded border"
+          onClick={handleCopyJSON}
+          disabled={!rows.length}
+        >
+          Copy JSON
         </button>
         <div className="text-sm text-gray-600">
           Showing {rows.length} of {total} • Page {page} / {totalPages}
@@ -174,9 +232,7 @@ export default function AdminLogsPage() {
                 <td className="p-2 whitespace-nowrap">
                   {new Date(row.createdAt).toLocaleString()}
                 </td>
-                <td className="p-2">
-                  <span className="font-mono">{row.action}</span>
-                </td>
+                <td className="p-2 font-mono">{row.action}</td>
                 <td className="p-2">
                   <div className="flex flex-col">
                     <span>{row.actorEmail || "—"}</span>
@@ -234,9 +290,7 @@ export default function AdminLogsPage() {
 
 function safeStringify(v: unknown) {
   try {
-    if (typeof v === "string") {
-      return v;
-    }
+    if (typeof v === "string") return v;
     return JSON.stringify(v, null, 2);
   } catch {
     return String(v);
