@@ -52,7 +52,6 @@ export default function AdminLogsPage() {
     if (targetId.trim()) sp.set("targetId", targetId.trim());
     if (from.trim()) sp.set("from", from.trim());
     if (to.trim()) sp.set("to", to.trim());
-    // Send client timezone offset in minutes (e.g., 420 for PDT)
     sp.set("tzOffset", String(new Date().getTimezoneOffset()));
     return sp.toString();
   }, [page, limit, action, email, targetId, from, to]);
@@ -75,26 +74,20 @@ export default function AdminLogsPage() {
     }
   }
 
-  // initial + on any query string change
   useEffect(() => {
     fetchLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qs]);
 
-  // auto-refresh current page
   useEffect(() => {
-    // avoid double-fire on first mount toggles
     if (!isMounted.current) {
       isMounted.current = true;
       return;
     }
     if (!autoRefresh) return;
-
     const id = setInterval(() => {
-      // don’t stack requests
       if (!loading) fetchLogs();
     }, intervalMs);
-
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, qs, loading]);
@@ -278,7 +271,30 @@ export default function AdminLogsPage() {
                 <td className="p-2 whitespace-nowrap">
                   {new Date(row.createdAt).toLocaleString()}
                 </td>
-                <td className="p-2 font-mono">{row.action}</td>
+
+                {/* colored action badge */}
+                <td className="p-2 font-mono">
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-semibold ${
+                      row.action.startsWith("USER_DISABLE")
+                        ? "bg-red-100 text-red-700"
+                        : row.action.startsWith("USER_ENABLE")
+                        ? "bg-green-100 text-green-700"
+                        : row.action.startsWith("USER_SET_TRUST")
+                        ? "bg-blue-100 text-blue-700"
+                        : row.action.startsWith("USER_UNFREEZE")
+                        ? "bg-amber-100 text-amber-700"
+                        : row.action.startsWith("USER_ELEVATE")
+                        ? "bg-purple-100 text-purple-700"
+                        : row.action.startsWith("USER_DEMOTE")
+                        ? "bg-gray-200 text-gray-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {row.action}
+                  </span>
+                </td>
+
                 <td className="p-2">
                   <div className="flex flex-col">
                     <span>{row.actorEmail || "—"}</span>
@@ -287,6 +303,7 @@ export default function AdminLogsPage() {
                     </span>
                   </div>
                 </td>
+
                 <td className="p-2">
                   <div className="flex flex-col">
                     <span>{row.targetType}</span>
@@ -295,6 +312,7 @@ export default function AdminLogsPage() {
                     </span>
                   </div>
                 </td>
+
                 <td className="p-2">
                   <pre className="max-w-[520px] whitespace-pre-wrap break-words text-xs bg-gray-50 rounded p-2">
                     {row.details ? safeStringify(row.details) : "—"}
@@ -324,7 +342,9 @@ export default function AdminLogsPage() {
         </button>
         <button
           className="px-3 py-2 rounded border disabled:opacity-50"
-          onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / limit)), p + 1))}
+          onClick={() =>
+            setPage((p) => Math.min(Math.max(1, Math.ceil(total / limit)), p + 1))
+          }
           disabled={page >= Math.max(1, Math.ceil(total / limit)) || loading}
         >
           Next
