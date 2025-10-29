@@ -6,30 +6,30 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
+import { logAdminAction } from "@/lib/admin/log";
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "clwzud5zr0000v4l5gnkz1oz3";
 const ADMIN_GRANT_TOKEN = process.env.ADMIN_GRANT_TOKEN || "";
 
-// Session type guard
 type AdminSession =
-  | {
-      user?: { id?: string; role?: string; email?: string | null } | null;
-    }
+  | { user?: { id?: string; role?: string; email?: string | null } | null }
   | null;
 
-async function requireAdminOrToken(req: Request): Promise<{ ok: boolean; actor: string; via: "session" | "token" }> {
-  // 1) Try NextAuth admin session
+async function requireAdminOrToken(
+  req: Request
+): Promise<{ ok: boolean; actor: string; actorId?: string; actorEmail?: string | null; via: "session" | "token" }> {
+  // 1) NextAuth session
   try {
     const session = (await getServerSession(authOptions as any)) as AdminSession;
     const uid = session?.user?.id;
     const role = session?.user?.role;
     const email = session?.user?.email ?? "admin";
     if (uid && (uid === ADMIN_USER_ID || role === "admin")) {
-      return { ok: true, actor: String(email), via: "session" };
+      return { ok: true, actor: String(email), actorId: uid, actorEmail: session?.user?.email ?? null, via: "session" };
     }
   } catch {}
 
-  // 2) Optional bootstrap token (?token=...)
+  // 2) Bootstrap token (?token=...)
   if (ADMIN_GRANT_TOKEN) {
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
@@ -41,10 +41,7 @@ async function requireAdminOrToken(req: Request): Promise<{ ok: boolean; actor: 
   return { ok: false, actor: "unknown", via: "session" };
 }
 
-/**
- * GET: peek a user (by id or email)
- *   /api/admin/elevate?userId=... | &email=...
- */
+/** GET /api/admin/elevate?userId=... | &email=... */
 export async function GET(req: Request) {
   const gate = await requireAdminOrToken(req);
   if (!gate.ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -64,32 +61,23 @@ export async function GET(req: Request) {
 }
 
 /**
- * POST: elevate/demote admin
- * Body:
- * {
- *   "userId"?: string,
- *   "email"?: string,
- *   "makeAdmin": boolean           // true => admin, false => regular
- * }
- *
- * Tries `role='admin'|'user'`; if not present, tries `isAdmin=true|false`.
- * If neither field exists, returns a schema hint.
+ * POST /api/admin/elevate
+ * Body: { userId?: string, email?: string, makeAdmin: boolean }
+ * - Tries `role='admin'|'user'`, falls back to `isAdmin=true|false`
+ * - Writes audit log on success
  */
 export async function POST(req: Request) {
   const gate = await requireAdminOrToken(req);
   if (!gate.ok) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const { userId, email, makeAdmin } = body as {
-    userId?: string;
-    email?: string;
-    makeAdmin?: boolean;
-  };
-
+  const { userId, email, makeAdmin } = body as { userId?: string; email?: string; makeAdmin?: boolean };
   if (!userId && !email) return NextResponse.json({ ok: false, error: "Provide userId or email" }, { status: 400 });
-  if (typeof makeAdmin !== "boolean") return NextResponse.json({ ok: false, error: "makeAdmin must be boolean" }, { status: 400 });
+  if (typeof makeAdmin !== "boolean") {
+    return NextResponse.json({ ok: false, error: "makeAdmin must be boolean" }, { status: 400 });
+  }
 
-  // Narrow lookup result to avoid type collisions
+  // Narrow lookup; avoid previous type collisions
   const userRow = await prisma.user.findFirst({
     where: { OR: [{ id: userId ?? undefined }, { email: email ?? undefined }] },
     select: { id: true, email: true, name: true },
@@ -98,13 +86,22 @@ export async function POST(req: Request) {
 
   const userIdStr = String(userRow.id);
 
-  // Attempt A: use `role` enum
+  // Attempt A — role enum
   try {
+    // We don't select role unless it exists; logging stays generic to avoid TS schema conflicts
     const updated = await prisma.user.update({
       where: { id: userIdStr },
       data: { role: makeAdmin ? "admin" : "user" } as any,
       select: { id: true, email: true, name: true },
     });
+
+    await logAdminAction(
+      { actorId: gate.actorId, actorEmail: gate.actorEmail },
+      makeAdmin ? "USER_ELEVATE" : "USER_DEMOTE",
+      "User",
+      userIdStr,
+      { field: "role", to: makeAdmin ? "admin" : "user", via: gate.via }
+    );
 
     return NextResponse.json({
       ok: true,
@@ -113,17 +110,25 @@ export async function POST(req: Request) {
       actor: gate.actor,
       via: gate.via,
     });
-  } catch (e) {
+  } catch {
     // fall through to Attempt B
   }
 
-  // Attempt B: use `isAdmin` boolean
+  // Attempt B — isAdmin boolean
   try {
     const updated = await prisma.user.update({
       where: { id: userIdStr },
       data: { isAdmin: !!makeAdmin } as any,
       select: { id: true, email: true, name: true },
     });
+
+    await logAdminAction(
+      { actorId: gate.actorId, actorEmail: gate.actorEmail },
+      makeAdmin ? "USER_ELEVATE" : "USER_DEMOTE",
+      "User",
+      userIdStr,
+      { field: "isAdmin", to: !!makeAdmin, via: gate.via }
+    );
 
     return NextResponse.json({
       ok: true,
@@ -136,32 +141,9 @@ export async function POST(req: Request) {
     const hint = [
       "Your User model appears to have neither `role` nor `isAdmin`.",
       "Add one of the following to prisma/schema.prisma and migrate:",
-      "",
-      "Option 1 (enum role):",
-      "  enum Role {",
-      "    user",
-      "    admin",
-      "  }",
-      "  model User {",
-      "    id        String @id @default(cuid())",
-      "    email     String @unique",
-      "    name      String?",
-      "    // ...",
-      "    role      Role   @default(user)",
-      "  }",
-      "",
-      "Option 2 (boolean flag):",
-      "  model User {",
-      "    id        String @id @default(cuid())",
-      "    email     String @unique",
-      "    name      String?",
-      "    // ...",
-      "    isAdmin   Boolean @default(false)",
-      "  }",
-      "",
-      "Then run:",
-      "  npx prisma generate",
-      "  npx prisma migrate dev --name add-user-admin-role",
+      " - enum Role { user, admin }  +  role Role @default(user)",
+      " - isAdmin Boolean @default(false)",
+      "Then run: npx prisma generate && npx prisma migrate dev --name add-user-admin-role",
     ].join("\n");
     return NextResponse.json(
       { ok: false, error: "Schema missing admin field", hint, details: String(e2) },
