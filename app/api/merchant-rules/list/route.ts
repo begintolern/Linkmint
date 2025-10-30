@@ -27,10 +27,15 @@ export async function GET(req: NextRequest) {
     const wantsAll =
       searchParams.get("all") === "1" || searchParams.get("all") === "true";
 
+    // Detect admin either from session OR cookie fallback
+    const isAdmin =
+      viewer.role === "admin" ||
+      req.cookies.get("role")?.value === "admin";
+
     // PH-only launch rules:
     // - Only admins may request ?all=1 (see everything)
     // - Non-admins are always forced to PH
-    const allowAll = canViewAllRegions(viewer.role, wantsAll);
+    const allowAll = canViewAllRegions(isAdmin ? "admin" : "user", wantsAll);
 
     // Decide which "market" to filter by. Our schema uses `market` (e.g., "PH" | "US"),
     // not `region`. We normalize any incoming value to our known codes.
@@ -40,13 +45,12 @@ export async function GET(req: NextRequest) {
       const maybeRegion = normalizeRegion(requestedRegion);
       if (requestedRegion) {
         // If admin passed ?region=US (or PH/GLOBAL), apply it.
-        // Adjust to your schema; here we filter by `market`.
         where.market = maybeRegion;
       } // else: no market filter (all)
     } else {
       // For non-admin (or admin not requesting all), compute effective region,
       // which PH-locks regular users during PH launch.
-      const eff = effectiveUserRegion(viewer.role, requestedRegion); // -> "PH" for users
+      const eff = effectiveUserRegion(isAdmin ? "admin" : "user", requestedRegion);
       where.market = eff;
     }
 
@@ -65,7 +69,7 @@ export async function GET(req: NextRequest) {
         where,
         skip: offset,
         take: limit,
-        orderBy: { updatedAt: "desc" }, // if your schema lacks updatedAt, switch to createdAt
+        orderBy: { updatedAt: "desc" },
       }) as any,
       prisma.merchantRule.count({ where }) as any,
     ]);
@@ -80,7 +84,7 @@ export async function GET(req: NextRequest) {
         total,
         canViewAll: allowAll,
         items,
-        merchants: items, // legacy alias some clients expect
+        merchants: items, // legacy alias
       });
     }
 
