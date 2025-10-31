@@ -1,4 +1,3 @@
-// app/dashboard/links/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -58,8 +57,11 @@ export default async function SmartLinksPage() {
         </Link>
       </div>
 
-      {/* Single Recent Links List (newer version) */}
-      <RecentLocalLinks />
+      {/* Recent Links (local, with server fallback) */}
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">Your Recent Links</h2>
+        <RecentLocalLinks />
+      </section>
     </main>
   );
 }
