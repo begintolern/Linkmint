@@ -10,7 +10,7 @@ type CreateResponse =
 
 const PH_MERCHANTS = [
   { hostIncludes: "lazada.com.ph", id: "cmfvvoxsj0000oij8u4oadeo5", name: "Lazada PH" },
-  { hostIncludes: "shopee.ph",     id: "cmfu940920003oikshotzltnp", name: "Shopee" },
+  { hostIncludes: "shopee.ph",      id: "cmfu940920003oikshotzltnp", name: "Shopee"     },
 ];
 
 function detectMerchant(urlStr: string) {
@@ -31,12 +31,12 @@ export default function CreateLinkClient() {
   const [productUrl, setProductUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [success, setSuccess] = useState<{ shortUrl?: string; id?: string; merchant?: string } | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setInfo(null);
+    setSuccess(null);
 
     if (!productUrl.trim()) {
       setError("Please paste a product URL.");
@@ -64,49 +64,35 @@ export default function CreateLinkClient() {
 
       const data = (await res.json()) as CreateResponse;
 
-      if (!res.ok || !("ok" in data) || data.ok === false) {
-        const msg =
-          ("message" in data && data.message) ||
-          ("error" in data && data.error) ||
-          "Failed to create link.";
+      if (!res.ok || data.ok === false) {
+        const msg = ("message" in data && data.message) || ("error" in data && data.error) || "Failed to create link.";
         setError(msg);
         return;
       }
 
-      // Success message
-      setInfo(
-        data.shortUrl
-          ? `Link created! Short URL: ${data.shortUrl}`
-          : `Link created! ID: ${data.id}`
-      );
+      // Persist success info on screen (no auto-redirect)
+      setSuccess({ shortUrl: data.shortUrl, id: data.id, merchant: merchant.name });
 
-      // NEW: write to localStorage so "Your Recent Links" can pick it up
+      // Optional: stash to localStorage so the Links page (if it reads this) can show “Recent”
       try {
-        const key = "recentLinks";
-        const existing = JSON.parse(localStorage.getItem(key) || "[]");
-        const entry = {
-          id: data.id,
-          shortUrl: data.shortUrl || "",
-          merchant: merchant.name,
-          createdAt: Date.now(),
-        };
-        const updated = [entry, ...(Array.isArray(existing) ? existing : [])]
-          .slice(0, 10); // keep last 10
-        localStorage.setItem(key, JSON.stringify(updated));
-      } catch {
-        // ignore storage errors
-      }
-
-      // Briefly show success, then go to Links
-      setTimeout(() => {
-        router.push("/dashboard/links");
-      }, 500);
-    } catch (err: any) {
+        const key = "lm_recent_links";
+        const prev = JSON.parse(localStorage.getItem(key) || "[]");
+        const now = Date.now();
+        const entry = { id: data.id, shortUrl: data.shortUrl, merchant: merchant.name, createdAt: now, productUrl };
+        const next = [entry, ...prev].slice(0, 10);
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch { /* ignore storage errors */ }
+    } catch (err) {
       console.error("create link error", err);
       setError("Network error while creating the link.");
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleCopy() {
+    if (!success?.shortUrl) return;
+    navigator.clipboard.writeText(success.shortUrl).catch(() => {});
   }
 
   return (
@@ -135,12 +121,39 @@ export default function CreateLinkClient() {
       </form>
 
       {error && <div className="text-red-600 text-sm">{error}</div>}
-      {info && <div className="text-green-700 text-sm">{info}</div>}
+
+      {success && (
+        <div className="rounded border p-3 space-y-2">
+          <div className="text-green-700 text-sm">
+            Link created{success.merchant ? ` for ${success.merchant}` : ""}!
+          </div>
+          {success.shortUrl && (
+            <div className="text-xs break-all">
+              <b>Short URL: </b> {success.shortUrl}
+            </div>
+          )}
+          <div className="flex gap-2">
+            {success.shortUrl && (
+              <button
+                onClick={handleCopy}
+                className="rounded bg-gray-200 px-3 py-1 text-sm"
+              >
+                Copy
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/dashboard/links")}
+              className="rounded bg-blue-600 px-3 py-1 text-white text-sm"
+            >
+              Go to My Links
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="text-xs opacity-70">
-        Supported now: <b>Lazada PH</b> and <b>Shopee PH</b>. We auto-detect the
-        merchant and send <code>merchantId</code>, <code>destinationUrl</code>,
-        and <code>source</code> to the API.
+        Supported now: <b>Lazada PH</b> and <b>Shopee PH</b>. We auto-detect the merchant and
+        send <code>merchantId</code>, <code>destinationUrl</code>, and <code>source</code> to the API.
       </div>
     </div>
   );

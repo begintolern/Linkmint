@@ -9,7 +9,6 @@ import { authOptions } from "@/lib/auth/options";
 
 import Link from "next/link";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
-import RecentLinksClient from "@/app/components/RecentLinksClient";
 import RecentLocalLinks from "./RecentLocalLinks";
 
 type AppUser = {
@@ -59,11 +58,8 @@ export default async function SmartLinksPage() {
         </Link>
       </div>
 
-      {/* Local device recent links */}
+      {/* Single Recent Links List (newer version) */}
       <RecentLocalLinks />
-
-      {/* Server-fetched or existing recent links */}
-      <RecentLinksClient />
     </main>
   );
 }
