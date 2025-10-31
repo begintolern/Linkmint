@@ -61,11 +61,11 @@ export default function CreateLinkClient() {
 
     setBusy(true);
     try {
-      // IMPORTANT: use the singular route we actually have: /api/smartlink/create
+      // Use the singular API route we implemented: /api/smartlink/create
       const res = await fetch("/api/smartlink/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // send session cookie
+        credentials: "include",
         body: JSON.stringify({
           merchantId: merchant.id,
           destinationUrl: productUrl,
@@ -73,10 +73,9 @@ export default function CreateLinkClient() {
         }),
       });
 
-      // The API returns JSON (either ok:true or ok:false)
       const data = (await res.json()) as CreateResponse;
 
-      if (!res.ok || !("ok" in data) || data.ok === false) {
+      if (!res.ok || data.ok === false) {
         const msg =
           ("message" in data && data.message) ||
           ("error" in data && data.error) ||
@@ -85,14 +84,14 @@ export default function CreateLinkClient() {
         return;
       }
 
-      // Success
+      // Success message (API may return shortUrl or just the id)
       setInfo(
         data.shortUrl
           ? `Link created! Short URL: ${data.shortUrl}`
           : `Link created! ID: ${data.id}`
       );
 
-      // Small delay so user sees the success message, then go to Links
+      // Brief pause so the user sees the success, then go to Links
       setTimeout(() => router.push("/dashboard/links"), 600);
     } catch (err: any) {
       console.error("create link error", err);
