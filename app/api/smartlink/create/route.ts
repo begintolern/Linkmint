@@ -13,9 +13,11 @@ const MERCHANT_NAME_BY_ID: Record<string, string> = {
 };
 
 function randomId(len = 6) {
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const chars =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let out = "";
-  for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < len; i++)
+    out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
@@ -28,11 +30,16 @@ export async function POST(req: NextRequest) {
 
     if (!merchantId || !destinationUrl || !source) {
       return NextResponse.json(
-        { ok: false, message: "Missing input. Required: merchantId, destinationUrl, source." },
+        {
+          ok: false,
+          message:
+            "Missing input. Required: merchantId, destinationUrl, source.",
+        },
         { status: 400 }
       );
     }
 
+    // Validate destination URL
     try {
       new URL(destinationUrl);
     } catch {
@@ -42,10 +49,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Create short id and canonical short URL that uses our internal redirect
     const id = randomId(6);
-    const host = new URL(destinationUrl).hostname;
-    const shortUrl = `https://lm.to/${id}?t=${Date.now()}&m=${encodeURIComponent(host)}`;
     const merchant = MERCHANT_NAME_BY_ID[merchantId] ?? "Unknown";
+
+    // IMPORTANT: use your own redirect route, not lm.to
+    const shortUrl = `https://linkmint.co/r/${id}`;
+
+    // If you later back this with a DB/kv, store: { id, destinationUrl, merchantId, createdAt }
 
     return NextResponse.json({
       ok: true,
