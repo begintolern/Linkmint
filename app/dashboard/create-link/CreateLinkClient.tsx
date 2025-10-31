@@ -9,18 +9,8 @@ type CreateResponse =
   | { ok: false; error?: string; message?: string };
 
 const PH_MERCHANTS = [
-  // Lazada PH
-  {
-    hostIncludes: "lazada.com.ph",
-    id: "cmfvvoxsj0000oij8u4oadeo5",
-    name: "Lazada PH",
-  },
-  // Shopee PH
-  {
-    hostIncludes: "shopee.ph",
-    id: "cmfu940920003oikshotzltnp",
-    name: "Shopee",
-  },
+  { hostIncludes: "lazada.com.ph", id: "cmfvvoxsj0000oij8u4oadeo5", name: "Lazada PH" },
+  { hostIncludes: "shopee.ph",     id: "cmfu940920003oikshotzltnp", name: "Shopee" },
 ];
 
 function detectMerchant(urlStr: string) {
@@ -61,7 +51,6 @@ export default function CreateLinkClient() {
 
     setBusy(true);
     try {
-      // Use the singular API route we implemented: /api/smartlink/create
       const res = await fetch("/api/smartlink/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -75,7 +64,7 @@ export default function CreateLinkClient() {
 
       const data = (await res.json()) as CreateResponse;
 
-      if (!res.ok || data.ok === false) {
+      if (!res.ok || !("ok" in data) || data.ok === false) {
         const msg =
           ("message" in data && data.message) ||
           ("error" in data && data.error) ||
@@ -84,15 +73,34 @@ export default function CreateLinkClient() {
         return;
       }
 
-      // Success message (API may return shortUrl or just the id)
+      // Success message
       setInfo(
         data.shortUrl
           ? `Link created! Short URL: ${data.shortUrl}`
           : `Link created! ID: ${data.id}`
       );
 
-      // Brief pause so the user sees the success, then go to Links
-      setTimeout(() => router.push("/dashboard/links"), 600);
+      // NEW: write to localStorage so "Your Recent Links" can pick it up
+      try {
+        const key = "recentLinks";
+        const existing = JSON.parse(localStorage.getItem(key) || "[]");
+        const entry = {
+          id: data.id,
+          shortUrl: data.shortUrl || "",
+          merchant: merchant.name,
+          createdAt: Date.now(),
+        };
+        const updated = [entry, ...(Array.isArray(existing) ? existing : [])]
+          .slice(0, 10); // keep last 10
+        localStorage.setItem(key, JSON.stringify(updated));
+      } catch {
+        // ignore storage errors
+      }
+
+      // Briefly show success, then go to Links
+      setTimeout(() => {
+        router.push("/dashboard/links");
+      }, 500);
     } catch (err: any) {
       console.error("create link error", err);
       setError("Network error while creating the link.");

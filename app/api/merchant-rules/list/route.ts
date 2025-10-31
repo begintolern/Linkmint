@@ -1,4 +1,8 @@
 // app/api/merchant-rules/list/route.ts
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getViewer } from "@/lib/auth/guards";
