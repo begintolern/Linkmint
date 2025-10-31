@@ -4,25 +4,31 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type CreateResponse = {
-  ok: boolean;
-  id?: string;
-  error?: string;
-  shortUrl?: string;
-  merchant?: string;
-};
+type CreateResponse =
+  | { ok: true; id: string; shortUrl?: string; merchant?: string }
+  | { ok: false; error?: string; message?: string };
 
-const PH_DOMAINS = [
-  { hostIncludes: "lazada.com.ph", merchant: "Lazada PH" },
-  { hostIncludes: "shopee.ph", merchant: "Shopee" },
+const PH_MERCHANTS = [
+  // Lazada PH
+  {
+    hostIncludes: "lazada.com.ph",
+    id: "cmfvvoxsj0000oij8u4oadeo5",
+    name: "Lazada PH",
+  },
+  // Shopee PH
+  {
+    hostIncludes: "shopee.ph",
+    id: "cmfu940920003oikshotzltnp",
+    name: "Shopee",
+  },
 ];
 
 function detectMerchant(urlStr: string) {
   try {
     const u = new URL(urlStr);
     const host = u.hostname.toLowerCase();
-    for (const rule of PH_DOMAINS) {
-      if (host.includes(rule.hostIncludes)) return rule.merchant;
+    for (const m of PH_MERCHANTS) {
+      if (host.includes(m.hostIncludes)) return m;
     }
     return null;
   } catch {
@@ -35,66 +41,100 @@ export default function CreateLinkClient() {
   const [productUrl, setProductUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
+
+    if (!productUrl.trim()) {
+      setError("Please paste a product URL.");
+      return;
+    }
 
     const merchant = detectMerchant(productUrl);
     if (!merchant) {
-      setError("Could not detect merchant. Please use a Lazada or Shopee link.");
+      setError("We only support Lazada PH and Shopee PH URLs for now.");
       return;
     }
 
     setBusy(true);
     try {
+      // IMPORTANT: use the singular route we actually have: /api/smartlink/create
       const res = await fetch("/api/smartlink/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // send session cookie
         body: JSON.stringify({
+          merchantId: merchant.id,
           destinationUrl: productUrl,
-          merchantName: merchant,
           source: "dashboard",
         }),
       });
 
-      const data: CreateResponse = await res.json();
-      if (!data.ok) throw new Error(data.error || "Failed to create link");
+      // The API returns JSON (either ok:true or ok:false)
+      const data = (await res.json()) as CreateResponse;
 
-      router.push("/dashboard/smartlinks");
+      if (!res.ok || !("ok" in data) || data.ok === false) {
+        const msg =
+          ("message" in data && data.message) ||
+          ("error" in data && data.error) ||
+          "Failed to create link.";
+        setError(msg);
+        return;
+      }
+
+      // Success
+      setInfo(
+        data.shortUrl
+          ? `Link created! Short URL: ${data.shortUrl}`
+          : `Link created! ID: ${data.id}`
+      );
+
+      // Small delay so user sees the success message, then go to Links
+      setTimeout(() => router.push("/dashboard/links"), 600);
     } catch (err: any) {
-      setError(err.message);
+      console.error("create link error", err);
+      setError("Network error while creating the link.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="max-w-md mx-auto mt-10">
-      <h1 className="text-xl font-semibold mb-4">Create Smart Link</h1>
-      <form onSubmit={handleCreate} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Product URL</label>
-          <input
-            type="url"
-            required
-            className="w-full border rounded-lg p-2 text-sm"
-            placeholder="https://www.lazada.com.ph/product/..."
-            value={productUrl}
-            onChange={(e) => setProductUrl(e.target.value)}
-          />
-        </div>
+    <div className="max-w-xl space-y-4">
+      <h1 className="text-xl font-semibold">Create Smart Link (PH)</h1>
+      <p className="text-sm opacity-80">
+        Paste a <strong>real</strong> Lazada PH or Shopee PH product URL.
+      </p>
 
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-
+      <form onSubmit={handleCreate} className="space-y-3">
+        <input
+          type="url"
+          value={productUrl}
+          onChange={(e) => setProductUrl(e.target.value)}
+          placeholder="https://www.lazada.com.ph/products/..."
+          className="w-full rounded border px-3 py-2"
+          required
+        />
         <button
           type="submit"
           disabled={busy}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full disabled:opacity-50"
+          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
         >
           {busy ? "Creating..." : "Create Link"}
         </button>
       </form>
+
+      {error && <div className="text-red-600 text-sm">{error}</div>}
+      {info && <div className="text-green-700 text-sm">{info}</div>}
+
+      <div className="text-xs opacity-70">
+        Supported now: <b>Lazada PH</b> and <b>Shopee PH</b>. We auto-detect the
+        merchant and send <code>merchantId</code>, <code>destinationUrl</code>,
+        and <code>source</code> to the API.
+      </div>
     </div>
   );
 }
