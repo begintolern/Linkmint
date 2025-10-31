@@ -1,97 +1,132 @@
 // app/dashboard/create-link/CreateLinkClient.tsx
 "use client";
 
-export const revalidate = 0;
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-import Link from "next/link";
-import { useMemo, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { addRecentLink } from "@/app/components/RecentLinksClient";
+type CreateResponse = {
+  ok: boolean;
+  id?: string;
+  error?: string;
+  shortUrl?: string;
+  merchant?: string;
+};
 
-function makeDemoSmartUrl(sourceUrl: string) {
-  // tiny fake shortener: https://lm.to/<6-char>?t=<unix>&m=<host>
-  const id = Math.random().toString(36).slice(2, 8);
-  const t = Math.floor(Date.now() / 1000);
-  const u = new URL("https://lm.to/" + id);
-  u.searchParams.set("t", String(t));
+const PH_DOMAINS = [
+  { hostIncludes: "lazada.com.ph", merchant: "Lazada PH" },
+  { hostIncludes: "shopee.ph", merchant: "Shopee" },
+];
+
+function detectMerchant(urlStr: string) {
   try {
-    const src = new URL(sourceUrl);
-    u.searchParams.set("m", src.hostname.replace(/^www\./, ""));
-  } catch {}
-  return u.toString();
+    const u = new URL(urlStr);
+    const host = u.hostname.toLowerCase();
+    for (const rule of PH_DOMAINS) {
+      if (host.includes(rule.hostIncludes)) return rule.merchant;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export default function CreateLinkClient() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const [productUrl, setProductUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const initialUrl = useMemo(() => searchParams?.get("url") || "", [searchParams]);
-  const [url, setUrl] = useState<string>(initialUrl);
-  const [note, setNote] = useState<string>("");
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
 
-  useEffect(() => {
-    setUrl(initialUrl);
-  }, [initialUrl]);
-
-  const onGenerate = () => {
-    const sourceUrl = (url || "").trim();
-    if (!sourceUrl) {
-      alert("Please paste a product URL first.");
+    // Basic URL parse
+    let u: URL;
+    try {
+      u = new URL(productUrl);
+    } catch {
+      setError("Please enter a valid product URL.");
       return;
     }
-    const smartUrl = makeDemoSmartUrl(sourceUrl);
 
-    // ✅ Save just the smart URL (matches RecentLinksClient API)
-    addRecentLink(smartUrl);
+    // PH-only guard: allow Lazada PH or Shopee PH only
+    const merchant = detectMerchant(productUrl);
+    if (!merchant) {
+      setError(
+        "For PH launch, only Lazada PH (lazada.com.ph) and Shopee (shopee.ph) links are allowed."
+      );
+      return;
+    }
 
-    // Go back to Smart Links so they immediately see it in the list
-    router.push("/dashboard/links");
-  };
+    setBusy(true);
+    try {
+      // Call your existing create-link API (adjust path if yours is different)
+      const res = await fetch("/api/links/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productUrl,
+          merchant, // helpful for server logs/metrics
+          market: "PH",
+          source: "dashboard",
+        }),
+      });
+
+      const data = (await res.json()) as CreateResponse;
+      if (!data.ok) {
+        setError(data.error || "Failed to create link.");
+        setBusy(false);
+        return;
+      }
+
+      // Navigate to Links page (where “Your recent links” shows)
+      router.push("/dashboard/links");
+    } catch (err: any) {
+      setError("Network error. Please try again.");
+      setBusy(false);
+    }
+  }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Back to Smart Links */}
-      <div>
-        <Link
-          href="/dashboard/links"
-          className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs text-gray-800 hover:bg-gray-50"
-        >
-          ← Back to Smart Links
-        </Link>
-      </div>
+    <div className="max-w-xl mx-auto space-y-4">
+      <h1 className="text-2xl font-semibold">Create Smart Link</h1>
+      <p className="text-sm text-gray-600">
+        PH-only launch: paste a product URL from{" "}
+        <strong>lazada.com.ph</strong> or <strong>shopee.ph</strong>. We’ll
+        auto-detect the merchant and create your smart link.
+      </p>
 
-      <div>
-        <h1 className="text-2xl font-semibold">Create Smart Link</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Paste a product URL or choose a merchant to generate a tracked, compliant link.
-        </p>
-      </div>
+      <form onSubmit={handleCreate} className="space-y-3">
+        <label className="block text-sm font-medium">
+          Product URL
+          <input
+            className="mt-1 w-full rounded-md border px-3 py-2"
+            placeholder="https://www.lazada.com.ph/..."
+            value={productUrl}
+            onChange={(e) => setProductUrl(e.target.value)}
+            disabled={busy}
+            required
+          />
+        </label>
 
-      <div className="max-w-xl border rounded-2xl p-4 shadow-sm bg-white">
-        <label className="block text-sm font-medium mb-1">Product URL</label>
-        <input
-          type="url"
-          placeholder="https://example.com/product/123"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          className="w-full rounded-lg border px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
-
-        <label className="block text-sm font-medium mb-1">Notes (optional)</label>
-        <textarea
-          placeholder="Campaign notes…"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          className="w-full rounded-lg border px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
-          rows={4}
-        />
+        {error && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
+            {error}
+          </div>
+        )}
 
         <button
-          onClick={onGenerate}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          type="submit"
+          disabled={busy}
+          className="rounded-md px-4 py-2 bg-black text-white disabled:opacity-60"
         >
-          Generate Link
+          {busy ? "Creating..." : "Create Link"}
         </button>
+      </form>
+
+      <div className="text-xs text-gray-500">
+        Tip: We currently allow only Lazada PH and Shopee during PH launch. More
+        merchants are coming soon.
       </div>
     </div>
   );
