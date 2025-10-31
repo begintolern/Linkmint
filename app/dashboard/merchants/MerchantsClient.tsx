@@ -1,314 +1,196 @@
 // app/dashboard/merchants/MerchantsClient.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 type Merchant = {
   id: string;
   merchantName: string | null;
-  market: string | null; // "PH" | "US" | ...
   network: string | null;
-  domainPattern: string | null;
-  commissionRate: string | null; // e.g. "0.05"
-  commissionType: string | null; // e.g. "PERCENT"
-  status: string | null; // e.g. "PENDING"
-  updatedAt?: string;
-  createdAt?: string;
+  market: string | null;
+  allowedRegions?: string[] | null;
+  updatedAt?: string | null;
 };
 
-type ApiListResp = {
-  ok: boolean;
-  page: number;
-  limit: number;
-  total: number;
-  canViewAll: boolean;
-  items: Merchant[];
-};
-
-export default function MerchantsClient(props: {
+type Props = {
   isAdmin: boolean;
   initialRegion?: string;
   initialAll?: boolean;
-}) {
-  const { isAdmin, initialRegion = "", initialAll = false } = props;
-  const router = useRouter();
-  const sp = useSearchParams()!;
+};
 
-  // Local filters state mirrors URL
+export default function MerchantsClient({
+  isAdmin,
+  initialRegion = "PH",
+  initialAll = false,
+}: Props) {
   const [region, setRegion] = useState<string>(initialRegion);
-  const [all, setAll] = useState<boolean>(!!initialAll);
-
-  // Data state
-  const [loading, setLoading] = useState<boolean>(true);
+  const [showAll, setShowAll] = useState<boolean>(initialAll && isAdmin);
   const [items, setItems] = useState<Merchant[]>([]);
-  const [page, setPage] = useState<number>(1);
-  const [limit] = useState<number>(25);
   const [total, setTotal] = useState<number>(0);
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(total / limit)),
-    [total, limit]
-  );
+  const [loading, setLoading] = useState<boolean>(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Build query string for the API based on filters
-  const buildApiUrl = useCallback(
-    (nextPage?: number) => {
-      const params = new URLSearchParams();
-      params.set("limit", String(limit));
-      params.set("page", String(nextPage ?? page));
-
-      // For PH-only launch the API enforces:
-      // - only admins can use all=1 (see all regions)
-      // - non-admins are locked to PH on the server side
-      if (isAdmin && all) {
-        params.set("all", "1");
-      } else {
-        if (region) params.set("region", region.toUpperCase());
-      }
-
-      return `/api/merchant-rules/list?${params.toString()}`;
-    },
-    [all, isAdmin, limit, page, region]
-  );
-
-  // Push filter state into the URL (address bar), so links are shareable
-  const syncUrl = useCallback(
-    (nextPage?: number, nextRegion?: string, nextAll?: boolean) => {
-      const params = new URLSearchParams();
-      params.set("limit", String(limit));
-      params.set("page", String(nextPage ?? page));
-
-      if (isAdmin && (nextAll ?? all)) {
-        params.set("all", "1");
-      } else {
-        const r = (nextRegion ?? region).toUpperCase();
-        if (r) params.set("region", r);
-      }
-
-      const qs = params.toString();
-      router.replace(`/dashboard/merchants?${qs}`);
-    },
-    [router, limit, page, region, all, isAdmin]
-  );
-
-  // Fetch list
-  const load = useCallback(
-    async (nextPage?: number) => {
-      try {
-        setLoading(true);
-        const url = buildApiUrl(nextPage);
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: ApiListResp = await res.json();
-        if (!data.ok) throw new Error("Server error");
-        setItems(data.items || []);
-        setTotal(data.total || 0);
-        if (typeof nextPage === "number") setPage(nextPage);
-      } catch (e) {
-        console.error("load merchants failed:", e);
-        alert("Failed to load merchants.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [buildApiUrl]
-  );
-
-  // On mount/read URL -> hydrate filters
-  useEffect(() => {
-    const spAll = sp?.get("all");
-    const spRegion = sp?.get("region");
-    const spPage = sp?.get("page");
-
-
-    if (isAdmin) {
-      setAll(spAll === "1" || spAll === "true");
+  const query = useMemo(() => {
+    const sp = new URLSearchParams();
+    sp.set("limit", "25");
+    if (showAll && isAdmin) {
+      sp.set("all", "1");
     } else {
-      setAll(false);
+      // user-scoped; region is applied server-side but we still pass it
+      sp.set("region", region);
     }
-    if (spRegion) setRegion(spRegion.toUpperCase());
-    if (spPage) {
-      const p = parseInt(spPage, 10);
-      if (Number.isFinite(p) && p > 0) setPage(p);
+    return sp.toString();
+  }, [region, showAll, isAdmin]);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/merchant-rules/list?${query}`, {
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (data?.ok) {
+        setItems(data.items ?? []);
+        setTotal(data.total ?? 0);
+      } else {
+        console.error("Load merchants failed:", data);
+      }
+    } catch (e) {
+      console.error("Load merchants error:", e);
+    } finally {
+      setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
 
   useEffect(() => {
-    load(page);
-  }, [load]);
+    // @ts-ignore
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
-  // Handlers
-  const handleRegionChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextRegion = e.target.value;
-    setRegion(nextRegion);
-    setAll(false); // selecting a region disables "All"
-    syncUrl(1, nextRegion, false);
-    await load(1);
-  };
-
-  const handleAllToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nextAll = e.target.checked;
-    setAll(nextAll);
-    // when all=true, we ignore region
-    syncUrl(1, "", nextAll);
-    await load(1);
-  };
-
-  const handlePrev = async () => {
-    if (page <= 1) return;
-    const np = page - 1;
-    syncUrl(np);
-    await load(np);
-  };
-
-  const handleNext = async () => {
-    if (page >= totalPages) return;
-    const np = page + 1;
-    syncUrl(np);
-    await load(np);
-  };
-
-  const handleDelete = async (id: string) => {
+  async function handleDelete(id: string) {
     if (!isAdmin) return;
-    const yes = confirm("Delete this merchant rule?");
-    if (!yes) return;
+    const go = window.confirm("Delete this merchant rule? This cannot be undone.");
+    if (!go) return;
+
+    setDeletingId(id);
     try {
       const res = await fetch(`/api/merchant-rules/${id}`, {
         method: "DELETE",
-        cache: "no-store",
       });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `HTTP ${res.status}`);
+      const data = await res.json();
+      if (res.ok && data?.ok) {
+        setItems((prev) => prev.filter((m) => m.id !== id));
+        setTotal((t) => Math.max(0, t - 1));
+      } else {
+        alert(data?.error || "Delete failed");
       }
-      await load(page);
-    } catch (e: any) {
-      console.error("delete failed:", e);
-      alert("Delete failed: " + (e?.message || "Unknown error"));
+    } catch (e) {
+      console.error("Delete error:", e);
+      alert("Delete failed");
+    } finally {
+      setDeletingId(null);
     }
-  };
+  }
 
   return (
-    <section className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        {isAdmin ? (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        {!isAdmin ? (
+          <div className="text-sm text-gray-500">
+            Region: <span className="font-medium">PH</span> (locked for PH launch)
+          </div>
+        ) : (
           <>
-            <label className="text-sm font-medium">Region</label>
+            <label className="text-sm">Region:</label>
             <select
-              value={all ? "" : region.toUpperCase()}
-              onChange={handleRegionChange}
-              disabled={all}
-              className="border rounded-md px-2 py-1 text-sm"
+              className="border rounded px-2 py-1 text-sm"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              disabled={showAll}
             >
-              <option value="">(none)</option>
               <option value="PH">PH</option>
               <option value="US">US</option>
+              <option value="GLOBAL">GLOBAL</option>
             </select>
 
-            <label className="ml-4 inline-flex items-center gap-2 text-sm">
+            <label className="ml-4 text-sm flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={all}
-                onChange={handleAllToggle}
+                checked={showAll}
+                onChange={(e) => setShowAll(e.target.checked)}
               />
-              All Regions (admin)
+              View all regions (admin)
             </label>
           </>
-        ) : (
-          <div className="text-sm">
-            <span className="font-medium">Region:</span> PH (locked)
-          </div>
         )}
+
+        <button
+          onClick={load}
+          className="ml-auto border rounded px-3 py-1 text-sm"
+          disabled={loading}
+        >
+          {loading ? "Refreshing..." : "Refresh"}
+        </button>
       </div>
 
-      {/* List */}
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600">
+      <div className="text-sm text-gray-600">
+        Showing <span className="font-medium">{items.length}</span> of{" "}
+        <span className="font-medium">{total}</span>
+      </div>
+
+      <div className="overflow-auto rounded border">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-50 text-gray-700">
             <tr>
-              <th className="text-left px-3 py-2">Merchant</th>
-              <th className="text-left px-3 py-2">Market</th>
-              <th className="text-left px-3 py-2">Network</th>
-              <th className="text-left px-3 py-2">Domain</th>
-              <th className="text-left px-3 py-2">Rate</th>
-              <th className="text-left px-3 py-2">Status</th>
-              {isAdmin && <th className="px-3 py-2 text-right">Actions</th>}
+              <th className="text-left p-2">Merchant</th>
+              <th className="text-left p-2">Network</th>
+              <th className="text-left p-2">Market</th>
+              <th className="text-left p-2">Regions</th>
+              <th className="text-left p-2">Updated</th>
+              {isAdmin && <th className="text-left p-2">Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            {items.map((m) => (
+              <tr key={m.id} className="border-t">
+                <td className="p-2">{m.merchantName ?? "—"}</td>
+                <td className="p-2">{m.network ?? "—"}</td>
+                <td className="p-2">{m.market ?? "—"}</td>
+                <td className="p-2">
+                  {(m.allowedRegions && m.allowedRegions.length > 0
+                    ? m.allowedRegions.join(", ")
+                    : "—")}
+                </td>
+                <td className="p-2">
+                  {m.updatedAt
+                    ? new Date(m.updatedAt).toLocaleString()
+                    : "—"}
+                </td>
+                {isAdmin && (
+                  <td className="p-2">
+                    <button
+                      onClick={() => handleDelete(m.id)}
+                      disabled={deletingId === m.id}
+                      className="border rounded px-2 py-1 text-xs hover:bg-red-50"
+                      title="Delete merchant rule"
+                    >
+                      {deletingId === m.id ? "Deleting…" : "Delete"}
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+            {items.length === 0 && (
               <tr>
-                <td className="px-3 py-4" colSpan={isAdmin ? 7 : 6}>
-                  Loading…
+                <td className="p-4 text-gray-500" colSpan={isAdmin ? 6 : 5}>
+                  No merchants found.
                 </td>
               </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td className="px-3 py-6 text-gray-500" colSpan={isAdmin ? 7 : 6}>
-                  No merchants found for this view.
-                </td>
-              </tr>
-            ) : (
-              items.map((m) => {
-                const rate =
-                  m.commissionType === "PERCENT" && m.commissionRate
-                    ? `${(Number(m.commissionRate) * 100).toFixed(0)}%`
-                    : m.commissionRate ?? "-";
-                return (
-                  <tr key={m.id} className="border-t">
-                    <td className="px-3 py-2">{m.merchantName ?? "-"}</td>
-                    <td className="px-3 py-2">{m.market ?? "-"}</td>
-                    <td className="px-3 py-2">{m.network ?? "-"}</td>
-                    <td className="px-3 py-2">{m.domainPattern ?? "-"}</td>
-                    <td className="px-3 py-2">{rate}</td>
-                    <td className="px-3 py-2">{m.status ?? "-"}</td>
-                    {isAdmin && (
-                      <td className="px-3 py-2">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleDelete(m.id)}
-                            className="px-2 py-1 text-xs rounded-md border border-red-200 text-red-700 hover:bg-red-50"
-                            title="Delete rule"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })
             )}
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-sm">
-        <div>
-          Page <span className="font-medium">{page}</span> of{" "}
-          <span className="font-medium">{totalPages}</span>
-          <span className="text-gray-500"> — {total} total</span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handlePrev}
-            disabled={page <= 1 || loading}
-            className="px-3 py-1 rounded-md border disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={page >= totalPages || loading}
-            className="px-3 py-1 rounded-md border disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </section>
+    </div>
   );
 }
