@@ -1,6 +1,6 @@
 // app/api/smartlinks/create/route.ts
-export const dynamic = "force-dynamic";   // ⛔ no prerender/SSG
-export const revalidate = 0;              // ⛔ no caching
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -28,19 +28,23 @@ function randomId(len = 6) {
   return out;
 }
 
-// Build short links for the SAME host that handled the request
-function getBaseFromRequest(req: NextRequest) {
+/** Prefer env base (prod), else derive from request; force https and strip trailing slash. */
+function getPreferredBase(req: NextRequest) {
+  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (envBase && /^https?:\/\//i.test(envBase)) {
+    return envBase.replace(/\/+$/, ""); // strip trailing slash
+  }
   const u = new URL(req.url);
-  return `${u.protocol}//${u.host}/`;
+  // If proxy reports http, still force https for public short links
+  const proto = "https:";
+  return `${proto}//${u.host}`;
 }
 
-// Safe extractor for strict TS
 function getUserId(session: Session | null): string | null {
   const anyUser = (session as any)?.user ?? null;
   return (anyUser?.id as string | undefined) ?? null;
 }
 
-// Explicitly block GET to avoid static export/prerender attempts
 export async function GET() {
   return NextResponse.json({ ok: false, message: "Method Not Allowed" }, { status: 405 });
 }
@@ -65,7 +69,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate destination
     let parsed: URL;
     try {
       parsed = new URL(destinationUrl);
@@ -79,9 +82,9 @@ export async function POST(req: NextRequest) {
     const merchantMeta =
       MERCHANT_NAME_BY_ID[merchantId] ?? { name: "Unknown", domain: parsed.hostname };
 
-    const BASE = getBaseFromRequest(req);
+    const base = getPreferredBase(req);           // e.g., https://em7262.linkmint.co
     const id = randomId(6);
-    const shortUrl = `${BASE}r/${id}`;
+    const shortUrl = `${base}/r/${id}`;           // absolute, right host
 
     const destinations: Prisma.InputJsonValue = {
       default: destinationUrl,
