@@ -1,148 +1,210 @@
 // app/components/RecentLinksClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
-type LocalLink = {
+type RecentLink = {
   id: string;
-  url: string;
-  shortUrl?: string;
-  merchant?: string;
-  createdAt: number; // epoch ms
+  shortUrl: string;
+  destinationUrl: string;
+  merchant?: string | null;
+  createdAt: number; // ms epoch
 };
 
-// We will read from BOTH keys, then write back to the new one.
-const PRIMARY_KEY = "lm_recent_links_v1";
-const LEGACY_KEYS = ["lm_recent_links", "lm_recent_links_v1"];
+type RecentClick = {
+  linkId: string;
+  merchant?: string | null;
+  destinationUrl: string;
+  shortUrl?: string | null;
+  clickedAt: number; // ms epoch
+};
 
-function dedupeAndSort(items: LocalLink[]): LocalLink[] {
-  const byId = new Map<string, LocalLink>();
-  for (const it of items) {
-    if (!it?.id) continue;
-    const prev = byId.get(it.id);
-    if (!prev || (it.createdAt || 0) > (prev.createdAt || 0)) {
-      byId.set(it.id, it);
-    }
+const LINKS_KEY = "recent-links";
+const CLICKS_KEY = "recent-clicks";
+const MAX_ITEMS = 20;
+
+function readJson<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
   }
-  return Array.from(byId.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 }
 
-function readAll(): LocalLink[] {
-  const all: LocalLink[] = [];
-  for (const k of LEGACY_KEYS) {
-    try {
-      const raw = localStorage.getItem(k);
-      if (!raw) continue;
-      const arr = JSON.parse(raw) as LocalLink[] | undefined;
-      if (Array.isArray(arr)) all.push(...arr);
-    } catch {
-      /* ignore bad JSON */
-    }
+function writeJson<T>(key: string, value: T) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore quota errors for now
   }
-  return dedupeAndSort(all);
 }
 
-function writePrimary(items: LocalLink[]) {
-  localStorage.setItem(PRIMARY_KEY, JSON.stringify(items.slice(0, 50)));
-}
+export default function RecentLinksClient() {
+  const [links, setLinks] = useState<RecentLink[]>([]);
+  const [clicks, setClicks] = useState<RecentClick[]>([]);
 
-export default function RecentLocalLinks() {
-  const [items, setItems] = useState<LocalLink[]>([]);
-
+  // Load once on mount
   useEffect(() => {
-    const merged = readAll();
-    setItems(merged);
+    const stored = readJson<RecentLink[]>(LINKS_KEY, []);
+    setLinks(stored.slice(0, MAX_ITEMS));
 
-    // Migrate: write to PRIMARY, remove true legacy key
-    writePrimary(merged);
-    for (const k of LEGACY_KEYS) {
-      if (k !== PRIMARY_KEY) localStorage.removeItem(k);
-    }
+    const storedClicks = readJson<RecentClick[]>(CLICKS_KEY, []);
+    setClicks(storedClicks.slice(0, MAX_ITEMS));
   }, []);
 
-  function handleOpen(u?: string) {
-    if (!u) return;
-    window.open(u, "_blank", "noopener,noreferrer");
+  const hasLinks = links.length > 0;
+  const hasClicks = clicks.length > 0;
+
+  function handleRemove(id: string) {
+    const next = links.filter((l) => l.id !== id);
+    setLinks(next);
+    writeJson(LINKS_KEY, next);
   }
 
-  function handleCopy(text?: string) {
-    if (!text) return;
-    navigator.clipboard?.writeText(text).catch(() => {});
-  }
-
-  function removeAt(idx: number) {
-    const next = items.slice();
-    next.splice(idx, 1);
-    setItems(next);
-    writePrimary(next);
-  }
-
-  function clearAll() {
-    setItems([]);
-    writePrimary([]);
-  }
-
-  if (!items.length) {
-    return (
-      <div className="rounded border p-4">
-        <h3 className="font-semibold">Your Recent Links</h3>
-        <p className="text-sm opacity-80">
-          No links yet. Create one from{" "}
-          <a className="underline" href="/dashboard/create-link">Create Smart Link</a>.
-        </p>
-      </div>
+  function handleEdit(id: string) {
+    const item = links.find((l) => l.id === id);
+    if (!item) return;
+    const nextUrl = prompt("Update destination URL:", item.destinationUrl);
+    if (!nextUrl) return;
+    const next = links.map((l) =>
+      l.id === id ? { ...l, destinationUrl: nextUrl } : l
     );
+    setLinks(next);
+    writeJson(LINKS_KEY, next);
   }
+
+  // NEW: track click to localStorage, then navigate
+  function handleOpen(item: RecentLink) {
+    try {
+      const entry: RecentClick = {
+        linkId: item.id,
+        merchant: item.merchant ?? null,
+        destinationUrl: item.destinationUrl,
+        shortUrl: item.shortUrl,
+        clickedAt: Date.now(),
+      };
+      const current = readJson<RecentClick[]>(CLICKS_KEY, []);
+      const next = [entry, ...current].slice(0, MAX_ITEMS);
+      writeJson(CLICKS_KEY, next);
+      setClicks(next);
+    } catch {
+      // best-effort
+    }
+    // Navigate to product
+    window.open(item.destinationUrl, "_blank", "noopener,noreferrer");
+  }
+
+  const sortedLinks = useMemo(
+    () => [...links].sort((a, b) => b.createdAt - a.createdAt),
+    [links]
+  );
+
+  const sortedClicks = useMemo(
+    () => [...clicks].sort((a, b) => b.clickedAt - a.clickedAt),
+    [clicks]
+  );
 
   return (
-    <div className="rounded border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Your Recent Links</h3>
-        <button
-          className="text-sm underline opacity-80 hover:opacity-100"
-          onClick={clearAll}
-        >
-          Clear all
-        </button>
-      </div>
-
-      <ul className="space-y-2">
-        {items.map((it, idx) => (
-          <li key={it.id} className="rounded border p-3">
-            <div className="flex flex-wrap items-center gap-2 justify-between">
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium truncate">
-                  {it.merchant || "Smart Link"} · {new Date(it.createdAt).toLocaleString()}
+    <div className="grid gap-8">
+      {/* Recent Links */}
+      <section>
+        <h2 className="text-lg font-semibold mb-2">Your Recent Links</h2>
+        {!hasLinks ? (
+          <div className="text-sm opacity-70">
+            No links yet. Create one from{" "}
+            <Link href="/dashboard/create-link" className="underline">
+              Create Smart Link
+            </Link>
+            .
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sortedLinks.map((l) => (
+              <div
+                key={l.id}
+                className="rounded border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium truncate">
+                    {l.merchant || "Link"}
+                  </div>
+                  <div className="text-xs opacity-70 break-all">
+                    {l.destinationUrl}
+                  </div>
+                  <div className="text-[11px] opacity-60 mt-1">
+                    Created {new Date(l.createdAt).toLocaleString()}
+                  </div>
                 </div>
-                <div className="text-xs opacity-80 truncate">
-                  {it.shortUrl || it.url}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleOpen(l)}
+                    className="rounded bg-blue-600 px-3 py-1.5 text-white text-sm hover:bg-blue-700"
+                  >
+                    Open Product
+                  </button>
+                  <button
+                    onClick={() => handleEdit(l.id)}
+                    className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleRemove(l.id)}
+                    className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+      </section>
 
-              <div className="flex gap-2">
-                <button
-                  className="rounded bg-blue-600 px-3 py-1 text-white text-sm"
-                  onClick={() => handleOpen(it.shortUrl || it.url)}
-                >
-                  Open
-                </button>
-                <button
-                  className="rounded bg-gray-200 px-3 py-1 text-sm"
-                  onClick={() => handleCopy(it.shortUrl || it.url)}
-                >
-                  Copy
-                </button>
-                <button
-                  className="rounded bg-red-600 px-3 py-1 text-white text-sm"
-                  onClick={() => removeAt(idx)}
-                >
-                  Remove
-                </button>
+      {/* Recent Clicks */}
+      <section>
+        <h2 className="text-lg font-semibold mb-2">Recent Clicks</h2>
+        {!hasClicks ? (
+          <div className="text-sm opacity-70">
+            No clicks yet. Use <b>Open Product</b> on a link to log a click.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sortedClicks.map((c, idx) => (
+              <div
+                key={idx}
+                className="rounded border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium truncate">
+                    {c.merchant || "Click"}
+                  </div>
+                  <div className="text-xs opacity-70 break-all">
+                    {c.destinationUrl}
+                  </div>
+                  <div className="text-[11px] opacity-60 mt-1">
+                    Clicked {new Date(c.clickedAt).toLocaleString()}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <a
+                    href={c.destinationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded bg-blue-600 px-3 py-1.5 text-white text-sm hover:bg-blue-700"
+                  >
+                    Open Again
+                  </a>
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
