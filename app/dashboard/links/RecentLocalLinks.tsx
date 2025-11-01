@@ -1,165 +1,157 @@
-// app/dashboard/links/RecentLocalLinks.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 
 type RecentLink = {
-  id?: string;
-  shortUrl?: string | null;
-  destinationUrl?: string | null;
-  merchant?: string | null;
-  createdAt?: number; // ms epoch
+  id: string;
+  shortUrl: string;
+  merchant: string;
+  destinationUrl: string;
+  createdAt: number;
 };
 
-const STORAGE_KEY = "recent-links";
-
-function loadLinks(): RecentLink[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // normalize
-    return parsed.map((x: any) => ({
-      id: x?.id ?? undefined,
-      shortUrl: x?.shortUrl ?? null,
-      destinationUrl: x?.destinationUrl ?? null,
-      merchant: x?.merchant ?? null,
-      createdAt: typeof x?.createdAt === "number" ? x.createdAt : Date.now(),
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function saveLinks(list: RecentLink[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-}
-
-function hostnameOf(url?: string | null) {
-  if (!url) return "";
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return "";
-  }
-}
-
 export default function RecentLocalLinks() {
-  const [links, setLinks] = useState<RecentLink[]>([]);
+  const [items, setItems] = useState<RecentLink[]>([]);
+  const [debug, setDebug] = useState<string>("");
 
-  useEffect(() => {
-    setLinks(loadLinks());
-  }, []);
-
-  const sorted = useMemo(() => {
-    return [...links].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-  }, [links]);
-
-  function handleOpen(l: RecentLink) {
-    // Prefer a real product URL; fall back to shortUrl if it’s not lm.to
-    const shortHost = hostnameOf(l.shortUrl);
-    const useDestination =
-      !!l.destinationUrl && (!l.shortUrl || shortHost === "lm.to");
-
-    const urlToOpen = useDestination ? l.destinationUrl! : l.shortUrl!;
+  function load() {
     try {
-      window.open(urlToOpen, "_blank", "noopener,noreferrer");
-    } catch {
-      // no-op
+      const raw = localStorage.getItem("recent-links") || "[]";
+      const arr = JSON.parse(raw) as RecentLink[];
+      // newest first
+      arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      setItems(arr);
+      setDebug(`Loaded ${arr.length} from localStorage`);
+    } catch (e) {
+      console.error("recent-links parse error", e);
+      setItems([]);
+      setDebug("Parse error; showing 0");
     }
   }
 
-  function handleRemove(idx: number) {
-    const next = [...sorted];
-    next.splice(idx, 1);
-    setLinks(next);
-    saveLinks(next);
+  useEffect(() => {
+    load();
+  }, []);
+
+  function openShort(u: string) {
+    try {
+      // Use window.open directly with the url passed in
+      window.open(u, "_blank");
+    } catch (e) {
+      console.error("openShort error", e);
+      alert("Couldn't open the short link.");
+    }
   }
 
-  if (sorted.length === 0) {
-    return (
-      <div className="rounded-lg border p-4">
-        <div className="font-medium mb-1">Your Recent Links</div>
-        <div className="text-sm opacity-70">
-          No links yet. Create one from{" "}
-          <Link className="underline" href="/dashboard/create-link">
-            Create Smart Link
-          </Link>
-          .
-        </div>
-      </div>
-    );
+  function openProduct(u: string) {
+    try {
+      window.open(u, "_blank");
+    } catch (e) {
+      console.error("openProduct error", e);
+    }
+  }
+
+  function removeAt(idx: number) {
+    try {
+      const raw = localStorage.getItem("recent-links") || "[]";
+      const arr = JSON.parse(raw) as RecentLink[];
+      arr.splice(idx, 1);
+      localStorage.setItem("recent-links", JSON.stringify(arr));
+      load();
+    } catch (e) {
+      console.error("removeAt error", e);
+    }
+  }
+
+  function editAt(idx: number) {
+    try {
+      const raw = localStorage.getItem("recent-links") || "[]";
+      const arr = JSON.parse(raw) as RecentLink[];
+      const cur = arr[idx];
+      if (!cur) return;
+
+      const next = prompt("Update destination URL:", cur.destinationUrl);
+      if (!next) return;
+
+      arr[idx] = { ...cur, destinationUrl: next };
+      localStorage.setItem("recent-links", JSON.stringify(arr));
+      load();
+    } catch (e) {
+      console.error("editAt error", e);
+    }
   }
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
-      <div className="font-medium">Your Recent Links</div>
-      <ul className="space-y-2">
-        {sorted.map((l, i) => {
-          const shortHost = hostnameOf(l.shortUrl);
-          const willUseDestination =
-            !!l.destinationUrl && (!l.shortUrl || shortHost === "lm.to");
-          const openLabel = willUseDestination ? "Open Product" : "Open Short";
+    <section className="mt-6">
+      <div className="mb-2 flex items-center gap-3">
+        <h2 className="text-lg font-semibold">Your Recent Links</h2>
+        <button
+          onClick={load}
+          className="rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300"
+          title="Reload from localStorage"
+        >
+          Refresh
+        </button>
+        <span className="text-xs text-gray-500">{debug}</span>
+      </div>
 
-          return (
+      {items.length === 0 ? (
+        <div className="rounded border p-4 text-sm text-gray-600">
+          No recent links yet. Create one on the “Create Smart Link” page.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {items.map((it, idx) => (
             <li
-              key={(l.id ?? "") + (l.createdAt ?? i)}
-              className="flex flex-col gap-1 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"
+              key={`${it.id}-${idx}`}
+              className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
-                <div className="truncate">
-                  <span className="text-sm font-medium">
-                    {l.merchant || "Smart Link"}
-                  </span>
-                  {" · "}
-                  <span className="text-xs opacity-70">
-                    {new Date(l.createdAt ?? Date.now()).toLocaleString()}
-                  </span>
+                <div className="truncate font-medium">
+                  {it.merchant} · {it.shortUrl}
                 </div>
-                <div className="text-xs opacity-80 truncate">
-                  {willUseDestination ? l.destinationUrl : l.shortUrl}
+                <div className="truncate text-xs text-gray-500">
+                  → {it.destinationUrl}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Created {new Date(it.createdAt || Date.now()).toLocaleString()}
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2 sm:pt-0">
+              <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => handleOpen(l)}
-                  className="rounded bg-blue-600 px-3 py-1.5 text-white text-sm hover:bg-blue-700"
-                  title={
-                    willUseDestination
-                      ? "Opens original product URL (fallback because lm.to is a placeholder)"
-                      : "Opens the short link"
-                  }
+                  onClick={() => openShort(it.shortUrl)}
+                  className="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
+                  title="Open the short link"
                 >
-                  {openLabel}
+                  Open Short
                 </button>
-
-                <Link
-                  href={`/dashboard/create-link?url=${encodeURIComponent(
-                    (l.destinationUrl || l.shortUrl || "").toString()
-                  )}`}
-                  className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+                <button
+                  onClick={() => openProduct(it.destinationUrl)}
+                  className="rounded bg-green-600 px-3 py-1.5 text-white hover:bg-green-700"
+                  title="Open the product page"
+                >
+                  Open Product
+                </button>
+                <button
+                  onClick={() => editAt(idx)}
+                  className="rounded bg-yellow-500 px-3 py-1.5 text-white hover:bg-yellow-600"
+                  title="Edit destination URL"
                 >
                   Edit
-                </Link>
-
+                </button>
                 <button
-                  onClick={() => handleRemove(i)}
-                  className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
+                  onClick={() => removeAt(idx)}
+                  className="rounded bg-red-600 px-3 py-1.5 text-white hover:bg-red-700"
+                  title="Remove from recent"
                 >
                   Remove
                 </button>
               </div>
             </li>
-          );
-        })}
-      </ul>
-      <div className="text-xs opacity-60">
-        Note: <code>lm.to</code> is a placeholder. Until your short domain is
-        live, the Open button will use the original product URL.
-      </div>
-    </div>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
