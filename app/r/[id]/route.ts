@@ -2,39 +2,61 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-/**
- * Handles short links like /r/ABC123.
- * Looks up the SmartLink by its stored full shortUrl and redirects to originalUrl.
- * Also logs a Click row (fire-and-forget).
- */
-export async function GET(req: Request, ctx: { params: { id: string } }) {
-  const { id } = ctx.params;
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
 
-  // Build the full shortUrl exactly as we stored it during creation.
-  const url = new URL(req.url);
-  // url.origin is http://localhost:3000 (dev) or your prod domain.
-  const fullShort = `${url.origin}/r/${id}`;
-
-  // Find the SmartLink by its shortUrl
-  const link = await prisma.smartLink.findFirst({
-    where: { shortUrl: fullShort },
-    select: { id: true, originalUrl: true },
-  });
-
-  if (!link) {
-    return new NextResponse("Smart link not found.", {
-      status: 404,
-      headers: { "content-type": "text/plain; charset=utf-8" },
+  try {
+    // 1) Look up SmartLink by short id
+    const link = await prisma.smartLink.findUnique({
+      where: { id },
+      select: {
+        originalUrl: true,
+        destinationsJson: true,
+      },
     });
+
+    // 2) If not found, fall back to homepage
+    if (!link) {
+      return NextResponse.redirect(
+        process.env.NEXT_PUBLIC_APP_URL || "https://linkmint.co"
+      );
+    }
+
+    // 3) Choose destination (destinationsJson.default → else originalUrl)
+    let dest = link.originalUrl;
+    try {
+      const dj = link.destinationsJson as any;
+      if (dj && typeof dj === "object" && dj.default) {
+        dest = String(dj.default);
+      }
+    } catch {
+      // ignore and use originalUrl
+    }
+
+    // 4) Log the click (EventLog keeps schema-safe; avoid assumptions about Click model)
+    try {
+      const ua = (req.headers.get("user-agent") ?? "").slice(0, 250);
+      const referer = (req.headers.get("referer") ?? "").slice(0, 250);
+      await prisma.eventLog.create({
+        data: {
+          type: "LINK_REDIRECT",
+          detail: id,
+          message: `-> ${dest} ua=${ua} ref=${referer}`,
+        },
+      });
+    } catch (e) {
+      console.error("r/[id] eventLog failed:", e);
+    }
+
+    // 5) Redirect to the actual product page
+    return NextResponse.redirect(dest);
+  } catch (e) {
+    console.error("r/[id] handler error:", e);
+    return NextResponse.redirect(
+      process.env.NEXT_PUBLIC_APP_URL || "https://linkmint.co"
+    );
   }
-
-  // Log click (do not block redirect)
-  const ua = (req.headers.get("user-agent") ?? "").slice(0, 200);
-  const ref = req.headers.get("referer") ?? undefined;
-  prisma.click.create({
-    data: { linkId: link.id, ua, referrer: ref },
-  }).catch(() => { /* ignore logging errors */ });
-
-  // Redirect to the original product page
-  return NextResponse.redirect(link.originalUrl, 302);
 }
