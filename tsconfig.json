@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    /* ▶ Core settings */
     "target": "es2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -16,25 +17,31 @@
     "jsx": "preserve",
     "incremental": true,
 
+    /* ▶ Path aliases (covers app/* and root folders like lib/*) */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["app/*", "*"]
     },
 
+    /* ▶ Next.js plugin */
     "plugins": [
       {
         "name": "next"
       }
     ]
   },
+
+  /* ▶ Files included for TS checking */
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "types/**/*.d.ts",      // ✅ ensure your local shim folder is included
+    "types/**/*.d.ts",
     "next-auth.d.ts"
   ],
+
+  /* ▶ Files/folders to exclude */
   "exclude": [
     "node_modules",
     ".next"

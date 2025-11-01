@@ -1,3 +1,4 @@
+// app/components/RecentLinksClient.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -99,8 +100,8 @@ export default function RecentLinksClient() {
 
   return (
     <section data-testid="recent-links-root" className="space-y-3">
+      {/* Duplicate section header removed. Keep controls only. */}
       <div className="flex items-center gap-3">
-        <h2 className="text-lg font-semibold">Your Recent Links</h2>
         <button
           type="button"
           onClick={refresh}
@@ -140,9 +141,7 @@ export default function RecentLinksClient() {
                     {l.shortUrl}
                   </a>
                 </div>
-                <div className="truncate text-xs opacity-60">
-                  Dest: {l.destinationUrl}
-                </div>
+                <div className="truncate text-xs opacity-60">Dest: {l.destinationUrl}</div>
               </div>
 
               <div className="flex flex-wrap gap-2">
