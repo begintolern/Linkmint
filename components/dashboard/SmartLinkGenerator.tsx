@@ -87,7 +87,7 @@ export default function SmartLinkGenerator() {
       }
 
       // 🔗 Call your existing API to build a Smart Link (provision stub is okay)
-      const res = await fetch("/api/smart-links/generate", {
+      const res = await fetch("/api/smartlinks/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: rawUrl }),
@@ -182,3 +182,4 @@ export default function SmartLinkGenerator() {
     </div>
   );
 }
+

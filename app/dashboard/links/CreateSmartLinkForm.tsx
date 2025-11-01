@@ -133,7 +133,7 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
 
     // 3) Continue to create Smart Link
     try {
-      const res = await fetch("/api/smartlink", {
+      const res = await fetch("/api/smartlinks/create", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -332,3 +332,4 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
     </div>
   );
 }
+

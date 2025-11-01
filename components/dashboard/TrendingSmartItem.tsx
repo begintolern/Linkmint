@@ -14,8 +14,8 @@ type Item = {
 
 async function tryCreateSmartlink(originalUrl: string) {
   const candidates = [
-    { ep: "/api/smartlink", body: { url: originalUrl } },          // ✅ your existing working route
-    { ep: "/api/smart-links/generate", body: { url: originalUrl } },
+    { ep: "/api/smartlinks/create", body: { url: originalUrl } },          // ✅ your existing working route
+    { ep: "/api/smartlinks/create", body: { url: originalUrl } },
     { ep: "/api/links/create", body: { url: originalUrl } },
     { ep: "/api/smartlinks/create", body: { url: originalUrl } },
     { ep: "/api/linkmint/shorten", body: { url: originalUrl } },
@@ -169,3 +169,5 @@ export default function TrendingSmartItem({ item }: { item: Item }) {
     </div>
   );
 }
+
+

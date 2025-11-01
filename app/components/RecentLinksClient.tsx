@@ -1,4 +1,3 @@
-// app/components/RecentLinksClient.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -14,26 +13,26 @@ type RecentLink = {
 const KEY_V1 = "recent-links";
 const KEY_V2 = "recent-links:v2";
 
-/** Load recent links from either key, prefer v2 if present. */
-function loadRecent(): RecentLink[] {
-  const rawV2 = typeof window !== "undefined" ? localStorage.getItem(KEY_V2) : null;
-  const rawV1 = typeof window !== "undefined" ? localStorage.getItem(KEY_V1) : null;
-
-  const tryParse = (raw: string | null) => {
-    if (!raw) return null;
-    try {
-      const arr = JSON.parse(raw) as any[];
-      if (Array.isArray(arr)) return arr as RecentLink[];
-      return null;
-    } catch {
-      return null;
-    }
-  };
-
-  return tryParse(rawV2) ?? tryParse(rawV1) ?? [];
+function parseList(raw: string | null): RecentLink[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw ?? "[]");
+    return Array.isArray(arr) ? (arr as RecentLink[]) : [];
+  } catch {
+    return [];
+  }
 }
 
-function saveRecent(items: RecentLink[]) {
+/** Load from v2 (preferred) and v1, dedupe by id, newest first. */
+function loadRecent(): RecentLink[] {
+  const v2 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V2) : null);
+  const v1 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V1) : null);
+  const map = new Map<string, RecentLink>();
+  [...v2, ...v1].forEach((x) => map.set(x.id, x));
+  return Array.from(map.values()).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+}
+
+function saveV2(items: RecentLink[]) {
   try {
     localStorage.setItem(KEY_V2, JSON.stringify(items));
   } catch (e) {
@@ -41,77 +40,97 @@ function saveRecent(items: RecentLink[]) {
   }
 }
 
-export default function RecentLinksClient() {
+type Props = {
+  /** Keep false so we don’t duplicate controls with the page toolbar. */
+  showToolbar?: boolean;
+};
+
+export default function RecentLinksClient({ showToolbar = false }: Props) {
   const [items, setItems] = useState<RecentLink[]>([]);
-  const [debugMsg, setDebugMsg] = useState<string>("");
+  const [lastRefreshed, setLastRefreshed] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string>("");
+
+  const announce = (msg: string) => {
+    setNotice(msg);
+    setTimeout(() => setNotice(""), 1800);
+  };
 
   const refresh = useCallback(() => {
+    setBusy(true);
     const data = loadRecent();
     setItems(data);
-    setDebugMsg(`Loaded ${data.length} from localStorage`);
-    // Mirror into v2 so we standardize storage going forward
-    saveRecent(data);
+    saveV2(data);
+    const ts = Date.now();
+    setLastRefreshed(ts);
+    announce(`Refreshed ${new Date(ts).toLocaleTimeString()}`);
+    setBusy(false);
   }, []);
+
+  const clearAll = () => {
+    setBusy(true);
+    try {
+      localStorage.removeItem(KEY_V1);
+      localStorage.removeItem(KEY_V2);
+    } finally {
+      setItems([]);
+      const ts = Date.now();
+      setLastRefreshed(ts);
+      announce("Cleared");
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     refresh();
 
-    // Also refresh when the tab becomes visible again
+    // Refresh when tab becomes visible
     const onVis = () => {
       if (document.visibilityState === "visible") refresh();
     };
     document.addEventListener("visibilitychange", onVis);
 
-    // Manual cross-tab sync (storage events don’t fire in same tab)
+    // Sync when localStorage changes (other tabs/windows)
     const onStorage = (e: StorageEvent) => {
       if (e.key === KEY_V1 || e.key === KEY_V2) refresh();
     };
     window.addEventListener("storage", onStorage);
 
+    // Page-level toolbar events
+    const onExternalRefresh = () => refresh();
+    const onExternalClear = () => clearAll();
+    window.addEventListener("recent-links:refresh", onExternalRefresh as EventListener);
+    window.addEventListener("recent-links:clear", onExternalClear as EventListener);
+
     return () => {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("storage", onStorage);
+      window.removeEventListener("recent-links:refresh", onExternalRefresh as EventListener);
+      window.removeEventListener("recent-links:clear", onExternalClear as EventListener);
     };
   }, [refresh]);
 
   const removeOne = (id: string) => {
     const next = items.filter((x) => x.id !== id);
     setItems(next);
-    saveRecent(next);
+    saveV2(next);
+    announce("Removed");
   };
 
   const copyShort = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      alert("Short link copied!");
+      announce("Copied!");
     } catch {
       prompt("Copy this link:", url);
     }
   };
 
-  const openShort = (url: string) => {
-    // Ensure absolute URL opens correctly (no client-side router involvement)
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
-  const openProduct = (url: string) => {
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+  const open = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
 
   return (
     <section data-testid="recent-links-root" className="space-y-3">
-      {/* Duplicate section header removed. Keep controls only. */}
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={refresh}
-          className="rounded bg-gray-200 px-2 py-1 text-sm hover:bg-gray-300"
-          title="Reload from localStorage"
-        >
-          Refresh
-        </button>
-        <span className="text-xs opacity-60">{debugMsg}</span>
-      </div>
+      {/* No internal header/toolbar to avoid duplication with the page */}
 
       {items.length === 0 ? (
         <div className="rounded border p-4 text-sm opacity-70">
@@ -147,7 +166,7 @@ export default function RecentLinksClient() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => openShort(l.shortUrl)}
+                  onClick={() => open(l.shortUrl)}
                   className="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
                   title="Open the short link"
                 >
@@ -163,7 +182,7 @@ export default function RecentLinksClient() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => openProduct(l.destinationUrl)}
+                  onClick={() => open(l.destinationUrl)}
                   className="rounded bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700"
                   title="Open product page"
                 >
@@ -182,6 +201,15 @@ export default function RecentLinksClient() {
           ))}
         </ul>
       )}
+
+      {/* Status line (kept, compact) */}
+      <div className="text-xs opacity-60" aria-live="polite">
+        {notice
+          ? notice
+          : lastRefreshed
+          ? `Last refreshed ${new Date(lastRefreshed).toLocaleTimeString()}`
+          : " "}
+      </div>
     </section>
   );
 }

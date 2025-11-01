@@ -51,7 +51,7 @@ export default function CreateLinkClient() {
 
     setBusy(true);
     try {
-      const res = await fetch("/api/smartlink/create", {
+      const res = await fetch("/api/smartlinks/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -73,11 +73,8 @@ export default function CreateLinkClient() {
         return;
       }
 
-      // --- Save to localStorage: "recent-links" (keep last 10) ---
+      // --- Save to localStorage (v1 + v2) and notify list to refresh ---
       try {
-        const raw = localStorage.getItem("recent-links");
-        const arr = raw ? JSON.parse(raw) : [];
-        const list: any[] = Array.isArray(arr) ? arr : [];
         const entry = {
           id: data.id,
           shortUrl: data.shortUrl ?? "",
@@ -85,14 +82,31 @@ export default function CreateLinkClient() {
           destinationUrl: productUrl,
           createdAt: Date.now(),
         };
-        console.log("Saving recent link:", entry);
-        list.unshift(entry);
-        localStorage.setItem("recent-links", JSON.stringify(list.slice(0, 10)));
-        console.log("recent-links now:", localStorage.getItem("recent-links"));
+
+        const read = (k: string) => {
+          const raw = localStorage.getItem(k);
+          const arr = raw ? JSON.parse(raw) : [];
+          return Array.isArray(arr) ? arr : [];
+        };
+        const write = (k: string, list: any[]) =>
+          localStorage.setItem(k, JSON.stringify(list.slice(0, 10)));
+
+        const v1 = read("recent-links");
+        v1.unshift(entry);
+        write("recent-links", v1);
+
+        const v2 = read("recent-links:v2");
+        // de-dupe by id, put newest first
+        const map = new Map<string, any>([[entry.id, entry]]);
+        for (const r of v2) if (!map.has(r.id)) map.set(r.id, r);
+        write("recent-links:v2", Array.from(map.values()));
+
+        // tell the RecentLinksClient to refresh immediately
+        window.dispatchEvent(new Event("recent-links:refresh"));
       } catch (err) {
         console.error("localStorage save error", err);
       }
-      // -----------------------------------------------------------
+      // ---------------------------------------------------------------
 
       setInfo(
         data.shortUrl
@@ -100,7 +114,8 @@ export default function CreateLinkClient() {
           : `Link created! ID: ${data.id}`
       );
 
-      setTimeout(() => router.push("/dashboard/links"), 600);
+      // small delay, then go to /dashboard/links
+      setTimeout(() => router.push("/dashboard/links"), 300);
     } catch (err: any) {
       console.error("create link error", err);
       setError("Network error while creating the link.");
@@ -140,7 +155,8 @@ export default function CreateLinkClient() {
       <div className="text-xs opacity-70">
         Supported now: <b>Lazada PH</b> and <b>Shopee PH</b>. We auto-detect the
         merchant and send <code>merchantId</code>, <code>destinationUrl</code>, and{" "}
-        <code>source</code> to the API, then save to <code>recent-links</code>.
+        <code>source</code> to the API. Your link is saved to device storage and
+        shows in <em>Recent Links</em>.
       </div>
     </div>
   );

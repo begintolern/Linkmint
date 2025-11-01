@@ -18,7 +18,7 @@ export default function SmartLinkHistory() {
 
   async function fetchLinks(cursor?: string) {
     setLoading(true);
-    const base = "/api/smartlink/history?limit=5"; // ↓ page size = 5 for easier testing
+    const base = "/api/smartlinks/history?limit=5"; // ↓ page size = 5 for easier testing
     const qs = cursor ? `${base}&cursor=${cursor}` : base;
     const res = await fetch(qs);
     const data = await res.json();
@@ -89,3 +89,4 @@ export default function SmartLinkHistory() {
     </div>
   );
 }
+

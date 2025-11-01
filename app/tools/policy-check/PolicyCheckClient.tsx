@@ -35,7 +35,7 @@ export default function PolicyCheckClient() {
       console.log("Policy check result:", checkData);
 
       // --- SmartLink creation
-      const linkRes = await fetch("/api/smartlink", {
+      const linkRes = await fetch("/api/smartlinks/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -108,3 +108,4 @@ export default function PolicyCheckClient() {
     </div>
   );
 }
+

@@ -215,7 +215,9 @@ model SmartLink {
   destinationsJson Json?
   merchantRule     MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
   user             User          @relation("UserToSmartLink", fields: [userId], references: [id])
+  clicks         Click[]
 }
+
 
 model ReferralGroup {
   id         String   @id @default(cuid())
@@ -517,4 +519,12 @@ model AdminActionLog {
   targetType String
   targetId   String?
   details    Json?
+}
+model Click {
+  id       String    @id @default(cuid())
+  linkId   String
+  link     SmartLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  ts       DateTime  @default(now())
+  ua       String?
+  referrer String?
 }

@@ -41,7 +41,7 @@ async function tryCreateSmartlink(originalUrl: string): Promise<string | null> {
     "/api/links/create",
     "/api/smartlinks/create",
     "/api/linkmint/shorten",
-    "/api/smart-links/generate",
+    "/api/smartlinks/create",
   ];
   for (const ep of candidates) {
     try {
@@ -280,3 +280,4 @@ export default function FinderPage() {
     </div>
   );
 }
+
