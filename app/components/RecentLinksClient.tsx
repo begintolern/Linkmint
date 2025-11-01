@@ -1,144 +1,182 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type RecentLink = {
   id: string;
-  shortUrl: string;         // e.g., "https://lm.to/abc123?t=...&m=..."
-  merchant?: string;
-  destinationUrl?: string;
-  createdAt?: number;
+  shortUrl: string;        // e.g., https://lm.to/abc123?t=...&m=...
+  merchant: string;        // e.g., "Lazada PH"
+  destinationUrl: string;  // original product URL
+  createdAt: number;       // epoch ms
 };
 
-const STORAGE_KEY = "recent-links";
+const LS_KEY = "recent-smartlinks";
 
-function safeHref(u: string): string {
-  if (!u) return "";
-  return u.startsWith("http://") || u.startsWith("https://") ? u : `https://${u}`;
+function loadFromLS(): RecentLink[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function saveToLS(next: RecentLink[]) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
+}
+
+function isValidHttpUrl(u?: string | null) {
+  if (!u) return false;
+  try {
+    const url = new URL(u);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export default function RecentLinksClient() {
-  const [links, setLinks] = useState<RecentLink[]>([]);
+  const [items, setItems] = useState<RecentLink[]>([]);
 
+  // initial load
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as RecentLink[];
-        setLinks(Array.isArray(parsed) ? parsed : []);
-      }
-    } catch {
-      setLinks([]);
-    }
+    setItems(loadFromLS());
   }, []);
 
-  async function handleRemove(id: string) {
-    const next = links.filter((l) => l.id !== id);
-    setLinks(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {}
+  const hasItems = items.length > 0;
+
+  function removeOne(id: string) {
+    const next = items.filter((it) => it.id !== id);
+    setItems(next);
+    saveToLS(next);
   }
 
-  function handleOpenShort(url: string) {
-    const href = safeHref(url);
-    // Fallback open in new tab if anchor fails for any reason
-    window.open(href, "_blank", "noopener,noreferrer");
+  function copy(text: string) {
+    navigator.clipboard?.writeText(text).catch(() => {});
   }
 
-  if (!links.length) {
-    return (
-      <div className="rounded-md border p-4">
-        <div className="font-medium">Your Recent Links</div>
-        <div className="text-sm opacity-70 mt-1">No links yet.</div>
-      </div>
-    );
-  }
+  const sorted = useMemo(
+    () => [...items].sort((a, b) => b.createdAt - a.createdAt),
+    [items]
+  );
 
   return (
-    <div className="rounded-md border p-4">
-      <div className="font-medium mb-3">Your Recent Links</div>
-      <ul className="space-y-3">
-        {links.map((link) => {
-          const href = safeHref(link.shortUrl);
-          const created =
-            link.createdAt ? new Date(link.createdAt).toLocaleString() : "";
+    <section className="mt-6">
+      <h2 className="text-lg font-semibold mb-3">Your Recent Links</h2>
 
-          return (
-            <li
-              key={link.id}
-              className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">
-                  {link.merchant || "Smart Link"} · {link.id}
-                </div>
-                <div className="text-xs opacity-70 truncate">
-                  Short: {href}
-                </div>
-                {link.destinationUrl && (
-                  <div className="text-xs opacity-70 truncate">
-                    To: {link.destinationUrl}
+      {!hasItems && (
+        <div className="rounded border p-4 text-sm opacity-80">
+          No links yet. Create your first smart link to see it here.
+        </div>
+      )}
+
+      {hasItems && (
+        <div className="space-y-3">
+          {sorted.map((it) => {
+            const created = new Date(it.createdAt).toLocaleString();
+            const canOpenShort = isValidHttpUrl(it.shortUrl);
+            const canOpenProduct = isValidHttpUrl(it.destinationUrl);
+
+            return (
+              <div
+                key={`${it.id}-${it.createdAt}`}
+                className="rounded-lg border p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium truncate">
+                    {it.merchant} • <span className="opacity-80">{it.id}</span>
                   </div>
-                )}
-                {created && (
-                  <div className="text-xs opacity-60">Created {created}</div>
-                )}
+                  <div className="text-xs opacity-70">
+                    Created {created}
+                  </div>
+                  <div className="text-xs mt-1 break-all opacity-80">
+                    {it.shortUrl}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {/* Open Short as a REAL <a>, never a button */}
+                  {canOpenShort ? (
+                    <a
+                      href={it.shortUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
+                      title="Open the short link in a new tab"
+                    >
+                      Open Short
+                    </a>
+                  ) : (
+                    <button
+                      className="rounded bg-gray-400 px-3 py-1.5 text-white"
+                      title="Short URL is invalid"
+                      disabled
+                    >
+                      Open Short
+                    </button>
+                  )}
+
+                  {/* Open product */}
+                  {canOpenProduct ? (
+                    <a
+                      href={it.destinationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700"
+                      title="Open the original product in a new tab"
+                    >
+                      Open Product
+                    </a>
+                  ) : (
+                    <button
+                      className="rounded bg-gray-400 px-3 py-1.5 text-white"
+                      title="Product URL is invalid"
+                      disabled
+                    >
+                      Open Product
+                    </button>
+                  )}
+
+                  {/* Copy short link */}
+                  <button
+                    className="rounded bg-neutral-700 px-3 py-1.5 text-white hover:bg-neutral-800"
+                    onClick={() => copy(it.shortUrl)}
+                    title="Copy the short link to clipboard"
+                  >
+                    Copy Short
+                  </button>
+
+                  {/* Edit (placeholder) */}
+                  <button
+                    className="rounded bg-purple-600 px-3 py-1.5 text-white hover:bg-purple-700"
+                    onClick={() => alert("Edit coming soon")}
+                    title="Edit link (coming soon)"
+                  >
+                    Edit
+                  </button>
+
+                  {/* Remove (local only) */}
+                  <button
+                    className="rounded bg-red-600 px-3 py-1.5 text-white hover:bg-red-700"
+                    onClick={() => removeOne(it.id)}
+                    title="Remove from your recent list"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-
-              <div className="flex gap-2 shrink-0">
-                {/* Preferred: real anchor with full absolute URL */}
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
-                  title="Opens the short link"
-                >
-                  Open Short
-                </a>
-
-                {/* JS fallback in case the anchor is somehow overridden */}
-                <button
-                  type="button"
-                  onClick={() => handleOpenShort(href)}
-                  className="rounded border px-3 py-1.5 hover:bg-gray-50"
-                  title="Fallback open"
-                >
-                  Open (Fallback)
-                </button>
-
-                {/* Copy short URL */}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(href);
-                      alert("Short link copied!");
-                    } catch {
-                      alert("Could not copy link.");
-                    }
-                  }}
-                  className="rounded border px-3 py-1.5 hover:bg-gray-50"
-                  title="Copy short link"
-                >
-                  Copy
-                </button>
-
-                {/* Remove */}
-                <button
-                  type="button"
-                  onClick={() => handleRemove(link.id)}
-                  className="rounded border px-3 py-1.5 hover:bg-red-50"
-                  title="Remove from list"
-                >
-                  Remove
-                </button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
   );
 }
