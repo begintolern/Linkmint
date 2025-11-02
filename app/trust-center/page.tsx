@@ -1,305 +1,195 @@
 // app/trust-center/page.tsx
-"use client";
-
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
 
-type Lang = "en" | "tl";
-
-const ROUTES = {
-  home: "/",
-  signup: "/signup",
-  dashboard: "/dashboard",
-  tutorial: "/tutorial",
-  trust: "/trust-center",
-  faq: "/tutorial#faq",
-  contact: "/contact",
-} as const;
-
 export default function TrustCenterPage() {
-  const [lang, setLang] = useState<Lang>("en");
-
-  const t = useMemo(() => {
-    if (lang === "tl") {
-      return {
-        nav_home: "Home",
-        nav_dashboard: "Dashboard",
-        nav_tutorial: "Paano Kumita",
-        title: "Trust Center",
-        subtitle:
-          "Transparent kami sa kung paano gumagana ang earnings at payouts. Ito ang mga patakaran na nagpoprotekta sa lahat.",
-        last_updated: "Huling update",
-        section_payouts_title: "Paano ang Payouts",
-        section_payouts_points: [
-          "Nagbabayad lang kami kapag natanggap na namin ang pondo mula sa affiliate network o merchant.",
-          "Karaniwan may hold window (hal. 30 araw) para sa mga refund o chargeback risk.",
-          "Kapag na-approve at natanggap ang pondo, eligible na ang iyong earnings sa payout ayon sa iyong TrustScore.",
-          "Lahat ng payout sa Pilipinas ay ginagawa sa pamamagitan ng GCash sa Philippine Peso (₱).",
-        ],
-        section_hold_title: "30-Day Hold at TrustScore",
-        section_hold_points: [
-          "Para sa mga bagong users, may minimum 30-araw na 'honeymoon' hold bago payagan ang maagang payout.",
-          "Pinoprotektahan nito ang platform laban sa fraud at invalid traffic.",
-          "Ang TrustScore ay tumataas sa maayos at legit na paggamit; mas mataas na TrustScore = mas mabilis at mas maayos na payout eligibility.",
-        ],
-        section_compliance_title: "Ethical at Compliant",
-        section_compliance_points: [
-          "Sumusunod kami sa terms ng bawat merchant o network (hal. bawal self-purchase kung hindi pinapayagan, walang coupon stacking kung bawal).",
-          "Makikita ang mga patakaran sa Merchant Rules sa dashboard.",
-          "Ang paglabag ay maaaring magdulot ng pagka-void ng commissions o penalties ayon sa network.",
-        ],
-        section_proof_title: "Verified Payouts (Sample Proof)",
-        section_proof_note:
-          "Ito ay sample lamang. Kapag naka-sync na sa payout logs mo, makikita rito ang mga totoong transaksyon.",
-        proof_headers: ["Petsa", "Provider", "Halaga", "Status", "Ref"],
-        proof_rows: [
-          ["2025-10-20", "GCash", "₱150.00", "PAID", "TestGC001"],
-          ["2025-10-12", "GCash", "₱295.00", "PAID", "TestGC002"],
-        ],
-        help_title: "Tulong at FAQ",
-        help_points: [
-          "May tanong sa payout timing o status? Tingnan ang FAQ.",
-          "Kung kailangan mo ng tulong, mag-message sa amin.",
-        ],
-        cta_to_dashboard: "Bumalik sa Dashboard",
-        cta_to_tutorial: "Tingnan ang Paano Kumita",
-        cta_to_faq: "FAQ",
-        cta_to_contact: "Contact",
-      };
-    }
-    return {
-      nav_home: "Home",
-      nav_dashboard: "Dashboard",
-      nav_tutorial: "How it Works",
-      title: "Trust Center",
-      subtitle:
-        "We’re transparent about how earnings and payouts work. These rules protect the entire community.",
-      last_updated: "Last updated",
-      section_payouts_title: "How Payouts Work",
-      section_payouts_points: [
-        "We pay out only after affiliate funds are received from the network or merchant.",
-        "Most programs include a hold window (e.g., 30 days) for returns or chargebacks.",
-        "Once funds are approved and received, your earnings become payout-eligible based on your TrustScore.",
-        "All payouts in the Philippines are made through GCash in Philippine Peso (₱).",
-      ],
-      section_hold_title: "30-Day Hold & TrustScore",
-      section_hold_points: [
-        "New users start with a minimum 30-day 'honeymoon' hold before early payouts are enabled.",
-        "This protects the platform from fraud or invalid traffic.",
-        "TrustScore increases with legitimate and consistent activity; higher TrustScore = faster, smoother payout eligibility.",
-      ],
-      section_compliance_title: "Ethical & Compliant",
-      section_compliance_points: [
-        "We comply with every merchant/network’s terms (e.g., no self-purchase if disallowed, no coupon stacking if prohibited).",
-        "All merchant rules are clearly displayed in your dashboard.",
-        "Violations may void commissions or result in penalties per network policies.",
-      ],
-      section_proof_title: "Verified Payouts (Sample Proof)",
-      section_proof_note:
-        "This is just a sample. Once your payout logs are connected, real transactions will appear here.",
-      proof_headers: ["Date", "Provider", "Amount", "Status", "Ref"],
-      proof_rows: [
-        ["2025-10-20", "GCash", "₱150.00", "PAID", "TestGC001"],
-        ["2025-10-12", "GCash", "₱295.00", "PAID", "TestGC002"],
-      ],
-      help_title: "Help & FAQ",
-      help_points: [
-        "Questions about payout timing or status? Check the FAQ.",
-        "Need help? Contact us anytime.",
-      ],
-      cta_to_dashboard: "Back to Dashboard",
-      cta_to_tutorial: "See How it Works",
-      cta_to_faq: "FAQ",
-      cta_to_contact: "Contact",
-    };
-  }, [lang]);
-
-  const today = new Date();
-  const lastUpdated = today.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
-
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b bg-white/70 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
-            <span className="inline-block h-6 w-6 rounded-md bg-emerald-500" />
-            <span>linkmint.co</span>
-          </Link>
-
-          <div className="flex items-center gap-2">
-            <LangToggle lang={lang} setLang={setLang} />
-            <nav className="hidden items-center gap-4 sm:flex">
-              <Link href={ROUTES.home} className="text-sm text-gray-700 hover:text-gray-900">
-                {t.nav_home}
-              </Link>
-              <Link href={ROUTES.tutorial} className="text-sm text-gray-700 hover:text-emerald-600 hover:underline">
-                {t.nav_tutorial}
-              </Link>
-              <Link href={ROUTES.dashboard} className="text-sm text-gray-700 hover:text-gray-900">
-                {t.nav_dashboard}
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <main className="mx-auto max-w-5xl p-6 space-y-10 text-gray-900">
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-4 pb-10 pt-10">
-        <h1 className="text-3xl font-bold md:text-5xl">{t.title}</h1>
-        <p className="mt-3 max-w-prose text-base text-gray-600 md:text-lg">{t.subtitle}</p>
-        <p className="mt-2 text-xs text-gray-500">
-          {t.last_updated}: {lastUpdated}
+      <section className="space-y-3">
+        <h1 className="text-3xl font-bold">Trust Center</h1>
+        <p className="text-gray-600">
+          Linkmint pays real money for real purchases. We’re strict (on purpose)
+          so the system stays fair and sustainable for everyone.
         </p>
+        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
+          <p className="text-emerald-900 text-sm">
+            <strong>Core rule:</strong> We only pay out after the affiliate
+            network sends funds to Linkmint (<i>approved</i>, not pending).
+          </p>
+        </div>
       </section>
 
-      {/* Sections */}
-      <Section title={t.section_payouts_title}>
-        <BulletList items={t.section_payouts_points} />
-      </Section>
-
-      <Section title={t.section_hold_title} muted>
-        <BulletList items={t.section_hold_points} />
-      </Section>
-
-      <Section title={t.section_compliance_title}>
-        <BulletList items={t.section_compliance_points} />
-      </Section>
-
-      {/* Proof */}
-      <Section title={t.section_proof_title} muted>
-        <p className="mb-3 text-sm text-gray-600">{t.section_proof_note}</p>
-        <div className="overflow-x-auto rounded-xl border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-left">
-              <tr>
-                {t.proof_headers.map((h, i) => (
-                  <th key={i} className="px-4 py-2 font-semibold text-gray-700">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {t.proof_rows.map((row, i) => (
-                <tr key={i} className="border-t">
-                  {row.map((cell, j) => (
-                    <td key={j} className="px-4 py-2 text-gray-800">
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Quick Links */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Quick links</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <TrustLink href="/dashboard/create-link" label="Create Smart Link" />
+          <TrustLink href="/dashboard/links" label="Your Recent Links" />
+          <TrustLink href="/dashboard/payouts" label="Payouts & Accounts" />
+          <TrustLink href="/dashboard/merchants" label="Merchant Rules" />
+          <TrustLink href="/dashboard/merchants/ai" label="AI Suggestions (beta)" />
+          <TrustLink href="/tutorial" label="How it Works (Tutorial)" />
         </div>
-      </Section>
+      </section>
 
-      {/* Help */}
-      <Section title={t.help_title}>
-        <BulletList items={t.help_points} />
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href={ROUTES.dashboard} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
-            {t.cta_to_dashboard}
-          </Link>
-          <Link href={ROUTES.tutorial} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
-            {t.cta_to_tutorial}
-          </Link>
-          <Link href={ROUTES.faq} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
-            {t.cta_to_faq}
-          </Link>
-          <Link href={ROUTES.contact} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50">
-            {t.cta_to_contact}
-          </Link>
-        </div>
-      </Section>
+      {/* PH payout timeline (GCash, ₱ examples) */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Payout timeline (PH)</h2>
 
-      {/* Footer */}
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
-          <span>© {new Date().getFullYear()} linkmint.co</span>
-          <div className="flex items-center gap-4">
-            <Link href={ROUTES.tutorial} className="hover:underline">
-              {lang === "tl" ? "Paano Kumita" : "How it Works"}
-            </Link>
-            <Link href={ROUTES.dashboard} className="hover:underline">
-              Dashboard
-            </Link>
-            <span>{lang === "tl" ? "Ginawa para sa ethical micro-sales" : "Built for ethical micro-sales"}</span>
-          </div>
+        <TimelineItem
+          title="Day 0–1: Purchase happens"
+          desc="Your link drives a real purchase on Lazada/Shopee (or other supported merchant). It appears as Pending in Linkmint."
+          peso="₱0 (no payout yet)"
+        />
+        <TimelineItem
+          title="~Day 2–30: Waiting for approval"
+          desc="Merchant/network verifies the order. Cancellations/returns void earnings. When approved, it moves to Approved."
+          peso="Sample: ₱180 pending → ₱180 approved"
+        />
+        <TimelineItem
+          title="After approval: Funds sent to Linkmint"
+          desc="Only after we receive funds from the network does the amount become Eligible for payout."
+          peso="₱180 becomes Eligible"
+        />
+        <TimelineItem
+          title="Payout to you (GCash)"
+          desc="Eligible balance can be sent to your verified GCash. You’ll see fees/FX if applicable and a final net ₱ amount."
+          peso="Example: ₱180 gross → ₱176.50 net (illustrative)"
+        />
+
+        <div className="rounded-lg border p-4 text-sm text-gray-700">
+          <p className="mb-2">
+            <strong>Heads up:</strong> Some merchants take longer than 30 days
+            to approve. We never float unpaid funds for merchants that haven’t
+            paid Linkmint yet.
+          </p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>Amazon is excluded from early payouts (approval first).</li>
+            <li>We may batch small amounts to minimize fees.</li>
+          </ul>
         </div>
-      </footer>
+      </section>
+
+      {/* Compliance & integrity rules (PH-focused) */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Compliance & integrity</h2>
+
+        <RuleBlock
+          title="Merchant policies apply"
+          points={[
+            "Gift cards, coupon stacking, or prohibited categories may be excluded.",
+            "Self-purchase or abuse is disallowed by many merchants and may void commissions.",
+          ]}
+        />
+        <RuleBlock
+          title="Cookie windows & returns"
+          points={[
+            "Earnings depend on the merchant’s cookie window and final approval.",
+            "Returns, cancellations, or fraud checks can reduce/void commissions.",
+          ]}
+        />
+        <RuleBlock
+          title="One real person, one account"
+          points={[
+            "No multi-accounting, fake traffic, bots, or misleading content.",
+            "We audit patterns and disable abusive accounts to protect everyone.",
+          ]}
+        />
+        <RuleBlock
+          title="PH age policy"
+          points={[
+            "Only users 18+ can receive payouts.",
+            "Under 18 may share/learn, but payouts must go to a verified adult (guardian) account.",
+          ]}
+        />
+      </section>
+
+      {/* FAQ (short) */}
+      <section className="space-y-3">
+        <h2 className="text-xl font-semibold">FAQ (quick)</h2>
+        <div className="space-y-4">
+          <Faq
+            q="Do I need Lazada/Shopee accounts to browse?"
+            a="No to browse; yes to buy. Merchants may prompt login to view prices, add to cart, or complete checkout."
+          />
+          <Faq
+            q="Why is my payout not instant?"
+            a="Because merchants must approve and pay Linkmint first. Once funds arrive, your balance becomes Eligible."
+          />
+          <Faq
+            q="Can I use GCash?"
+            a="Yes. Add your verified GCash in Payouts. We’ll show any applicable fees/FX before you confirm."
+          />
+        </div>
+      </section>
+
+      {/* Footer/helper */}
+      <section className="rounded-xl bg-gray-50 border p-4 text-sm text-gray-700">
+        Questions or concerns?{" "}
+        <Link href="/contact" className="underline hover:text-emerald-700">
+          Contact support
+        </Link>
+        .
+      </section>
     </main>
   );
 }
 
-/* ---------- UI bits ---------- */
+/* ---------- Small components ---------- */
 
-function Section({
+function TrustLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-lg border px-4 py-3 text-sm font-semibold shadow-sm hover:bg-gray-50"
+    >
+      {label}
+    </Link>
+  );
+}
+
+function TimelineItem({
   title,
-  children,
-  muted,
+  desc,
+  peso,
 }: {
   title: string;
-  children: React.ReactNode;
-  muted?: boolean;
+  desc: string;
+  peso: string;
 }) {
   return (
-    <section className={muted ? "border-t bg-gray-50" : "border-t"}>
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <h2 className="text-xl font-semibold md:text-2xl">{title}</h2>
-        <div className="mt-4">{children}</div>
+    <div className="flex items-start gap-3">
+      <div className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-600" />
+      <div className="space-y-1">
+        <h3 className="font-semibold">{title}</h3>
+        <p className="text-gray-700 text-sm">{desc}</p>
+        <p className="text-xs text-gray-500">Illustrative: {peso}</p>
       </div>
-    </section>
+    </div>
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
+function RuleBlock({ title, points }: { title: string; points: string[] }) {
   return (
-    <ul className="list-disc space-y-2 pl-5 text-gray-700">
-      {items.map((x, i) => (
-        <li key={i} className="text-base leading-relaxed">
-          {x}
-        </li>
-      ))}
-    </ul>
+    <div className="rounded-lg border p-4">
+      <h3 className="font-semibold">{title}</h3>
+      <ul className="mt-2 list-disc pl-5 text-sm text-gray-700 space-y-1">
+        {points.map((p, i) => (
+          <li key={i}>{p}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
-function LangToggle({
-  lang,
-  setLang,
-}: {
-  lang: Lang;
-  setLang: (v: Lang) => void;
-}) {
+function Faq({ q, a }: { q: string; a: string }) {
   return (
-    <div className="inline-flex items-center rounded-xl border border-gray-300 p-1">
-      <button
-        onClick={() => setLang("en")}
-        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "en" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
-        }`}
-        aria-pressed={lang === "en"}
-      >
-        EN
-      </button>
-      <button
-        onClick={() => setLang("tl")}
-        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-          lang === "tl" ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
-        }`}
-        aria-pressed={lang === "tl"}
-      >
-        TL
-      </button>
+    <div>
+      <p className="font-medium">{q}</p>
+      <p className="text-sm text-gray-700">{a}</p>
     </div>
   );
 }
