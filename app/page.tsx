@@ -16,6 +16,11 @@ const ROUTES = {
   tutorial: "/tutorial", // kept in header + footer
 } as const;
 
+const AUTH = {
+  login: "/api/auth/signin?callbackUrl=/dashboard",
+  logout: "/api/auth/signout",
+} as const;
+
 const ASSETS = {
   phoneVideo: "/video/tutorial-web.mp4",
 } as const;
@@ -30,11 +35,14 @@ export default function LandingPage() {
         nav_dashboard: "Dashboard",
         nav_trust: "Trust Center",
         nav_tutorial: "Paano Kumita",
+        nav_login: "Log in",
         hero_title: "Kumita mula sa mga link na sineshare mo.",
         hero_sub:
           "Kapag may bumili gamit ang link mo, may commission ka. Lahat transparent — statuses, approvals, at payouts.",
         cta_primary: "Simulan ang kita",
         cta_secondary: "Tingnan ang Trust Center",
+        login_hint: "May account ka na?",
+        login_link: "Mag-log in",
         referral_title: "Palakasin ang kita sa Referrals",
         referral_points: [
           "Tuwing 3 invites, may 5% bonus ka sa approved earnings nila sa loob ng 90 araw.",
@@ -54,11 +62,14 @@ export default function LandingPage() {
       nav_dashboard: "Dashboard",
       nav_trust: "Trust Center",
       nav_tutorial: "How it Works",
+      nav_login: "Log in",
       hero_title: "Earn from what you already share.",
       hero_sub:
         "When your link drives a purchase, you get credit — with transparent statuses, approvals, and real payouts.",
       cta_primary: "Start earning",
       cta_secondary: "See Trust Center",
+      login_hint: "Already have an account?",
+      login_link: "Log in",
       referral_title: "Boost your earnings with referrals",
       referral_points: [
         "Every 3 invitees unlocks a 5% bonus on their approved earnings for 90 days.",
@@ -89,19 +100,29 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <LangToggle lang={lang} setLang={setLang} />
             <nav className="hidden items-center gap-4 sm:flex">
+              {/* New: explicit Log in in header */}
+              <Link
+                href={AUTH.login}
+                className="text-sm text-gray-700 hover:text-emerald-600 hover:underline"
+              >
+                {t.nav_login}
+              </Link>
+
               <Link
                 href={ROUTES.dashboard}
                 className="text-sm text-gray-700 hover:text-gray-900"
               >
                 {t.nav_dashboard}
               </Link>
-              {/* Restored: How it Works link in header for quick access */}
+
+              {/* How it Works */}
               <Link
                 href={ROUTES.tutorial}
                 className="text-sm text-gray-700 hover:text-emerald-600 hover:underline"
               >
                 {t.nav_tutorial}
               </Link>
+
               <Link
                 href={trustHref}
                 className="text-sm text-gray-700 hover:text-gray-900"
@@ -131,7 +152,7 @@ export default function LandingPage() {
             >
               {t.cta_primary}
             </Link>
-            {/* Secondary CTA → Trust Center (credibility) */}
+            {/* Secondary CTA → Trust Center */}
             <Link
               href={trustHref}
               className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
@@ -140,10 +161,19 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <p className="mt-3 text-xs text-gray-500">{t.trust_line}</p>
+          {/* New: quick login hint below CTAs */}
+          <p className="mt-3 text-xs text-gray-600">
+            {t.login_hint}{" "}
+            <Link href={AUTH.login} className="font-semibold text-emerald-700 hover:underline">
+              {t.login_link}
+            </Link>
+            .
+          </p>
+
+          <p className="mt-2 text-xs text-gray-500">{t.trust_line}</p>
         </div>
 
-        {/* Visual — can be replaced later with an earnings snapshot */}
+        {/* Visual */}
         <div className="flex justify-center">
           <div className="w-full max-w-[380px] md:max-w-[420px]">
             <div className="relative aspect-[9/16] overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200">
@@ -192,12 +222,14 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
           <span>{t.footer_left}</span>
           <div className="flex items-center gap-4">
-            {/* Keep tutorial discoverable in footer as well */}
             <Link href={ROUTES.tutorial} className="hover:underline">
               {t.footer_tutorial}
             </Link>
             <Link href={trustHref} className="hover:underline">
               {t.nav_trust}
+            </Link>
+            <Link href={AUTH.login} className="hover:underline">
+              {t.nav_login}
             </Link>
             <span>{t.footer_right}</span>
           </div>
