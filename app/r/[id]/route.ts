@@ -1,62 +1,82 @@
 // app/r/[id]/route.ts
-import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+function safeUrl(u?: string | null): string | null {
+  if (!u) return null;
+  try {
+    const parsed = new URL(u);
+    // Optional: allow only http/https
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const id = params.id;
 
   try {
-    // 1) Look up SmartLink by short id
+    // 1) Look up smart link by id
     const link = await prisma.smartLink.findUnique({
       where: { id },
       select: {
+        id: true,
         originalUrl: true,
         destinationsJson: true,
+        merchantName: true,
       },
     });
 
-    // 2) If not found, fall back to homepage
     if (!link) {
-      return NextResponse.redirect(
-        process.env.NEXT_PUBLIC_APP_URL || "https://linkmint.co"
-      );
+      // Not found → 404 to make issues obvious during testing
+      return NextResponse.json({ ok: false, error: "Smart link not found" }, { status: 404 });
     }
 
-    // 3) Choose destination (destinationsJson.default → else originalUrl)
-    let dest = link.originalUrl;
-    try {
-      const dj = link.destinationsJson as any;
-      if (dj && typeof dj === "object" && dj.default) {
-        dest = String(dj.default);
-      }
-    } catch {
-      // ignore and use originalUrl
+    // 2) Resolve destination (destinationsJson.default > originalUrl)
+    let to: string | null = null;
+    const dj: any = link.destinationsJson ?? null;
+
+    if (dj && typeof dj === "object" && typeof dj.default === "string") {
+      to = safeUrl(dj.default);
+    }
+    if (!to) {
+      to = safeUrl(link.originalUrl);
+    }
+    if (!to) {
+      return NextResponse.json({ ok: false, error: "Invalid destination URL" }, { status: 400 });
     }
 
-    // 4) Log the click (EventLog keeps schema-safe; avoid assumptions about Click model)
+    // 3) Log click (best-effort)
     try {
-      const ua = (req.headers.get("user-agent") ?? "").slice(0, 250);
-      const referer = (req.headers.get("referer") ?? "").slice(0, 250);
       await prisma.eventLog.create({
         data: {
-          type: "LINK_REDIRECT",
-          detail: id,
-          message: `-> ${dest} ua=${ua} ref=${referer}`,
+          type: "LINK_CLICK",
+          message: `id=${link.id}`,
+          detail: JSON.stringify({
+            to,
+            ua: req.headers.get("user-agent") ?? "",
+            ref: req.headers.get("referer") ?? "",
+            ip: (req as any).ip ?? "",
+          }),
+          severity: 1,
         },
       });
     } catch (e) {
-      console.error("r/[id] eventLog failed:", e);
+      console.error("r/[id] click log error:", e);
     }
 
-    // 5) Redirect to the actual product page
-    return NextResponse.redirect(dest);
+    // 4) Redirect to merchant product
+    return NextResponse.redirect(to, { status: 302 });
   } catch (e) {
-    console.error("r/[id] handler error:", e);
-    return NextResponse.redirect(
-      process.env.NEXT_PUBLIC_APP_URL || "https://linkmint.co"
-    );
+    console.error("r/[id] fatal error:", e);
+    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }

@@ -7,7 +7,8 @@ type RecentLink = {
   shortUrl: string;
   merchant?: string;
   destinationUrl: string;
-  createdAt?: number; // may be missing on older entries
+  createdAt?: number;
+  pinned?: boolean;
 };
 
 const KEY_V1 = "recent-links";
@@ -27,17 +28,31 @@ function normalize(items: RecentLink[]): RecentLink[] {
   return items.map((x) => ({
     ...x,
     createdAt: typeof x.createdAt === "number" ? x.createdAt : Date.now(),
+    pinned: typeof x.pinned === "boolean" ? x.pinned : false,
   }));
 }
 
-/** Prefer v2, merge v1, dedupe, normalize, newest-first */
+/** Merge with **v2 preferred** so pin state persists. */
+function mergePreferV2(v1: RecentLink[], v2: RecentLink[]): RecentLink[] {
+  const map = new Map<string, RecentLink>();
+  // write older (v1) first…
+  for (const it of v1) map.set(it.id, it);
+  // …then overwrite with v2 (preferred)
+  for (const it of v2) map.set(it.id, it);
+  return Array.from(map.values());
+}
+
+/** Load: v2 preferred, dedupe, normalize, sort (pinned first, then newest) */
 function loadRecent(): RecentLink[] {
   const v2 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V2) : null);
   const v1 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V1) : null);
-  const map = new Map<string, RecentLink>();
-  [...v2, ...v1].forEach((x) => map.set(x.id, x));
-  const arr = normalize(Array.from(map.values()));
-  return arr.sort((a, b) => (b.createdAt! - a.createdAt!));
+  const merged = mergePreferV2(v1, v2);
+  const arr = normalize(merged);
+  return arr.sort((a, b) => {
+    const pinDelta = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+    if (pinDelta !== 0) return pinDelta;
+    return (b.createdAt! - a.createdAt!);
+  });
 }
 
 function saveV2(items: RecentLink[]) {
@@ -46,6 +61,10 @@ function saveV2(items: RecentLink[]) {
   } catch (e) {
     console.warn("recent-links save failed:", e);
   }
+}
+
+function broadcastChange() {
+  window.dispatchEvent(new Event("lm-recent-links-changed"));
 }
 
 export default function RecentLinksClient() {
@@ -58,11 +77,11 @@ export default function RecentLinksClient() {
     setBusy(true);
     const data = loadRecent();
     setItems(data);
-    saveV2(data);
+    saveV2(data); // always normalize into v2
     const ts = Date.now();
     setLastRefreshed(ts);
     setNotice(`Refreshed ${new Date(ts).toLocaleTimeString()}`);
-    setTimeout(() => setNotice(""), 2000);
+    setTimeout(() => setNotice(""), 1500);
     setBusy(false);
   }, []);
 
@@ -76,8 +95,9 @@ export default function RecentLinksClient() {
       const ts = Date.now();
       setLastRefreshed(ts);
       setNotice("Cleared");
-      setTimeout(() => setNotice(""), 2000);
+      setTimeout(() => setNotice(""), 1500);
       setBusy(false);
+      broadcastChange();
     }
   };
 
@@ -104,19 +124,35 @@ export default function RecentLinksClient() {
     };
   }, [refresh]);
 
+  const commit = (next: RecentLink[], toast: string) => {
+    const normalized = normalize(next).sort((a, b) => {
+      const pinDelta = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      if (pinDelta !== 0) return pinDelta;
+      return (b.createdAt! - a.createdAt!);
+    });
+    setItems(normalized);
+    saveV2(normalized);
+    setNotice(toast);
+    setTimeout(() => setNotice(""), 1200);
+    broadcastChange();
+  };
+
+  const togglePin = (id: string) => {
+    const next = items.map((x) => (x.id === id ? { ...x, pinned: !x.pinned } : x));
+    const nowPinned = next.find((x) => x.id === id)?.pinned;
+    commit(next, nowPinned ? "Pinned" : "Unpinned");
+  };
+
   const removeOne = (id: string) => {
     const next = items.filter((x) => x.id !== id);
-    setItems(next);
-    saveV2(next);
-    setNotice("Removed");
-    setTimeout(() => setNotice(""), 1500);
+    commit(next, "Removed");
   };
 
   const copyShort = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
       setNotice("Copied!");
-      setTimeout(() => setNotice(""), 1200);
+      setTimeout(() => setNotice(""), 900);
     } catch {
       prompt("Copy this link:", url);
     }
@@ -170,9 +206,19 @@ export default function RecentLinksClient() {
               className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
-                <div className="truncate font-medium">
-                  {l.merchant ? `${l.merchant} · ` : ""}
-                  <span className="opacity-70">ID:</span> {l.id}
+                <div className="truncate font-medium flex items-center gap-2">
+                  {l.pinned && (
+                    <span
+                      className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800"
+                      title="Pinned"
+                    >
+                      ★ Pinned
+                    </span>
+                  )}
+                  <span className="truncate">
+                    {l.merchant ? `${l.merchant} · ` : ""}
+                    <span className="opacity-70">ID:</span> {l.id}
+                  </span>
                 </div>
                 <div className="truncate text-sm">
                   <span className="opacity-60">Short: </span>
@@ -187,8 +233,6 @@ export default function RecentLinksClient() {
                   </a>
                 </div>
                 <div className="truncate text-xs opacity-80">Dest: {l.destinationUrl}</div>
-
-                {/* >>> Timestamp (stronger visibility) */}
                 <div className="mt-1 text-sm">
                   <span className="opacity-60">Created:</span>{" "}
                   <span className="font-medium">
@@ -198,6 +242,15 @@ export default function RecentLinksClient() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => togglePin(l.id)}
+                  className="rounded border px-3 py-1.5 text-sm hover:bg-yellow-50"
+                  title={l.pinned ? "Unpin" : "Pin"}
+                >
+                  {l.pinned ? "Unpin" : "Pin"}
+                </button>
+
                 <button
                   type="button"
                   onClick={() => open(l.shortUrl)}
