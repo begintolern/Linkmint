@@ -32,17 +32,21 @@ function randomId(len = 6) {
 function getPreferredBase(req: NextRequest) {
   const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (envBase && /^https?:\/\//i.test(envBase)) {
-    return envBase.replace(/\/+$/, ""); // strip trailing slash
+    return envBase.replace(/\/+$/, "");
   }
   const u = new URL(req.url);
-  // If proxy reports http, still force https for public short links
-  const proto = "https:";
-  return `${proto}//${u.host}`;
+  return `https://${u.host}`;
 }
 
 function getUserId(session: Session | null): string | null {
   const anyUser = (session as any)?.user ?? null;
   return (anyUser?.id as string | undefined) ?? null;
+}
+
+/** Simple CSV env helper */
+function envCsv(name: string): string[] {
+  const v = process.env[name]?.trim();
+  return v ? v.split(",").map(s => s.trim()).filter(Boolean) : [];
 }
 
 export async function GET() {
@@ -56,6 +60,44 @@ export async function POST(req: NextRequest) {
     if (!userId) {
       return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
     }
+
+    // ------------------ Rate Limit (with bypass) ------------------
+    const BYPASS_IDS = envCsv("LINKMINT_RATE_LIMIT_BYPASS_IDS"); // CSV of user IDs
+    const WINDOW_HOURS = Number(process.env.LINKMINT_RATE_LIMIT_HOURS ?? 24);
+    const MAX_PER_WINDOW = Number(process.env.LINKMINT_RATE_LIMIT_MAX ?? 10);
+
+    const isBypassed = BYPASS_IDS.includes(userId);
+
+    if (!isBypassed) {
+      const since = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000);
+      const count = await prisma.smartLink.count({
+        where: { userId, createdAt: { gte: since } },
+      });
+
+      if (count >= MAX_PER_WINDOW) {
+        // Optional: log a warning event for audit
+        await prisma.eventLog.create({
+          data: {
+            userId,
+            type: "USER_WARNING",
+            message: `RATE_LIMIT_LINK_CREATION: ${count} links in last ${WINDOW_HOURS}h`,
+            detail: JSON.stringify({ count, windowHours: WINDOW_HOURS }),
+            severity: 2,
+          },
+        });
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `You’ve reached the limit of ${MAX_PER_WINDOW} links in ${WINDOW_HOURS} hour(s). ` +
+              "Please try again later.",
+          },
+          { status: 429 }
+        );
+      }
+    }
+    // --------------------------------------------------------------
 
     const body = (await req.json()) as Body;
     const merchantId = body.merchantId?.trim();
@@ -82,9 +124,9 @@ export async function POST(req: NextRequest) {
     const merchantMeta =
       MERCHANT_NAME_BY_ID[merchantId] ?? { name: "Unknown", domain: parsed.hostname };
 
-    const base = getPreferredBase(req);           // e.g., https://em7262.linkmint.co
+    const base = getPreferredBase(req); // e.g., https://em7262.linkmint.co
     const id = randomId(6);
-    const shortUrl = `${base}/r/${id}`;           // absolute, right host
+    const shortUrl = `${base}/r/${id}`;
 
     const destinations: Prisma.InputJsonValue = {
       default: destinationUrl,
