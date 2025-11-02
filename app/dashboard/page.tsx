@@ -25,16 +25,15 @@ export default async function DashboardPage() {
   const user = (session?.user ?? {}) as AppUser;
   const name = user?.email ? user.email.split("@")[0] : user?.name ?? "there";
 
-  // Pure server-rendered tiles (no client components, no icons/motion)
   const tiles = [
-    { href: "/dashboard/create-link", title: "Create Smart Link",     subtitle: "Generate a tracked, compliant link", tone: "emerald" },
-    { href: "/dashboard/links",       title: "Links",                  subtitle: "Manage your links",                  tone: "indigo"  },
-    { href: "/dashboard/merchants",   title: "Explore Merchants",      subtitle: "Policies, payouts, rules",          tone: "blue"    },
-    { href: "/dashboard/merchants/ai",title: "AI Suggestions (beta)",  subtitle: "Heuristic trending offers",         tone: "purple"  },
-    { href: "/dashboard/earnings",    title: "Earnings",               subtitle: "Commissions & performance",         tone: "yellow"  },
-    { href: "/dashboard/payouts",     title: "Payouts",                subtitle: "History & accounts",                tone: "rose"    },
-    { href: "/dashboard/referrals",   title: "Referrals",              subtitle: "Invite friends · 5% bonus",         tone: "green"   },
-    { href: "/dashboard/settings",    title: "Settings",               subtitle: "Manage your account",               tone: "emerald" },
+    { href: "/dashboard/create-link", title: "Create Smart Link",         subtitle: "Generate a tracked, compliant link", tone: "emerald" },
+    { href: "/dashboard/links",       title: "Manage Links (Advanced)",   subtitle: "View history, refresh, clear, bulk actions", tone: "indigo"  },
+    { href: "/dashboard/merchants",   title: "Explore Merchants",         subtitle: "Policies, payouts, rules",          tone: "blue"    },
+    { href: "/dashboard/merchants/ai",title: "AI Suggestions (beta)",     subtitle: "Heuristic trending offers",         tone: "purple"  },
+    { href: "/dashboard/earnings",    title: "Earnings",                  subtitle: "Commissions & performance",         tone: "yellow"  },
+    { href: "/dashboard/payouts",     title: "Payouts",                   subtitle: "History & accounts",                tone: "rose"    },
+    { href: "/dashboard/referrals",   title: "Referrals",                 subtitle: "Invite friends · 5% bonus",         tone: "green"   },
+    { href: "/dashboard/settings",    title: "Settings",                  subtitle: "Manage your account",               tone: "emerald" },
   ] as const;
 
   const toneClass = (tone: string) => {

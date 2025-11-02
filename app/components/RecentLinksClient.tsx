@@ -7,7 +7,7 @@ type RecentLink = {
   shortUrl: string;
   merchant?: string;
   destinationUrl: string;
-  createdAt: number;
+  createdAt?: number; // older entries may lack this
 };
 
 const KEY_V1 = "recent-links";
@@ -16,20 +16,29 @@ const KEY_V2 = "recent-links:v2";
 function parseList(raw: string | null): RecentLink[] {
   if (!raw) return [];
   try {
-    const arr = JSON.parse(raw ?? "[]");
+    const arr = JSON.parse(raw);
     return Array.isArray(arr) ? (arr as RecentLink[]) : [];
   } catch {
     return [];
   }
 }
 
-/** Load from v2 (preferred) and v1, dedupe by id, newest first. */
+function normalize(items: RecentLink[]): RecentLink[] {
+  // Ensure createdAt exists; if missing, use "now" so it still sorts and displays.
+  return items.map((x) => ({
+    ...x,
+    createdAt: typeof x.createdAt === "number" ? x.createdAt : Date.now(),
+  }));
+}
+
+/** Load recent links from either key, prefer v2, dedupe, normalize, sort newest-first. */
 function loadRecent(): RecentLink[] {
   const v2 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V2) : null);
   const v1 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V1) : null);
   const map = new Map<string, RecentLink>();
   [...v2, ...v1].forEach((x) => map.set(x.id, x));
-  return Array.from(map.values()).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  const arr = normalize(Array.from(map.values()));
+  return arr.sort((a, b) => (b.createdAt! - a.createdAt!));
 }
 
 function saveV2(items: RecentLink[]) {
@@ -40,30 +49,21 @@ function saveV2(items: RecentLink[]) {
   }
 }
 
-type Props = {
-  /** Keep false so we don’t duplicate controls with the page toolbar. */
-  showToolbar?: boolean;
-};
-
-export default function RecentLinksClient({ showToolbar = false }: Props) {
+export default function RecentLinksClient() {
   const [items, setItems] = useState<RecentLink[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string>("");
 
-  const announce = (msg: string) => {
-    setNotice(msg);
-    setTimeout(() => setNotice(""), 1800);
-  };
-
   const refresh = useCallback(() => {
     setBusy(true);
     const data = loadRecent();
     setItems(data);
-    saveV2(data);
+    saveV2(data); // normalize to v2
     const ts = Date.now();
     setLastRefreshed(ts);
-    announce(`Refreshed ${new Date(ts).toLocaleTimeString()}`);
+    setNotice(`Refreshed ${new Date(ts).toLocaleTimeString()}`);
+    setTimeout(() => setNotice(""), 2000);
     setBusy(false);
   }, []);
 
@@ -76,7 +76,8 @@ export default function RecentLinksClient({ showToolbar = false }: Props) {
       setItems([]);
       const ts = Date.now();
       setLastRefreshed(ts);
-      announce("Cleared");
+      setNotice("Cleared");
+      setTimeout(() => setNotice(""), 2000);
       setBusy(false);
     }
   };
@@ -84,29 +85,23 @@ export default function RecentLinksClient({ showToolbar = false }: Props) {
   useEffect(() => {
     refresh();
 
-    // Refresh when tab becomes visible
     const onVis = () => {
       if (document.visibilityState === "visible") refresh();
     };
     document.addEventListener("visibilitychange", onVis);
 
-    // Sync when localStorage changes (other tabs/windows)
     const onStorage = (e: StorageEvent) => {
       if (e.key === KEY_V1 || e.key === KEY_V2) refresh();
     };
     window.addEventListener("storage", onStorage);
 
-    // Page-level toolbar events
-    const onExternalRefresh = () => refresh();
-    const onExternalClear = () => clearAll();
-    window.addEventListener("recent-links:refresh", onExternalRefresh as EventListener);
-    window.addEventListener("recent-links:clear", onExternalClear as EventListener);
+    const onCustom = () => refresh();
+    window.addEventListener("lm-recent-links-changed", onCustom as EventListener);
 
     return () => {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener("recent-links:refresh", onExternalRefresh as EventListener);
-      window.removeEventListener("recent-links:clear", onExternalClear as EventListener);
+      window.removeEventListener("lm-recent-links-changed", onCustom as EventListener);
     };
   }, [refresh]);
 
@@ -114,13 +109,15 @@ export default function RecentLinksClient({ showToolbar = false }: Props) {
     const next = items.filter((x) => x.id !== id);
     setItems(next);
     saveV2(next);
-    announce("Removed");
+    setNotice("Removed");
+    setTimeout(() => setNotice(""), 1500);
   };
 
   const copyShort = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      announce("Copied!");
+      setNotice("Copied!");
+      setTimeout(() => setNotice(""), 1200);
     } catch {
       prompt("Copy this link:", url);
     }
@@ -130,7 +127,37 @@ export default function RecentLinksClient({ showToolbar = false }: Props) {
 
   return (
     <section data-testid="recent-links-root" className="space-y-3">
-      {/* No internal header/toolbar to avoid duplication with the page */}
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="text-lg font-semibold">Your Recent Links</h2>
+
+        <button
+          type="button"
+          onClick={refresh}
+          disabled={busy}
+          className="rounded bg-gray-200 px-2 py-1 text-sm hover:bg-gray-300 disabled:opacity-50"
+          title="Reload from localStorage"
+        >
+          {busy ? "Refreshing…" : "Refresh"}
+        </button>
+
+        <button
+          type="button"
+          onClick={clearAll}
+          disabled={busy}
+          className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200 disabled:opacity-50"
+          title="Clear recent links on this device"
+        >
+          Clear
+        </button>
+
+        <span className="text-xs opacity-60">
+          {notice
+            ? notice
+            : lastRefreshed
+            ? `Last refreshed ${new Date(lastRefreshed).toLocaleTimeString()}`
+            : "—"}
+        </span>
+      </div>
 
       {items.length === 0 ? (
         <div className="rounded border p-4 text-sm opacity-70">
@@ -161,6 +188,9 @@ export default function RecentLinksClient({ showToolbar = false }: Props) {
                   </a>
                 </div>
                 <div className="truncate text-xs opacity-60">Dest: {l.destinationUrl}</div>
+                <div className="truncate text-xs opacity-60">
+                  Created: {new Date(l.createdAt ?? Date.now()).toLocaleString()}
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -201,15 +231,6 @@ export default function RecentLinksClient({ showToolbar = false }: Props) {
           ))}
         </ul>
       )}
-
-      {/* Status line (kept, compact) */}
-      <div className="text-xs opacity-60" aria-live="polite">
-        {notice
-          ? notice
-          : lastRefreshed
-          ? `Last refreshed ${new Date(lastRefreshed).toLocaleTimeString()}`
-          : " "}
-      </div>
     </section>
   );
 }
