@@ -1,24 +1,21 @@
 // app/api/smartlinks/create/route.ts
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import type { Prisma } from "@prisma/client";
 
 type Body = {
-  merchantId?: string;
+  merchantId?: string;       // accepted but not stored
   destinationUrl?: string;
-  source?: string;
+  source?: string;           // accepted but not stored
 };
 
-const MERCHANT_NAME_BY_ID: Record<string, { name: string; domain?: string }> = {
-  cmfvvoxsj0000oij8u4oadeo5: { name: "Lazada PH", domain: "lazada.com.ph" },
-  cmfu940920003oikshotzltnp: { name: "Shopee",    domain: "shopee.ph" },
+const MERCHANT_NAME_BY_ID: Record<string, string> = {
+  cmfvvoxsj0000oij8u4oadeo5: "Lazada PH",
+  cmfu940920003oikshotzltnp: "Shopee",
 };
 
 function randomId(len = 6) {
@@ -28,85 +25,62 @@ function randomId(len = 6) {
   return out;
 }
 
-/** Prefer env base (prod), else derive from request; force https and strip trailing slash. */
+/**
+ * Picks the best base URL for constructing short links.
+ * - Honors NEXT_PUBLIC_APP_URL or NEXT_PUBLIC_BASE_URL
+ * - Forces HTTP on localhost to avoid SSL errors
+ * - Defaults to req.host if no env var is set
+ */
 function getPreferredBase(req: NextRequest) {
-  const envBase = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const envBase =
+    (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || "").trim();
+
   if (envBase && /^https?:\/\//i.test(envBase)) {
-    return envBase.replace(/\/+$/, "");
+    try {
+      const u = new URL(envBase);
+      const isLocal =
+        u.hostname === "localhost" ||
+        u.hostname === "127.0.0.1" ||
+        u.hostname.endsWith(".local");
+      const proto = isLocal ? "http" : u.protocol.replace(":", "");
+      return `${proto}://${u.host}`.replace(/\/+$/, "");
+    } catch {
+      // fallback below
+    }
   }
+
   const u = new URL(req.url);
-  return `https://${u.host}`;
-}
+  const host = u.host.toLowerCase();
+  const isLocal =
+    host.startsWith("localhost") ||
+    host.startsWith("127.0.0.1") ||
+    host.endsWith(".local");
 
-function getUserId(session: Session | null): string | null {
-  const anyUser = (session as any)?.user ?? null;
-  return (anyUser?.id as string | undefined) ?? null;
-}
-
-/** Simple CSV env helper */
-function envCsv(name: string): string[] {
-  const v = process.env[name]?.trim();
-  return v ? v.split(",").map(s => s.trim()).filter(Boolean) : [];
+  const proto = isLocal ? "http" : "https";
+  return `${proto}://${host}`;
 }
 
 export async function GET() {
-  return NextResponse.json({ ok: false, message: "Method Not Allowed" }, { status: 405 });
+  return NextResponse.json({ ok: false, message: "POST only" }, { status: 405 });
 }
 
 export async function POST(req: NextRequest) {
   try {
+    // --- Require authentication
     const session = (await getServerSession(authOptions)) as Session | null;
-    const userId = getUserId(session);
+    const userId = (session as any)?.user?.id as string | undefined;
     if (!userId) {
       return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    // ------------------ Rate Limit (with bypass) ------------------
-    const BYPASS_IDS = envCsv("LINKMINT_RATE_LIMIT_BYPASS_IDS"); // CSV of user IDs
-    const WINDOW_HOURS = Number(process.env.LINKMINT_RATE_LIMIT_HOURS ?? 24);
-    const MAX_PER_WINDOW = Number(process.env.LINKMINT_RATE_LIMIT_MAX ?? 10);
-
-    const isBypassed = BYPASS_IDS.includes(userId);
-
-    if (!isBypassed) {
-      const since = new Date(Date.now() - WINDOW_HOURS * 60 * 60 * 1000);
-      const count = await prisma.smartLink.count({
-        where: { userId, createdAt: { gte: since } },
-      });
-
-      if (count >= MAX_PER_WINDOW) {
-        // Optional: log a warning event for audit
-        await prisma.eventLog.create({
-          data: {
-            userId,
-            type: "USER_WARNING",
-            message: `RATE_LIMIT_LINK_CREATION: ${count} links in last ${WINDOW_HOURS}h`,
-            detail: JSON.stringify({ count, windowHours: WINDOW_HOURS }),
-            severity: 2,
-          },
-        });
-
-        return NextResponse.json(
-          {
-            ok: false,
-            message:
-              `You’ve reached the limit of ${MAX_PER_WINDOW} links in ${WINDOW_HOURS} hour(s). ` +
-              "Please try again later.",
-          },
-          { status: 429 }
-        );
-      }
-    }
-    // --------------------------------------------------------------
-
+    // --- Parse request body
     const body = (await req.json()) as Body;
-    const merchantId = body.merchantId?.trim();
     const destinationUrl = body.destinationUrl?.trim();
-    const source = body.source?.trim();
+    const merchantId = body.merchantId?.trim();
 
-    if (!merchantId || !destinationUrl || !source) {
+    if (!destinationUrl) {
       return NextResponse.json(
-        { ok: false, message: "Missing input. Required: merchantId, destinationUrl, source." },
+        { ok: false, message: "destinationUrl is required" },
         { status: 400 }
       );
     }
@@ -121,33 +95,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const merchantMeta =
-      MERCHANT_NAME_BY_ID[merchantId] ?? { name: "Unknown", domain: parsed.hostname };
+    const merchantName = MERCHANT_NAME_BY_ID[merchantId ?? ""] ?? "Unknown";
+    const merchantDomain = parsed.hostname || null;
 
-    const base = getPreferredBase(req); // e.g., https://em7262.linkmint.co
     const id = randomId(6);
+    const base = getPreferredBase(req);
     const shortUrl = `${base}/r/${id}`;
 
-    const destinations: Prisma.InputJsonValue = {
-      default: destinationUrl,
-      source,
-    };
-
+    // ✅ Store fields that exist in the Prisma model only
     await prisma.smartLink.create({
       data: {
         id,
         userId,
         merchantRuleId: null,
-        merchantName: merchantMeta.name,
-        merchantDomain: merchantMeta.domain ?? null,
+        merchantName,
+        merchantDomain,
         originalUrl: destinationUrl,
         shortUrl,
         label: null,
-        destinationsJson: destinations,
+        destinationsJson: { default: destinationUrl },
       },
     });
 
-    return NextResponse.json({ ok: true, id, shortUrl, merchant: merchantMeta.name });
+    return NextResponse.json({ ok: true, id, shortUrl, merchant: merchantName });
   } catch (err) {
     console.error("smartlinks/create error:", err);
     return NextResponse.json({ ok: false, message: "Server error" }, { status: 500 });
