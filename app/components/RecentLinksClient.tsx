@@ -7,7 +7,7 @@ type RecentLink = {
   shortUrl: string;
   merchant?: string;
   destinationUrl: string;
-  createdAt?: number; // older entries may lack this
+  createdAt?: number; // may be missing on older entries
 };
 
 const KEY_V1 = "recent-links";
@@ -24,14 +24,13 @@ function parseList(raw: string | null): RecentLink[] {
 }
 
 function normalize(items: RecentLink[]): RecentLink[] {
-  // Ensure createdAt exists; if missing, use "now" so it still sorts and displays.
   return items.map((x) => ({
     ...x,
     createdAt: typeof x.createdAt === "number" ? x.createdAt : Date.now(),
   }));
 }
 
-/** Load recent links from either key, prefer v2, dedupe, normalize, sort newest-first. */
+/** Prefer v2, merge v1, dedupe, normalize, newest-first */
 function loadRecent(): RecentLink[] {
   const v2 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V2) : null);
   const v1 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V1) : null);
@@ -59,7 +58,7 @@ export default function RecentLinksClient() {
     setBusy(true);
     const data = loadRecent();
     setItems(data);
-    saveV2(data); // normalize to v2
+    saveV2(data);
     const ts = Date.now();
     setLastRefreshed(ts);
     setNotice(`Refreshed ${new Date(ts).toLocaleTimeString()}`);
@@ -175,7 +174,7 @@ export default function RecentLinksClient() {
                   {l.merchant ? `${l.merchant} · ` : ""}
                   <span className="opacity-70">ID:</span> {l.id}
                 </div>
-                <div className="truncate text-sm opacity-80">
+                <div className="truncate text-sm">
                   <span className="opacity-60">Short: </span>
                   <a
                     href={l.shortUrl}
@@ -187,9 +186,14 @@ export default function RecentLinksClient() {
                     {l.shortUrl}
                   </a>
                 </div>
-                <div className="truncate text-xs opacity-60">Dest: {l.destinationUrl}</div>
-                <div className="truncate text-xs opacity-60">
-                  Created: {new Date(l.createdAt ?? Date.now()).toLocaleString()}
+                <div className="truncate text-xs opacity-80">Dest: {l.destinationUrl}</div>
+
+                {/* >>> Timestamp (stronger visibility) */}
+                <div className="mt-1 text-sm">
+                  <span className="opacity-60">Created:</span>{" "}
+                  <span className="font-medium">
+                    {new Date(l.createdAt ?? Date.now()).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
