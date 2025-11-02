@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 type CreateResponse =
   | { ok: true; id: string; shortUrl?: string; merchant?: string }
@@ -10,7 +9,7 @@ type CreateResponse =
 
 const PH_MERCHANTS = [
   { hostIncludes: "lazada.com.ph", id: "cmfvvoxsj0000oij8u4oadeo5", name: "Lazada PH" },
-  { hostIncludes: "shopee.ph", id: "cmfu940920003oikshotzltnp", name: "Shopee" },
+  { hostIncludes: "shopee.ph",     id: "cmfu940920003oikshotzltnp", name: "Shopee"     },
 ];
 
 function detectMerchant(urlStr: string) {
@@ -27,7 +26,6 @@ function detectMerchant(urlStr: string) {
 }
 
 export default function CreateLinkClient() {
-  const router = useRouter();
   const [productUrl, setProductUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,12 +36,13 @@ export default function CreateLinkClient() {
     setError(null);
     setInfo(null);
 
-    if (!productUrl.trim()) {
+    const url = productUrl.trim();
+    if (!url) {
       setError("Please paste a product URL.");
       return;
     }
 
-    const merchant = detectMerchant(productUrl);
+    const merchant = detectMerchant(url);
     if (!merchant) {
       setError("We only support Lazada PH and Shopee PH URLs for now.");
       return;
@@ -57,12 +56,18 @@ export default function CreateLinkClient() {
         credentials: "include",
         body: JSON.stringify({
           merchantId: merchant.id,
-          destinationUrl: productUrl,
+          destinationUrl: url,
           source: "dashboard",
         }),
       });
 
-      const data = (await res.json()) as CreateResponse;
+      let data: CreateResponse;
+      try {
+        data = (await res.json()) as CreateResponse;
+      } catch {
+        setError("Unexpected server response.");
+        return;
+      }
 
       if (!res.ok || !("ok" in data) || data.ok === false) {
         const msg =
@@ -73,50 +78,35 @@ export default function CreateLinkClient() {
         return;
       }
 
-      // --- Save to localStorage (v1 + v2) and notify list to refresh ---
+      // Save to localStorage "recent-links" (keep last 10)
       try {
+        const raw = localStorage.getItem("recent-links");
+        const arr = raw ? JSON.parse(raw) : [];
+        const list: any[] = Array.isArray(arr) ? arr : [];
         const entry = {
           id: data.id,
           shortUrl: data.shortUrl ?? "",
           merchant: data.merchant ?? merchant.name,
-          destinationUrl: productUrl,
+          destinationUrl: url,
           createdAt: Date.now(),
         };
+        list.unshift(entry);
+        localStorage.setItem("recent-links", JSON.stringify(list.slice(0, 10)));
 
-        const read = (k: string) => {
-          const raw = localStorage.getItem(k);
-          const arr = raw ? JSON.parse(raw) : [];
-          return Array.isArray(arr) ? arr : [];
-        };
-        const write = (k: string, list: any[]) =>
-          localStorage.setItem(k, JSON.stringify(list.slice(0, 10)));
-
-        const v1 = read("recent-links");
-        v1.unshift(entry);
-        write("recent-links", v1);
-
-        const v2 = read("recent-links:v2");
-        // de-dupe by id, put newest first
-        const map = new Map<string, any>([[entry.id, entry]]);
-        for (const r of v2) if (!map.has(r.id)) map.set(r.id, r);
-        write("recent-links:v2", Array.from(map.values()));
-
-        // tell the RecentLinksClient to refresh immediately
-        window.dispatchEvent(new Event("recent-links:refresh"));
+        // notify compact list to refresh immediately
+        window.dispatchEvent(new Event("lm-recent-links-changed"));
       } catch (err) {
         console.error("localStorage save error", err);
       }
-      // ---------------------------------------------------------------
 
       setInfo(
         data.shortUrl
           ? `Link created! Short URL: ${data.shortUrl}`
           : `Link created! ID: ${data.id}`
       );
-
-      // small delay, then go to /dashboard/links
-      setTimeout(() => router.push("/dashboard/links"), 300);
-    } catch (err: any) {
+      // Optional: clear field
+      // setProductUrl("");
+    } catch (err) {
       console.error("create link error", err);
       setError("Network error while creating the link.");
     } finally {
@@ -126,10 +116,7 @@ export default function CreateLinkClient() {
 
   return (
     <div className="max-w-xl space-y-4">
-      <h1 className="text-xl font-semibold">Create Smart Link (PH)</h1>
-      <p className="text-sm opacity-80">
-        Paste a <strong>real</strong> Lazada PH or Shopee PH product URL.
-      </p>
+      {/* Header removed to avoid duplication with page header */}
 
       <form onSubmit={handleCreate} className="space-y-3">
         <input
@@ -151,13 +138,6 @@ export default function CreateLinkClient() {
 
       {error && <div className="text-red-600 text-sm">{error}</div>}
       {info && <div className="text-green-700 text-sm">{info}</div>}
-
-      <div className="text-xs opacity-70">
-        Supported now: <b>Lazada PH</b> and <b>Shopee PH</b>. We auto-detect the
-        merchant and send <code>merchantId</code>, <code>destinationUrl</code>, and{" "}
-        <code>source</code> to the API. Your link is saved to device storage and
-        shows in <em>Recent Links</em>.
-      </div>
     </div>
   );
 }
