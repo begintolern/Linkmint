@@ -35,5 +35,4 @@ jobs:
         run: npx wait-on http://localhost:3000
 
       - name: Run Playwright API health tests
-        run: echo "Playwright API tests temporarily disabled"
-
+        run: npx playwright test -c playwright.api.config.ts
