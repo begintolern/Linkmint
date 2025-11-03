@@ -43,6 +43,9 @@ export default function AdminLogsPage() {
   const intervalMs = 10_000; // 10s
   const isMounted = useRef(false);
 
+  // Banner control
+  const [showPlaywrightNotice, setShowPlaywrightNotice] = useState(true);
+
   const qs = useMemo(() => {
     const sp = new URLSearchParams();
     sp.set("page", String(page));
@@ -117,9 +120,7 @@ export default function AdminLogsPage() {
     ]);
     const csv = [header, ...csvRows]
       .map((row) =>
-        row
-          .map((val) => `"${String(val).replace(/"/g, '""')}"`)
-          .join(",")
+        row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",")
       )
       .join("\n");
 
@@ -132,7 +133,6 @@ export default function AdminLogsPage() {
     URL.revokeObjectURL(url);
   };
 
-  // --- Copy JSON ---
   const handleCopyJSON = () => {
     if (!rows.length) return;
     navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
@@ -141,14 +141,34 @@ export default function AdminLogsPage() {
 
   return (
     <div className="p-6 space-y-4">
+      {/* Amber banner with dismiss toggle */}
+      {showPlaywrightNotice ? (
+        <div className="rounded-lg border border-amber-400 bg-amber-50 px-4 py-3 text-amber-900 flex justify-between items-start">
+          <div>
+            ⚠️ Automated Playwright tests are currently <b>disabled</b> in CI{" "}
+            (<code>.github/workflows/verify.yml</code>)
+          </div>
+          <button
+            onClick={() => setShowPlaywrightNotice(false)}
+            className="ml-4 text-xs text-amber-700 hover:underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900">
+          <div className="font-semibold">Heads up</div>
+          <div className="text-sm">
+            This is a live admin log viewer. It auto-refreshes every 10 seconds (you can turn it off),
+            and anything sensitive here should not be shared outside the team.
+          </div>
+        </div>
+      )}
+
       <div className="flex items-baseline justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-semibold">Admin Action Logs</h1>
         <div className="text-sm text-gray-600">
-          {lastUpdated ? (
-            <>Last updated: {lastUpdated.toLocaleTimeString()}</>
-          ) : (
-            "—"
-          )}
+          {lastUpdated ? <>Last updated: {lastUpdated.toLocaleTimeString()}</> : "—"}
         </div>
       </div>
 
@@ -271,48 +291,15 @@ export default function AdminLogsPage() {
                 <td className="p-2 whitespace-nowrap">
                   {new Date(row.createdAt).toLocaleString()}
                 </td>
-
-                {/* colored action badge */}
-                <td className="p-2 font-mono">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-semibold ${
-                      row.action.startsWith("USER_DISABLE")
-                        ? "bg-red-100 text-red-700"
-                        : row.action.startsWith("USER_ENABLE")
-                        ? "bg-green-100 text-green-700"
-                        : row.action.startsWith("USER_SET_TRUST")
-                        ? "bg-blue-100 text-blue-700"
-                        : row.action.startsWith("USER_UNFREEZE")
-                        ? "bg-amber-100 text-amber-700"
-                        : row.action.startsWith("USER_ELEVATE")
-                        ? "bg-purple-100 text-purple-700"
-                        : row.action.startsWith("USER_DEMOTE")
-                        ? "bg-gray-200 text-gray-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {row.action}
-                  </span>
-                </td>
-
+                <td className="p-2 font-mono">{row.action}</td>
                 <td className="p-2">
-                  <div className="flex flex-col">
-                    <span>{row.actorEmail || "—"}</span>
-                    <span className="text-xs text-gray-500">
-                      {row.actorId || "—"}
-                    </span>
-                  </div>
+                  {row.actorEmail || "—"}{" "}
+                  <span className="text-xs text-gray-500 block">{row.actorId || "—"}</span>
                 </td>
-
                 <td className="p-2">
-                  <div className="flex flex-col">
-                    <span>{row.targetType}</span>
-                    <span className="text-xs text-gray-500">
-                      {row.targetId || "—"}
-                    </span>
-                  </div>
+                  {row.targetType}{" "}
+                  <span className="text-xs text-gray-500 block">{row.targetId || "—"}</span>
                 </td>
-
                 <td className="p-2">
                   <pre className="max-w-[520px] whitespace-pre-wrap break-words text-xs bg-gray-50 rounded p-2">
                     {row.details ? safeStringify(row.details) : "—"}
