@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CommissionCard } from "@/components/dashboard/CommissionCard";
+import CommissionCard from "@/components/dashboard/CommissionCard";
 
 export default function DashboardPage() {
   // Step 1: first-time welcome
@@ -110,4 +110,5 @@ function StagePill({ label, tone }: { label: string; tone: "amber" | "blue" | "e
 function Arrow() {
   return <span className="text-gray-400">→</span>;
 }
+
 
