@@ -26,7 +26,7 @@ export default function Header() {
               <span className="hidden sm:block text-sm text-gray-600">Hi, {name.split("@")[0]}</span>
               <button
                 className="rounded-md bg-red-500 px-3 py-1.5 text-white text-sm hover:bg-red-600"
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={() => signOut({ callbackUrl: "/" })}
               >
                 Logout
               </button>

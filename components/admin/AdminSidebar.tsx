@@ -22,7 +22,7 @@ export default function AdminSidebar() {
   async function onLogout() {
     try {
       setBusy(true);
-      await signOut({ redirect: true, callbackUrl: "/admin/login" });
+      await signOut({ redirect: true, callbackUrl: "/" });
     } finally {
       setBusy(false);
     }

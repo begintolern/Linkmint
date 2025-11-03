@@ -13,7 +13,7 @@ export default function DashboardLayout({
   const router = useRouter();
 
   async function handleLogout() {
-    await signOut({ redirect: false });
+    await signOut({ callbackUrl: "/" });
     router.push("/logout");
   }
 
