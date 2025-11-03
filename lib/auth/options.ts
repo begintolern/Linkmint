@@ -1,209 +1,67 @@
-// lib/auth/options.ts
-import type { Session } from "next-auth";
-import type { JWT } from "next-auth/jwt";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import EmailProvider from "next-auth/providers/email";
+import { type NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
-import bcrypt from "bcryptjs";
-import { verifyPin } from "@/lib/pin";
+import { compare } from "bcryptjs";
 
-const isProd = process.env.NODE_ENV === "production";
-
-export const authOptions: any = {
-  adapter: PrismaAdapter(prisma),
-
-  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 30 }, // 30 days
-  secret: process.env.NEXTAUTH_SECRET,
-  debug: false,
-  trustHost: true,
-
-  // ✅ Mobile-safe cookies (helps avoid "Unauthorized" on iOS/Safari)
-  cookies: {
-  sessionToken: {
-    name: isProd ? "__Secure-next-auth.session-token" : "next-auth.session-token",
-    options: {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: isProd,
-      // no domain → browser will use current host automatically
-    },
-  },
-},
-
-
+export const authOptions: NextAuthOptions = {
   providers: [
-    EmailProvider({
-      server: process.env.EMAIL_SERVER!,
-      from: process.env.EMAIL_FROM!,
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    }),
-
-    // 🔐 Email & Password Login
     CredentialsProvider({
-      name: "Email & Password",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(creds) {
-        if (!creds?.email || !creds?.password) return null;
-
-        const email = String(creds.email).trim().toLowerCase();
-        const pw = String(creds.password);
-
-        const user = await prisma.user.findFirst({
-          where: { email, deletedAt: null },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            password: true,
-            role: true,
-            emailVerifiedAt: true,
-            referralCode: true,
-            deletedAt: true,
-          },
-        });
-
-        if (!user || !user.password) return null;
-
-        const ok = await bcrypt.compare(pw, user.password);
-        if (!ok) return null;
-
-        if (!user.emailVerifiedAt) {
-          throw new Error("EMAIL_NOT_VERIFIED");
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Missing email or password");
         }
 
-        if (user.deletedAt) return null;
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+        if (!user) throw new Error("User not found");
+
+        const isValid = await compare(credentials.password, user.passwordHash);
+        if (!isValid) throw new Error("Invalid password");
 
         return {
           id: user.id,
-          name: user.name ?? "",
           email: user.email,
-          role: user.role ?? "USER",
-          referralCode: user.referralCode ?? null,
-        } as any;
+          name: user.name,
+          role: user.role,
+        };
       },
     }),
 
-    // 🔢 PIN-based login
-    CredentialsProvider({
-      id: "pin",
-      name: "PIN",
-      credentials: {
-        deviceId: { label: "Device ID", type: "text" },
-        pin: { label: "PIN", type: "password" },
-      },
-      async authorize(creds) {
-        const deviceId = String(creds?.deviceId || "").trim();
-        const pin = String(creds?.pin || "").trim();
-        if (!deviceId || !pin) return null;
-
-        const cred = await prisma.pinCredential.findFirst({
-          where: { deviceId },
-          select: { userId: true, pinHash: true },
-        });
-        if (!cred) return null;
-
-        const ok = await verifyPin(pin, cred.pinHash);
-        if (!ok) return null;
-
-        const user = await prisma.user.findUnique({
-          where: { id: cred.userId },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            referralCode: true,
-            deletedAt: true,
-          },
-        });
-        if (!user || user.deletedAt) return null;
-
-        return {
-          id: user.id,
-          name: user.name ?? "",
-          email: user.email,
-          role: user.role ?? "USER",
-          referralCode: user.referralCode ?? null,
-        } as any;
-      },
+    // Optional: Keep Google for future use
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
   ],
 
   pages: {
     signIn: "/login",
+    newUser: "/dashboard", // ✅ force redirect to dashboard after first login
   },
 
   callbacks: {
-    async signIn({ user }: { user: any }) {
-      if (!user?.id) return false;
-      try {
-        const db = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { deletedAt: true },
-        });
-        if (db?.deletedAt) return false;
-      } catch {
-        return false;
-      }
-      return true;
+    async redirect({ url, baseUrl }) {
+      // ✅ Force all successful logins to go to dashboard
+      if (url.startsWith("/dashboard")) return url;
+      return `${baseUrl}/dashboard`;
     },
-
-    async jwt({ token, user }: { token: JWT; user?: any }): Promise<JWT> {
-      if (user) {
-        token.sub = (user.id ?? token.sub) as string;
-        token.email = (user.email ?? token.email) as string;
-      } else {
-        token.email = token.email ?? (token as any).email;
-      }
-
-      const userId = (user?.id ?? token.sub) as string | undefined;
-      if (userId) {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { referralCode: true, role: true, deletedAt: true },
-          });
-          if (dbUser) {
-            (token as any).referralCode = dbUser.referralCode ?? null;
-            (token as any).role =
-              dbUser.role ?? (token as any).role ?? "USER";
-            (token as any).deletedAt = dbUser.deletedAt ?? null;
-          }
-        } catch {
-          // ignore DB errors
-        }
-      }
-      return token;
-    },
-
-    async session({
-      session,
-      token,
-    }: {
-      session: Session;
-      token: JWT;
-    }): Promise<Session> {
-      if (session?.user) {
-        (session.user as any).id = (token.sub ?? "") as string;
-        (session.user as any).email = (
-          token.email ??
-          session.user.email ??
-          null
-        ) as string | null;
-        (session.user as any).role = ((token as any).role ?? "USER") as string;
-        (session.user as any).referralCode = (
-          (token as any).referralCode ?? null
-        ) as string | null;
-        (session.user as any).disabled = Boolean(
-          (token as any).deletedAt ?? false
-        );
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.sub;
       }
       return session;
     },
   },
+
+  session: {
+    strategy: "jwt",
+  },
+  secret: process.env.NEXTAUTH_SECRET,
 };
