@@ -31,6 +31,7 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside className="w-64 shrink-0 bg-teal-900 text-teal-100 flex flex-col border-r border-teal-800">
         <div className="p-4 text-white font-semibold">Admin</div>
+
         <nav className="px-3 space-y-1">
           <Item href="/admin" label="Overview" />
           <Item href="/admin/commissions" label="Commissions" />
@@ -39,7 +40,10 @@ export default function AdminLayout({
           <Item href="/admin/merchant-rules" label="Merchant Rules" />
           <Item href="/admin/ops" label="Ops & Health" />
           <Item href="/admin/settings" label="Settings" />
-          {/* 🔹 New: AI Policy Pre-Check */}
+          {/* 🔹 Added: Logs + Users */}
+          <Item href="/admin/logs" label="Logs" />
+          <Item href="/admin/users" label="Users" />
+          {/* 🔹 Existing AI Policy Check link */}
           <Item href="/tools/policy-check" label="Policy Pre-Check (AI)" />
         </nav>
 
