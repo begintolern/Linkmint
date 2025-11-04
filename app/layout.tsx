@@ -60,6 +60,31 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* SEO: Organization schema for brand/entity trust */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Linkmint (linkmint.co)",
+              "url": "https://linkmint.co",
+              "logo": "https://linkmint.co/og-image.png",
+              "contactPoint": [
+                {
+                  "@type": "ContactPoint",
+                  "contactType": "customer support",
+                  "email": "admin@linkmint.co",
+                  "areaServed": ["PH", "US"],
+                  "availableLanguage": ["en", "tl"]
+                }
+              ]
+              // Add social profiles later via `sameAs`: ["https://twitter.com/…", "https://www.facebook.com/…"]
+            }),
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
