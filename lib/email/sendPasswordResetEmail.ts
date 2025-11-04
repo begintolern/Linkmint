@@ -19,15 +19,16 @@ function buildTransport() {
 }
 
 export async function sendPasswordResetEmail(to: string, token: string) {
-  // 🔑 build per-request so env is read at runtime
   const transporter = buildTransport();
 
-  const base =
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXTAUTH_URL ||
-    "http://localhost:3000";
+  // ✅ Choose correct base automatically (works in dev + prod)
+  const BASE_URL =
+    process.env.NEXT_PUBLIC_BASE_URL ??
+    process.env.NEXTAUTH_URL ??
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3001");
 
-  const link = `${base.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+  const cleanBase = BASE_URL.replace(/\/$/, ""); // remove trailing slash
+  const link = `${cleanBase}/reset-password?token=${encodeURIComponent(token)}`;
 
   await transporter.sendMail({
     from: `Linkmint <${process.env.EMAIL_FROM!}>`,

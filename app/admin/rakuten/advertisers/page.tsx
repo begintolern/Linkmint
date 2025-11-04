@@ -13,7 +13,13 @@ type Advertiser = {
 };
 
 type ApiResp = {
-  _metadata?: { page?: number; limit?: number; total?: number; _links?: { next?: string | null }; status?: string };
+  _metadata?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    _links?: { next?: string | null };
+    status?: string;
+  };
   advertisers?: Advertiser[];
 };
 
@@ -26,18 +32,14 @@ export default function AdvertisersAdminPage() {
   const [err, setErr] = useState<string | null>(null);
   const [data, setData] = useState<ApiResp | null>(null);
 
+  // Build a RELATIVE url (no origin) so it works in dev/prod and during prerender
   const url = useMemo(() => {
-    const origin =
-      typeof window !== "undefined" && window.location.origin
-        ? window.location.origin
-        : "http://localhost:3000";
-    const u = new URL(origin);
-    u.pathname = "/api/admin/rakuten/advertisers";
-    if (q) u.searchParams.set("q", q);
-    u.searchParams.set("status", status);
-    u.searchParams.set("page", String(page));
-    u.searchParams.set("pageSize", String(pageSize));
-    return u.toString();
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    params.set("status", status);
+    params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
+    return `/api/admin/rakuten/advertisers?${params.toString()}`;
   }, [q, status, page, pageSize]);
 
   async function fetchData() {
