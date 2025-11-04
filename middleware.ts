@@ -1,5 +1,6 @@
 // middleware.ts
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 /**
@@ -43,13 +44,14 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
+    // Check for admin key from cookie or header
     const cookieKey = req.cookies.get(ADMIN_KEY_NAME)?.value;
     const headerKey = req.headers.get("x-admin-key");
     const adminKey = process.env.ADMIN_API_KEY || "";
 
-    const ok = !!adminKey && (cookieKey === adminKey || headerKey === adminKey);
+    const keyValid = !!adminKey && (cookieKey === adminKey || headerKey === adminKey);
 
-    if (!ok) {
+    if (!keyValid) {
       const redirectUrl = url.clone();
       redirectUrl.pathname = "/admin/enter-key";
       redirectUrl.searchParams.set("next", url.pathname);
@@ -57,9 +59,9 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // --- 4️⃣ Dashboard auth guard (unauthenticated → /signup) ---
+  // --- 4️⃣ Dashboard & protected user areas ---
   if (url.pathname.startsWith("/dashboard")) {
-    // Read NextAuth session (JWT) from cookies. Requires NEXTAUTH_SECRET to be set.
+    // Validate JWT session (NextAuth)
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,
@@ -67,12 +69,12 @@ export async function middleware(req: NextRequest) {
 
     if (!token) {
       const redirectUrl = url.clone();
-      redirectUrl.pathname = "/signup"; // change to "/login" if you prefer
-      redirectUrl.search = ""; // clean up querystring
+      redirectUrl.pathname = "/login"; // redirect unauthenticated users
+      redirectUrl.searchParams.set("callbackUrl", url.pathname);
       return NextResponse.redirect(redirectUrl);
     }
   }
 
-  // --- Default pass-through ---
+  // --- 5️⃣ Default pass-through ---
   return NextResponse.next();
 }

@@ -20,18 +20,18 @@ export const authOptions: any = {
 
   // ✅ Mobile-safe cookies (helps avoid "Unauthorized" on iOS/Safari)
   cookies: {
-  sessionToken: {
-    name: isProd ? "__Secure-next-auth.session-token" : "next-auth.session-token",
-    options: {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      secure: isProd,
-      // no domain → browser will use current host automatically
+    sessionToken: {
+      name: isProd
+        ? "__Secure-next-auth.session-token"
+        : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProd,
+      },
     },
   },
-},
-
 
   providers: [
     EmailProvider({
@@ -191,9 +191,7 @@ export const authOptions: any = {
       if (session?.user) {
         (session.user as any).id = (token.sub ?? "") as string;
         (session.user as any).email = (
-          token.email ??
-          session.user.email ??
-          null
+          token.email ?? session.user.email ?? null
         ) as string | null;
         (session.user as any).role = ((token as any).role ?? "USER") as string;
         (session.user as any).referralCode = (
@@ -204,6 +202,24 @@ export const authOptions: any = {
         );
       }
       return session;
+    },
+
+    // ✅ New redirect callback (always send users to /dashboard after login)
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      try {
+        // Allow absolute URLs within same origin
+        if (url.startsWith(baseUrl)) return url;
+
+        // If middleware set a callbackUrl, honor it
+        const u = new URL(url, baseUrl);
+        const callback = u.searchParams.get("callbackUrl");
+        if (callback) return callback;
+
+        // Default fallback: always go to dashboard
+        return `${baseUrl}/dashboard`;
+      } catch {
+        return `${baseUrl}/dashboard`;
+      }
     },
   },
 };
