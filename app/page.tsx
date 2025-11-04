@@ -16,7 +16,6 @@ const ROUTES = {
   dashboard: "/dashboard",
   trustCenterEn: "/trust-center",
   tutorial: "/tutorial",
-  legitimacy: "/trust/legitimacy",
 } as const;
 
 const ASSETS = {
@@ -50,7 +49,6 @@ export default function LandingPage() {
         footer_left: "© " + new Date().getFullYear() + " linkmint.co",
         footer_right: "Built for ethical micro-sales",
         footer_tutorial: "How it Works",
-        footer_legitimacy: "Legit ba ang Linkmint?",
       };
     }
     return {
@@ -75,130 +73,154 @@ export default function LandingPage() {
       footer_left: "© " + new Date().getFullYear() + " linkmint.co",
       footer_right: "Built for ethical micro-sales",
       footer_tutorial: "How it Works",
-      footer_legitimacy: "Is Linkmint legit?",
     };
   }, [lang]);
 
   const trustHref = ROUTES.trustCenterEn;
 
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b bg-white/70 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
-            <span className="inline-block h-6 w-6 rounded-md bg-emerald-500" />
-            <span>linkmint.co</span>
-          </Link>
+    <>
+      {/* SEO: FAQ schema to reinforce legitimacy */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is Linkmint.co legit?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text":
+                    "Yes. Linkmint.co is a verified micro-affiliate platform that uses PayPal for real payouts. It helps users earn small commissions by sharing trusted merchant links. No investment, no MLM, and no deceptive behavior."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How does Linkmint.co work?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text":
+                    "You share smart links. When someone buys through your link, the merchant reports the sale and sends commission to Linkmint. Once cleared, Linkmint pays you via PayPal."
+                }
+              }
+            ]
+          }),
+        }}
+      />
 
-          <div className="flex items-center gap-2">
-            <LangToggle lang={lang} setLang={setLang} />
-            <nav className="hidden items-center gap-4 sm:flex">
-              {/* New: explicit Log in link for returning users */}
-              <Link href={ROUTES.signin} className="text-sm text-gray-700 hover:text-gray-900">
-                {t.nav_login}
-              </Link>
-              <Link href={ROUTES.dashboard} className="text-sm text-gray-700 hover:text-gray-900">
-                {t.nav_dashboard}
+      <main className="min-h-screen bg-white text-gray-900">
+        {/* Header */}
+        <header className="sticky top-0 z-20 border-b bg-white/70 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+            <Link href={ROUTES.home} className="flex items-center gap-2 font-semibold">
+              <span className="inline-block h-6 w-6 rounded-md bg-emerald-500" />
+              <span>linkmint.co</span>
+            </Link>
+
+            <div className="flex items-center gap-2">
+              <LangToggle lang={lang} setLang={setLang} />
+              <nav className="hidden items-center gap-4 sm:flex">
+                <Link href={ROUTES.signin} className="text-sm text-gray-700 hover:text-gray-900">
+                  {t.nav_login}
+                </Link>
+                <Link href={ROUTES.dashboard} className="text-sm text-gray-700 hover:text-gray-900">
+                  {t.nav_dashboard}
+                </Link>
+                <Link
+                  href={ROUTES.tutorial}
+                  className="text-sm text-gray-700 hover:text-emerald-600 hover:underline"
+                >
+                  {t.nav_tutorial}
+                </Link>
+                <Link href={trustHref} className="text-sm text-gray-700 hover:text-gray-900">
+                  {t.nav_trust}
+                </Link>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        {/* Hero Section */}
+        <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pb-16 pt-10 md:grid-cols-2 md:items-center">
+          <div>
+            <h1 className="text-3xl font-bold leading-tight md:text-5xl">{t.hero_title}</h1>
+            <p className="mt-4 max-w-prose text-base text-gray-600 md:text-lg">{t.hero_sub}</p>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link
+                href={ROUTES.signup}
+                className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                {t.cta_primary}
               </Link>
               <Link
-                href={ROUTES.tutorial}
-                className="text-sm text-gray-700 hover:text-emerald-600 hover:underline"
+                href={trustHref}
+                className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
               >
-                {t.nav_tutorial}
+                {t.cta_secondary}
               </Link>
-              <Link href={trustHref} className="text-sm text-gray-700 hover:text-gray-900">
+            </div>
+
+            <p className="mt-3 text-xs text-gray-500">{t.trust_line}</p>
+          </div>
+
+          <div className="flex justify-center">
+            <div className="w-full max-w-[380px] md:max-w-[420px]">
+              <div className="relative aspect-[9/16] overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200">
+                <video
+                  className="h-full w-full object-cover"
+                  playsInline
+                  muted
+                  loop
+                  controls
+                  src={ASSETS.phoneVideo}
+                />
+              </div>
+              <p className="mt-2 text-center text-xs text-gray-500">{t.video_caption}</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t bg-gray-50">
+          <div className="mx-auto max-w-6xl px-4 py-12">
+            <h2 className="text-xl font-semibold md:text-2xl">{t.referral_title}</h2>
+            <ul className="mt-4 list-disc space-y-2 pl-5 text-gray-700">
+              {t.referral_points.map((point, i) => (
+                <li key={i} className="text-base leading-relaxed">
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6">
+              <Link
+                href={ROUTES.signup}
+                className="inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+              >
+                {t.cta_primary}
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <footer className="border-t">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
+            <span>{t.footer_left}</span>
+            <div className="flex items-center gap-4">
+              <Link href={ROUTES.tutorial} className="hover:underline">
+                {t.footer_tutorial}
+              </Link>
+              <Link href={trustHref} className="hover:underline">
                 {t.nav_trust}
               </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-4 pb-16 pt-10 md:grid-cols-2 md:items-center">
-        <div>
-          <h1 className="text-3xl font-bold leading-tight md:text-5xl">{t.hero_title}</h1>
-          <p className="mt-4 max-w-prose text-base text-gray-600 md:text-lg">{t.hero_sub}</p>
-
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link
-              href={ROUTES.signup}
-              className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-            >
-              {t.cta_primary}
-            </Link>
-            <Link
-              href={trustHref}
-              className="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
-            >
-              {t.cta_secondary}
-            </Link>
-          </div>
-
-          <p className="mt-3 text-xs text-gray-500">{t.trust_line}</p>
-        </div>
-
-        {/* Visual */}
-        <div className="flex justify-center">
-          <div className="w-full max-w-[380px] md:max-w-[420px]">
-            <div className="relative aspect-[9/16] overflow-hidden rounded-2xl shadow-xl ring-1 ring-gray-200">
-              <video
-                className="h-full w-full object-cover"
-                playsInline
-                muted
-                loop
-                controls
-                src={ASSETS.phoneVideo}
-              />
+              <span>{t.footer_right}</span>
             </div>
-            <p className="mt-2 text-center text-xs text-gray-500">{t.video_caption}</p>
           </div>
-        </div>
-      </section>
-
-      {/* Referrals */}
-      <section className="border-t bg-gray-50">
-        <div className="mx-auto max-w-6xl px-4 py-12">
-          <h2 className="text-xl font-semibold md:text-2xl">{t.referral_title}</h2>
-          <ul className="mt-4 list-disc space-y-2 pl-5 text-gray-700">
-            {t.referral_points.map((point, i) => (
-              <li key={i} className="text-base leading-relaxed">
-                {point}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-6">
-            <Link
-              href={ROUTES.signup}
-              className="inline-block rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-            >
-              {t.cta_primary}
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 text-sm text-gray-500">
-          <span>{t.footer_left}</span>
-          <div className="flex items-center gap-4">
-            <Link href={ROUTES.tutorial} className="hover:underline">
-              {t.footer_tutorial}
-            </Link>
-            <Link href={trustHref} className="hover:underline">
-              {t.nav_trust}
-            </Link>
-            {/* New: Legitimacy link */}
-            <Link href={ROUTES.legitimacy} className="hover:underline">
-              {t.footer_legitimacy}
-            </Link>
-            <span>{t.footer_right}</span>
-          </div>
-        </div>
-      </footer>
-    </main>
+        </footer>
+      </main>
+    </>
   );
 }
 
