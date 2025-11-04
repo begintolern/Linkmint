@@ -16,6 +16,7 @@ const ROUTES = {
   dashboard: "/dashboard",
   trustCenterEn: "/trust-center",
   tutorial: "/tutorial",
+  legitimacy: "/trust/legitimacy",
 } as const;
 
 const ASSETS = {
@@ -49,6 +50,7 @@ export default function LandingPage() {
         footer_left: "© " + new Date().getFullYear() + " linkmint.co",
         footer_right: "Built for ethical micro-sales",
         footer_tutorial: "How it Works",
+        footer_legitimacy: "Legit ba ang Linkmint?",
       };
     }
     return {
@@ -73,6 +75,7 @@ export default function LandingPage() {
       footer_left: "© " + new Date().getFullYear() + " linkmint.co",
       footer_right: "Built for ethical micro-sales",
       footer_tutorial: "How it Works",
+      footer_legitimacy: "Is Linkmint legit?",
     };
   }, [lang]);
 
@@ -186,6 +189,10 @@ export default function LandingPage() {
             </Link>
             <Link href={trustHref} className="hover:underline">
               {t.nav_trust}
+            </Link>
+            {/* New: Legitimacy link */}
+            <Link href={ROUTES.legitimacy} className="hover:underline">
+              {t.footer_legitimacy}
             </Link>
             <span>{t.footer_right}</span>
           </div>
