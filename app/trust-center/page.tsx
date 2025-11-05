@@ -20,6 +20,18 @@ export default function TrustCenterPage() {
             network sends funds to Linkmint (<i>approved</i>, not pending).
           </p>
         </div>
+
+        {/* PH Transparency Statement */}
+        <div className="rounded-xl bg-white border border-emerald-300/60 p-4 shadow-sm">
+          <p className="text-sm leading-6">
+            <strong>Transparency (PH):</strong> Linkmint operates as a micro-affiliate platform
+            built to help ordinary people earn small but real commissions by sharing verified product
+            links from trusted merchants like <strong>Lazada</strong>, <strong>Shopee</strong>, and <strong>Zalora</strong>.
+            Every peso that appears in your dashboard comes from actual affiliate sales that the merchants
+            approve and send to Linkmint first. <strong>We only pay out what we receive</strong> — nothing hidden,
+            no “investment,” and no get-rich-quick tricks.
+          </p>
+        </div>
       </section>
 
       {/* Quick Links */}
