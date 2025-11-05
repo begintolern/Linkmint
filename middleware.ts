@@ -3,18 +3,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-/**
- * IMPORTANT:
- * - Do NOT run middleware on NextAuth endpoints, otherwise the auth callback
- *   may not set the session cookie.
- * - Also skip Next.js internals and static assets.
- */
 export const config = {
   matcher: [
-    // Run on everything EXCEPT the following:
-    // - /api/auth/* (NextAuth)
-    // - /_next/* and static assets
-    // - /favicon.ico, /robots.txt, /sitemap.xml
     "/((?!api/auth|_next|_static|_vercel|favicon\\.ico|robots\\.txt|sitemap\\.xml|images|public).*)",
   ],
 };
@@ -25,32 +15,54 @@ const ADMIN_KEY_NAME = "admin_key";
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
 
-  // --- 1️⃣ Force HTTPS on Railway ---
+  // 0) Allow admin key via query (auto-set cookie then redirect cleanly)
+  if (url.pathname.startsWith("/admin/enter-key")) {
+    const qsKey = url.searchParams.get("key");
+    if (qsKey) {
+      const nextPath = url.searchParams.get("next") || "/admin";
+      const redirectUrl = url.clone();
+      redirectUrl.pathname = nextPath;
+      redirectUrl.search = "";
+
+      const res = NextResponse.redirect(redirectUrl, { status: 303 });
+      res.cookies.set(ADMIN_KEY_NAME, qsKey, {
+        path: "/",
+        httpOnly: false,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+      return res;
+    }
+  }
+
+  // 1) Force HTTPS on Railway
   if (process.env.NODE_ENV === "production" && url.protocol === "http:") {
     url.protocol = "https:";
     return NextResponse.redirect(url, { status: 308 });
   }
 
-  // --- 2️⃣ Canonical redirect: remove www ---
+  // 2) Canonical redirect
   if (url.hostname === "www.linkmint.co") {
     url.hostname = "linkmint.co";
     return NextResponse.redirect(url, { status: 308 });
   }
 
-  // --- 3️⃣ Admin area protection ---
+  // 3) Admin gate (normalize keys to avoid CR/LF/space issues)
   if (url.pathname.startsWith(ADMIN_PATH_PREFIX)) {
-    // Allow access to the key-entry page itself
     if (url.pathname.startsWith("/admin/enter-key")) {
       return NextResponse.next();
     }
 
-    // Check for admin key from cookie or header
-    const cookieKey = req.cookies.get(ADMIN_KEY_NAME)?.value;
-    const headerKey = req.headers.get("x-admin-key");
-    const adminKey = process.env.ADMIN_API_KEY || "";
+    const rawCookieKey = req.cookies.get(ADMIN_KEY_NAME)?.value ?? "";
+    const rawHeaderKey = req.headers.get("x-admin-key") ?? "";
+    const rawEnvKey = process.env.ADMIN_API_KEY ?? "";
+
+    const cookieKey = rawCookieKey.trim();
+    const headerKey = rawHeaderKey.trim();
+    const adminKey = rawEnvKey.trim();
 
     const keyValid = !!adminKey && (cookieKey === adminKey || headerKey === adminKey);
-
     if (!keyValid) {
       const redirectUrl = url.clone();
       redirectUrl.pathname = "/admin/enter-key";
@@ -59,9 +71,8 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // --- 4️⃣ Dashboard & protected user areas ---
+  // 4) Dashboard auth
   if (url.pathname.startsWith("/dashboard")) {
-    // Validate JWT session (NextAuth)
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,
@@ -69,12 +80,12 @@ export async function middleware(req: NextRequest) {
 
     if (!token) {
       const redirectUrl = url.clone();
-      redirectUrl.pathname = "/login"; // redirect unauthenticated users
+      redirectUrl.pathname = "/login";
       redirectUrl.searchParams.set("callbackUrl", url.pathname);
       return NextResponse.redirect(redirectUrl);
     }
   }
 
-  // --- 5️⃣ Default pass-through ---
+  // 5) Default
   return NextResponse.next();
 }
