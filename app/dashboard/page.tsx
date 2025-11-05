@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth/options";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
 import Link from "next/link";
+import PayoutNotice from "./_components/PayoutNotice";
 
 type AppUser = {
   id?: string;
@@ -26,26 +27,74 @@ export default async function DashboardPage() {
   const name = user?.email ? user.email.split("@")[0] : user?.name ?? "there";
 
   const tiles = [
-    { href: "/dashboard/create-link", title: "Create Smart Link",         subtitle: "Generate a tracked, compliant link", tone: "emerald" },
-    { href: "/dashboard/links",       title: "Manage Links (Advanced)",   subtitle: "View history, refresh, clear, bulk actions", tone: "indigo"  },
-    { href: "/dashboard/merchants",   title: "Explore Merchants",         subtitle: "Policies, payouts, rules",          tone: "blue"    },
-    { href: "/dashboard/merchants/ai",title: "AI Suggestions (beta)",     subtitle: "Heuristic trending offers",         tone: "purple"  },
-    { href: "/dashboard/earnings",    title: "Earnings",                  subtitle: "Commissions & performance",         tone: "yellow"  },
-    { href: "/dashboard/payouts",     title: "Payouts",                   subtitle: "History & accounts",                tone: "rose"    },
-    { href: "/dashboard/referrals",   title: "Referrals",                 subtitle: "Invite friends · 5% bonus",         tone: "green"   },
-    { href: "/dashboard/settings",    title: "Settings",                  subtitle: "Manage your account",               tone: "emerald" },
+    {
+      href: "/dashboard/create-link",
+      title: "Create Smart Link",
+      subtitle: "Generate a tracked, compliant link",
+      tone: "emerald",
+    },
+    {
+      href: "/dashboard/links",
+      title: "Manage Links (Advanced)",
+      subtitle: "View history, refresh, clear, bulk actions",
+      tone: "indigo",
+    },
+    {
+      href: "/dashboard/merchants",
+      title: "Explore Merchants",
+      subtitle: "Policies, payouts, rules",
+      tone: "blue",
+    },
+    {
+      href: "/dashboard/merchants/ai",
+      title: "AI Suggestions (beta)",
+      subtitle: "Heuristic trending offers",
+      tone: "purple",
+    },
+    {
+      href: "/dashboard/earnings",
+      title: "Earnings",
+      subtitle: "Commissions & performance",
+      tone: "yellow",
+    },
+    {
+      href: "/dashboard/payouts",
+      title: "Payouts",
+      subtitle: "History & accounts",
+      tone: "rose",
+    },
+    {
+      href: "/dashboard/referrals",
+      title: "Referrals",
+      subtitle: "Invite friends · 5% bonus",
+      tone: "green",
+    },
+    {
+      href: "/dashboard/settings",
+      title: "Settings",
+      subtitle: "Manage your account",
+      tone: "emerald",
+    },
   ] as const;
 
   const toneClass = (tone: string) => {
     switch (tone) {
-      case "emerald": return "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700";
-      case "blue":    return "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700";
-      case "purple":  return "bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700";
-      case "yellow":  return "bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700";
-      case "rose":    return "bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700";
-      case "indigo":  return "bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700";
-      case "green":   return "bg-green-50 hover:bg-green-100 border-green-200 text-green-700";
-      default:        return "bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-800";
+      case "emerald":
+        return "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700";
+      case "blue":
+        return "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700";
+      case "purple":
+        return "bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700";
+      case "yellow":
+        return "bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700";
+      case "rose":
+        return "bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700";
+      case "indigo":
+        return "bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700";
+      case "green":
+        return "bg-green-50 hover:bg-green-100 border-green-200 text-green-700";
+      default:
+        return "bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-800";
     }
   };
 
@@ -56,12 +105,17 @@ export default async function DashboardPage() {
         subtitle={`Welcome back, ${name}! Manage your links, merchants, and payouts.`}
       />
 
+      {/* 🇵🇭 PH payout update notice */}
+      <PayoutNotice />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tiles.map(t => (
+        {tiles.map((t) => (
           <Link
             key={t.href}
             href={t.href}
-            className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-black/10 ${toneClass(t.tone)}`}
+            className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-black/10 ${toneClass(
+              t.tone
+            )}`}
           >
             <h3 className="text-base font-semibold">{t.title}</h3>
             <p className="mt-1 text-sm opacity-80">{t.subtitle}</p>
