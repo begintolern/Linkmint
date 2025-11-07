@@ -1,9 +1,9 @@
-// app/dashboard/payouts/page.tsx
+// app/dev/payouts/[userId]/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-import React from "react";
+// DEV VIEWER: no auth. Uses the existing summary API with ?devUserId=...
 
 type SummaryResp = {
   ok: boolean;
@@ -43,33 +43,12 @@ function fmt(iso?: string | null) {
   }
 }
 
-async function loadSummary(): Promise<SummaryResp> {
+async function loadSummary(userId: string): Promise<SummaryResp> {
   const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
-  const res = await fetch(`${base}/api/user/payouts/summary`, {
-    method: "GET",
-    cache: "no-store",
-    headers: { "Accept": "application/json" },
-  });
-
-  // If not authed in browser, try dev bypass if enabled
-  if (res.status === 401) {
-    const allowDev =
-      process.env.ALLOW_DEV_PAYOUTS_REQUEST === "1" ||
-      process.env.ALLOW_DEV_PAYOUTS_REQUEST_BYPASS === "1";
-    const devId = process.env.DEV_USER_ID;
-    if (allowDev && devId) {
-      const devRes = await fetch(
-        `${base}/api/user/payouts/summary?devUserId=${encodeURIComponent(devId)}`,
-        { cache: "no-store" }
-      );
-      if (!devRes.ok) {
-        const text = await devRes.text().catch(() => "");
-        return { ok: false, error: `Dev-bypass failed (${devRes.status}): ${text}` };
-      }
-      return (await devRes.json()) as SummaryResp;
-    }
-  }
-
+  const res = await fetch(
+    `${base}/api/user/payouts/summary?devUserId=${encodeURIComponent(userId)}`,
+    { cache: "no-store", headers: { Accept: "application/json" } }
+  );
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     return { ok: false, error: `Fetch failed (${res.status}): ${text}` };
@@ -77,36 +56,34 @@ async function loadSummary(): Promise<SummaryResp> {
   return (await res.json()) as SummaryResp;
 }
 
-export default async function PayoutsSummaryPage() {
-  const data = await loadSummary();
+export default async function DevPayoutsViewer({
+  params,
+}: { params: { userId: string } }) {
+  const userId = params.userId;
+  const data = await loadSummary(userId);
 
   return (
     <main className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-5xl space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Your Payouts</h1>
-          <a
-            href="/dashboard"
-            className="rounded-md border px-3 py-1 text-sm hover:bg-gray-100"
-          >
-            ← Back to Dashboard
+          <h1 className="text-2xl font-semibold">Dev Payouts Viewer</h1>
+          <a href="/admin/payouts" className="rounded-md border px-3 py-1 text-sm hover:bg-gray-100">
+            ← Back to Admin Payouts
           </a>
         </div>
 
         {!data.ok ? (
           <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-red-800">
             <div className="font-medium mb-1">Unable to load payouts.</div>
-            <div className="text-sm">
-              {data.error || "Please log in and try again."}
-            </div>
+            <div className="text-sm">{data.error || "Unknown error."}</div>
           </div>
         ) : (
           <>
             {/* User header */}
             <div className="rounded-xl border bg-white p-4 shadow-sm">
-              <div className="text-xs text-gray-500">Signed in as</div>
+              <div className="text-xs text-gray-500">User</div>
               <div className="text-lg font-medium">
-                {data.user?.email || data.user?.id}
+                {data.user?.email || data.user?.id || userId}
               </div>
             </div>
 
@@ -173,24 +150,6 @@ export default async function PayoutsSummaryPage() {
                   )}
                 </tbody>
               </table>
-            </div>
-
-            {/* CTA row */}
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href="/dashboard/earnings"
-                className="rounded-md border px-3 py-2 text-sm hover:bg-gray-100"
-                title="View commission earnings"
-              >
-                View Earnings
-              </a>
-              <a
-                href="/dashboard" // replace later when we add a user payout request form
-                className="rounded-md border px-3 py-2 text-sm hover:bg-gray-100"
-                title="Request a payout"
-              >
-                Request Payout (soon)
-              </a>
             </div>
           </>
         )}

@@ -135,9 +135,9 @@ export const authOptions: any = {
   ],
 
   pages: {
-    signIn: "/login",
-  },
-
+  signIn: "/login",
+  signOut: "/", // redirect to landing page after logout
+},
   callbacks: {
     async signIn({ user }: { user: any }) {
       if (!user?.id) return false;

@@ -1,312 +1,408 @@
-"use client";
-
+// app/admin/payouts/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
-import { useEffect, useMemo, useState } from "react";
+import React from "react";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
-type Payout = {
+/** ---- Helpers ---- */
+function fmt(iso?: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso ?? "—";
+  }
+}
+
+type Row = {
   id: string;
   userId: string;
-  userEmail?: string;
   amountPhp: number;
   method: string;
-  status: "PENDING" | "PROCESSING" | "PAID" | string;
-  requestedAt: string;
-  processedAt?: string;
-  gcashNumber?: string;
-  bankName?: string;
-  bankAccountNumber?: string;
-  processorNote?: string;
+  provider: string;
+  status: "PENDING" | "PROCESSING" | "PAID" | "FAILED" | string;
+  requestedAt?: string | null;
+  processedAt?: string | null;
+  processorNote?: string | null;
+  gcashNumber?: string | null;
+  bankName?: string | null;
+  bankAccountNumber?: string | null;
+  user?: { email?: string | null };
 };
 
-export default function AdminPayoutsPage() {
-  const [payouts, setPayouts] = useState<Payout[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "PROCESSING" | "PAID">("ALL");
-  const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: "", to: "" });
-  const [csvDownloading, setCsvDownloading] = useState(false);
-  const [selected, setSelected] = useState<Payout | null>(null);
+async function listPayoutRequests(status?: "PENDING" | "PROCESSING" | "PAID" | "FAILED" | "ALL") {
+  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
+  const url = new URL("/api/admin/payout-requests/list", base);
+  url.searchParams.set("take", "100");
+  if (status && status !== "ALL") url.searchParams.set("status", status);
 
-  // Build the list API URL (relative, SSR-safe)
-  const listUrl = useMemo(() => {
-    const params = new URLSearchParams();
-    if (statusFilter !== "ALL") params.set("status", statusFilter);
-    if (dateRange.from) params.set("from", dateRange.from);
-    if (dateRange.to) params.set("to", dateRange.to);
-    const qs = params.toString();
-    return `/api/admin/payouts/requests/list${qs ? `?${qs}` : ""}`;
-  }, [statusFilter, dateRange]);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "x-admin-key": process.env.ADMIN_API_KEY || "" },
+    cache: "no-store",
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch(listUrl, { cache: "no-store" });
-        const data = await res.json();
-        if (!cancelled && data?.ok && Array.isArray(data.items)) {
-          setPayouts(data.items as Payout[]);
-        }
-      } catch (err) {
-        console.error("Failed to load payouts", err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [listUrl]);
-
-  async function markPaid(id: string) {
-    if (!window.confirm("Mark this payout as PAID?")) return;
-    const res = await fetch("/api/admin/payouts/mark-paid", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    const data = await res.json();
-    if (data?.ok) {
-      setPayouts((prev) => prev.map((p) => (p.id === id ? { ...p, status: "PAID", processedAt: new Date().toISOString() } : p)));
-    } else {
-      alert("Failed: " + (data?.error || "Unknown error"));
-    }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`List failed (${res.status}): ${text}`);
   }
 
-  async function markProcessing(id: string) {
-    const res = await fetch("/api/admin/payouts/mark-processing", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    const data = await res.json();
-    if (data?.ok) {
-      setPayouts((prev) => prev.map((p) => (p.id === id ? { ...p, status: "PROCESSING" } : p)));
-    } else {
-      alert("Failed: " + (data?.error || "Unknown error"));
-    }
+  const data = (await res.json()) as { ok: boolean; total: number; rows: Row[] };
+  if (!data?.ok) throw new Error("List response not ok");
+  return data;
+}
+
+/** ---- Server actions ---- */
+async function approveAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id") || "");
+  const note = String(formData.get("note") || "Approved");
+  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
+
+  const res = await fetch(`${base}/api/admin/payout-requests/approve`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-key": process.env.ADMIN_API_KEY || "",
+    },
+    body: JSON.stringify({ id, note }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Approve failed (${res.status}): ${t}`);
   }
 
-  async function exportCsv() {
-    setCsvDownloading(true);
-    try {
-      const res = await fetch(listUrl + (listUrl.includes("?") ? "&" : "?") + "format=csv", { cache: "no-store" });
-      if (!res.ok) throw new Error("CSV request failed");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "payouts.csv";
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("CSV export failed", err);
-      alert("CSV export failed.");
-    } finally {
-      setCsvDownloading(false);
-    }
+  revalidatePath("/admin/payouts");
+}
+
+async function denyAction(formData: FormData) {
+  "use server";
+  const id = String(formData.get("id") || "");
+  const note = String(formData.get("note") || "Denied");
+  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
+
+  const res = await fetch(`${base}/api/admin/payout-requests/deny`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-key": process.env.ADMIN_API_KEY || "",
+    },
+    body: JSON.stringify({ id, note }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Deny failed (${res.status}): ${t}`);
   }
 
-  const fmt = (iso?: string) =>
-    iso ? new Date(iso).toLocaleString(undefined, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-";
+  revalidatePath("/admin/payouts");
+}
+
+/** Create a manual batch for all current PROCESSING payout requests */
+async function createBatchForProcessing() {
+  "use server";
+  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
+  const adminKey = process.env.ADMIN_API_KEY || "";
+
+  // 1) Load PROCESSING requests
+  const listUrl = new URL("/api/admin/payout-requests/list", base);
+  listUrl.searchParams.set("status", "PROCESSING");
+  listUrl.searchParams.set("take", "200");
+  const listRes = await fetch(listUrl.toString(), {
+    method: "GET",
+    headers: { "x-admin-key": adminKey },
+    cache: "no-store",
+  });
+  if (!listRes.ok) {
+    const t = await listRes.text().catch(() => "");
+    throw new Error(`Fetch PROCESSING list failed (${listRes.status}): ${t}`);
+  }
+  const listJson = (await listRes.json()) as { ok: boolean; rows: Row[] };
+  if (!listJson?.ok) throw new Error("PROCESSING list not ok");
+
+  const ids = (listJson.rows || []).map((r) => r.id);
+  if (ids.length === 0) {
+    revalidatePath("/admin/payouts");
+    return;
+  }
+
+  // 2) Create batch
+  const createRes = await fetch(`${base}/api/admin/payouts/batch/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-key": adminKey,
+    },
+    body: JSON.stringify({
+      ids,
+      note: "Manual batch from admin page",
+    }),
+    cache: "no-store",
+  });
+
+  if (!createRes.ok) {
+    const t = await createRes.text().catch(() => "");
+    throw new Error(`Batch create failed (${createRes.status}): ${t}`);
+  }
+  const createJson = (await createRes.json()) as { ok: boolean; batchId?: string };
+  const batchId = createJson?.batchId || "";
+
+  redirect(`/admin/payouts?batch=${encodeURIComponent(batchId)}`);
+}
+
+/** Mark a given batch PAID, mapping all current PROCESSING requests */
+async function markBatchPaidAction(formData: FormData) {
+  "use server";
+  const batchId = String(formData.get("batchId") || "");
+  if (!batchId) throw new Error("Missing batchId");
+  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
+  const adminKey = process.env.ADMIN_API_KEY || "";
+
+  // Collect all PROCESSING requests (assumes they’re the ones just batched)
+  const listUrl = new URL("/api/admin/payout-requests/list", base);
+  listUrl.searchParams.set("status", "PROCESSING");
+  listUrl.searchParams.set("take", "500");
+  const listRes = await fetch(listUrl.toString(), {
+    method: "GET",
+    headers: { "x-admin-key": adminKey },
+    cache: "no-store",
+  });
+  if (!listRes.ok) {
+    const t = await listRes.text().catch(() => "");
+    throw new Error(`Fetch PROCESSING list failed (${listRes.status}): ${t}`);
+  }
+  const listJson = (await listRes.json()) as { ok: boolean; rows: Row[] };
+  if (!listJson?.ok) throw new Error("PROCESSING list not ok");
+
+  const requestIds = (listJson.rows || []).map((r) => r.id);
+  if (requestIds.length === 0) {
+    revalidatePath("/admin/payouts");
+    return;
+  }
+
+  // Mark batch paid
+  const paidRes = await fetch(`${base}/api/admin/payouts/batch/mark-paid`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-key": adminKey,
+    },
+    body: JSON.stringify({
+      batchId,
+      requestIds,
+      note: "Paid via admin page",
+    }),
+    cache: "no-store",
+  });
+
+  if (!paidRes.ok) {
+    const t = await paidRes.text().catch(() => "");
+    throw new Error(`Mark-paid failed (${paidRes.status}): ${t}`);
+  }
+
+  redirect(`/admin/payouts?paid=${encodeURIComponent(batchId)}`);
+}
+
+/** ---- Page ---- */
+export default async function AdminPayoutsPage({
+  searchParams,
+}: {
+  searchParams?: { status?: "PENDING" | "PROCESSING" | "PAID" | "FAILED" | "ALL"; batch?: string; paid?: string };
+}) {
+  const status = searchParams?.status || "ALL";
+  const createdBatchId = searchParams?.batch;
+  const paidBatchId = searchParams?.paid;
+  const data = await listPayoutRequests(status);
+  const rows = data.rows || [];
+
+  // CSV href builder honoring current status
+  const csvHref =
+    status && status !== "ALL" ? `/admin/payouts/csv?status=${encodeURIComponent(status)}` : "/admin/payouts/csv";
 
   return (
-    <main className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Admin Payouts</h1>
-        <button
-          onClick={exportCsv}
-          disabled={csvDownloading}
-          className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
-        >
-          {csvDownloading ? "Exporting…" : "Export CSV"}
-        </button>
-      </div>
-
-      {/* Status filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {(["ALL", "PENDING", "PROCESSING", "PAID"] as const).map((st) => (
-          <button
-            key={st}
-            onClick={() => setStatusFilter(st)}
-            className={`rounded-lg border px-3 py-1 text-sm ${
-              statusFilter === st ? "bg-black text-white border-black" : "hover:bg-gray-50"
-            }`}
-            aria-pressed={statusFilter === st}
-          >
-            {st}
-          </button>
-        ))}
-      </div>
-
-      {/* Date range */}
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="date"
-          value={dateRange.from}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateRange((r) => ({ ...r, from: e.target.value }))}
-          className="rounded-lg border px-3 py-2 text-sm"
-          aria-label="From date"
-        />
-        <span>to</span>
-        <input
-          type="date"
-          value={dateRange.to}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateRange((r) => ({ ...r, to: e.target.value }))}
-          className="rounded-lg border px-3 py-2 text-sm"
-          aria-label="To date"
-        />
-        <button
-          onClick={() => setDateRange({ from: "", to: "" })}
-          className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
-        >
-          Clear
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto border rounded-xl">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-3 py-2 text-left">User Email</th>
-              <th className="px-3 py-2 text-left">Amount (₱)</th>
-              <th className="px-3 py-2 text-left">Method</th>
-              <th className="px-3 py-2 text-left">Status</th>
-              <th className="px-3 py-2 text-left">Requested</th>
-              <th className="px-3 py-2 text-left">Processed</th>
-              <th className="px-3 py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="p-4 text-center">
-                  Loading…
-                </td>
-              </tr>
-            ) : payouts.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="p-4 text-center text-gray-500">
-                  No payouts found.
-                </td>
-              </tr>
-            ) : (
-              payouts.map((p) => (
-                <tr key={p.id} className="border-t hover:bg-gray-50">
-                  <td className="px-3 py-2">{p.userEmail || p.userId}</td>
-                  <td className="px-3 py-2">₱{p.amountPhp}</td>
-                  <td className="px-3 py-2">{p.method}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        p.status === "PAID"
-                          ? "bg-green-100 text-green-700"
-                          : p.status === "PROCESSING"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : p.status === "PENDING"
-                          ? "bg-gray-100 text-gray-700"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {p.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2">{fmt(p.requestedAt)}</td>
-                  <td className="px-3 py-2">{fmt(p.processedAt)}</td>
-                  <td className="px-3 py-2 space-x-2">
-                    {p.status === "PENDING" && (
-                      <>
-                        <button
-                          onClick={() => markProcessing(p.id)}
-                          className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                        >
-                          Mark Processing
-                        </button>
-                        <button
-                          onClick={() => markPaid(p.id)}
-                          className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                        >
-                          Mark Paid
-                        </button>
-                      </>
-                    )}
-                    {p.status === "PROCESSING" && (
-                      <button
-                        onClick={() => markPaid(p.id)}
-                        className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                      >
-                        Complete Paid
-                      </button>
-                    )}
-                    {p.status === "PAID" && (
-                      <button
-                        onClick={() => setSelected(p)}
-                        className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                      >
-                        Details
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Details modal */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <h2 className="mb-3 text-lg font-semibold">Payout Details</h2>
-            <div className="space-y-1 text-sm">
-              <p>
-                <strong>User:</strong> {selected.userEmail || selected.userId}
-              </p>
-              <p>
-                <strong>Amount:</strong> ₱{selected.amountPhp}
-              </p>
-              <p>
-                <strong>Method:</strong> {selected.method}
-              </p>
-              {selected.gcashNumber && (
-                <p>
-                  <strong>GCash:</strong> {selected.gcashNumber}
-                </p>
-              )}
-              {selected.bankName && (
-                <p>
-                  <strong>Bank:</strong> {selected.bankName} ({selected.bankAccountNumber || "—"})
-                </p>
-              )}
-              {selected.processorNote && (
-                <p>
-                  <strong>Note:</strong> {selected.processorNote}
-                </p>
-              )}
-              <p>
-                <strong>Requested:</strong> {fmt(selected.requestedAt)}
-              </p>
-              <p>
-                <strong>Processed:</strong> {fmt(selected.processedAt)}
-              </p>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                onClick={() => setSelected(null)}
-                className="rounded-md border px-3 py-1 text-sm hover:bg-gray-50"
+    <main className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">Payout Requests</h1>
+          <div className="flex items-center gap-2 text-sm">
+            {(["ALL", "PENDING", "PROCESSING", "PAID", "FAILED"] as const).map((s) => (
+              <a
+                key={s}
+                href={s === "ALL" ? "/admin/payouts" : `/admin/payouts?status=${s}`}
+                className={`rounded-md border px-3 py-1 ${
+                  status === s || (!searchParams?.status && s === "ALL")
+                    ? "bg-black text-white border-black"
+                    : "hover:bg-gray-100"
+                }`}
               >
-                Close
-              </button>
-            </div>
+                {s}
+              </a>
+            ))}
+            {/* Export CSV for current status */}
+            <a
+              href={csvHref}
+              className="rounded-md border px-3 py-1 hover:bg-gray-100"
+              title="Export current list as CSV"
+            >
+              Export CSV
+            </a>
           </div>
         </div>
-      )}
+
+        {/* Success banners */}
+        {createdBatchId ? (
+          <div className="mb-3 rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+            Manual batch created: <span className="font-mono">{createdBatchId}</span>
+          </div>
+        ) : null}
+        {paidBatchId ? (
+          <div className="mb-3 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
+            Batch marked PAID: <span className="font-mono">{paidBatchId}</span>
+          </div>
+        ) : null}
+
+        {/* Batch controls */}
+        <div className="mb-4 flex items-center gap-2">
+          <form action={createBatchForProcessing}>
+            <button
+              className="rounded-md border px-4 py-2 text-sm hover:bg-gray-100"
+              title="Create a single manual batch for all currently PROCESSING payout requests"
+            >
+              Create Manual Batch (PROCESSING)
+            </button>
+          </form>
+
+          {createdBatchId ? (
+            <form action={markBatchPaidAction}>
+              <input type="hidden" name="batchId" value={createdBatchId} />
+              <button
+                className="rounded-md border px-4 py-2 text-sm hover:bg-gray-100"
+                title="Mark this batch as PAID and close all PROCESSING payout requests"
+              >
+                Mark This Batch Paid
+              </button>
+            </form>
+          ) : null}
+        </div>
+
+        <div className="text-sm text-gray-600 mb-3">
+          Total: {data?.total ?? 0} • Showing {rows.length}
+        </div>
+
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-100 text-gray-700">
+              <tr>
+                <th className="px-3 py-2 text-left">ID</th>
+                <th className="px-3 py-2 text-left">User / Email</th>
+                <th className="px-3 py-2 text-left">Amount (₱)</th>
+                <th className="px-3 py-2 text-left">Method</th>
+                <th className="px-3 py-2 text-left">Provider</th>
+                <th className="px-3 py-2 text-left">Requested / Processed</th>
+                <th className="px-3 py-2 text-left">Status</th>
+                <th className="px-3 py-2 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-3 py-4 text-gray-500 text-center">
+                    No payout requests found.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((r) => (
+                  <tr key={r.id} className="border-t border-gray-100">
+                    <td className="px-3 py-2 font-mono text-[12px]">{r.id}</td>
+                    <td className="px-3 py-2">
+                      <div className="font-medium">{r.user?.email || r.userId}</div>
+                      <div className="text-xs text-gray-500">{r.userId}</div>
+                    </td>
+                    <td className="px-3 py-2">₱{r.amountPhp}</td>
+                    <td className="px-3 py-2">{r.method}</td>
+                    <td className="px-3 py-2">{r.provider}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-col text-xs">
+                        <span>Req: {fmt(r.requestedAt)}</span>
+                        <span>Proc: {fmt(r.processedAt)}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">
+                        {r.status}
+                      </span>
+                    </td>
+
+                    {/* ---- ACTIONS ---- */}
+                    <td className="px-3 py-2">
+                      {r.status !== "PAID" ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Mark Processing */}
+                          <form action={approveAction}>
+                            <input type="hidden" name="id" value={r.id} />
+                            <input type="hidden" name="note" value="Approved for batch." />
+                            <button
+                              className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                              formAction={approveAction}
+                            >
+                              Mark Processing
+                            </button>
+                          </form>
+
+                          {/* Deny */}
+                          <form action={denyAction}>
+                            <input type="hidden" name="id" value={r.id} />
+                            <input type="hidden" name="note" value="Denied by admin." />
+                            <button
+                              className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                              formAction={denyAction}
+                            >
+                              Deny
+                            </button>
+                          </form>
+
+                          {/* Ledger link */}
+                          <a
+                            href={`/admin/payouts/ledger/${r.userId}`}
+                            className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                            title="Open per-user payout ledger"
+                          >
+                            Ledger
+                          </a>
+                        </div>
+                      ) : (
+                        <a
+                          href={`/admin/payouts/ledger/${r.userId}`}
+                          className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                          title="Open per-user payout ledger"
+                        >
+                          Ledger
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-xs text-gray-400 mt-3">
+          Secure: Admin API key is only sent from the server via server actions.
+        </p>
+      </div>
     </main>
   );
 }

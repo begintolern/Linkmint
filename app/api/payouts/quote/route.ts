@@ -1,46 +1,117 @@
 // app/api/payouts/quote/route.ts
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
-import { quoteFeeCents } from "@/lib/payouts/fees";
 
-// Local provider type (since Prisma doesn't export it in your schema)
-type PayoutProvider = "PAYPAL" | "PAYONEER";
+type Method = "GCASH" | "BANK";
+type Provider = "PAYPAL" | "PAYONEER" | "MANUAL" | "XENDIT" | "PAYMONGO" | "WISE" | "GCASHBIZ";
 
-type QuoteBody = {
-  amountCents?: number;
-  provider?: string; // validated and narrowed below
-};
+// --- Dev-only auth fallback ----
+async function getDevUserId(req: Request): Promise<string | undefined> {
+  if (process.env.ALLOW_DEV_PAYOUTS_QUOTE !== "1") return undefined;
 
-// Keep session typing consistent with other routes
-type MaybeSession = { user?: { id?: string | null } } | null;
+  // 1) Header
+  const h =
+    req.headers.get("x-linkmint-dev-user") ??
+    req.headers.get("x-dev-user-id");
+  if (h && h.trim()) return h.trim();
+
+  // 2) Body
+  try {
+    const body = await req.clone().json().catch(() => ({} as any));
+    if (typeof body?.devUserId === "string" && body.devUserId.trim()) {
+      return body.devUserId.trim();
+    }
+  } catch {
+    // ignore
+  }
+
+  // 3) Query param
+  try {
+    const url = new URL(req.url);
+    const qp = url.searchParams.get("devUserId");
+    if (qp && qp.trim()) return qp.trim();
+  } catch {
+    // ignore
+  }
+
+  // 4) .env fixed
+  const envId = process.env.DEV_USER_ID;
+  if (envId && envId.trim()) return envId.trim();
+
+  return undefined;
+}
+
+function pickDefaults(method: Method) {
+  const globalBps = Number(process.env.PAYOUT_FEE_BPS);
+  const globalFixed = Number(process.env.PAYOUT_FEE_FIXED_PHP);
+
+  if (method === "GCASH") {
+    const bps = Number(process.env.PAYOUT_FEE_GCASH_BPS);
+    const fixed = Number(process.env.PAYOUT_FEE_GCASH_FIXED);
+    return {
+      percentBps: Number.isFinite(bps) ? bps : Number.isFinite(globalBps) ? globalBps : 250, // 2.50%
+      fixedPhp: Number.isFinite(fixed) ? fixed : Number.isFinite(globalFixed) ? globalFixed : 15, // ₱15
+      provider: "GCASHBIZ" as Provider,
+    };
+  }
+
+  const bps = Number(process.env.PAYOUT_FEE_BANK_BPS);
+  const fixed = Number(process.env.PAYOUT_FEE_BANK_FIXED);
+  return {
+    percentBps: Number.isFinite(bps) ? bps : Number.isFinite(globalBps) ? globalBps : 300, // 3.00%
+    fixedPhp: Number.isFinite(fixed) ? fixed : Number.isFinite(globalFixed) ? globalFixed : 25, // ₱25
+    provider: "MANUAL" as Provider,
+  };
+}
 
 export async function POST(req: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as MaybeSession;
-    if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    // Require auth; allow dev bypass if enabled
+    const session = await getServerSession(authOptions);
+    let userId = (session as any)?.user?.id as string | undefined;
+    if (!userId) userId = await getDevUserId(req);
+    if (!userId) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { amountCents, provider } = (await req.json().catch(() => ({}))) as QuoteBody;
+    const body = await req.json().catch(() => ({}));
+    const amountPhp = Number(body?.amountPhp);
+    const methodRaw = String(body?.method || "").toUpperCase();
+    const explicitProvider = (body?.provider as Provider | undefined) ?? undefined;
 
-    if (!amountCents || amountCents <= 0) {
-      return NextResponse.json({ success: false, error: "Invalid amount" }, { status: 400 });
+    if (!Number.isInteger(amountPhp) || amountPhp <= 0) {
+      return NextResponse.json(
+        { ok: false, error: "amountPhp must be a positive integer (whole pesos)." },
+        { status: 400 }
+      );
+    }
+    if (methodRaw !== "GCASH" && methodRaw !== "BANK") {
+      return NextResponse.json({ ok: false, error: "method must be 'GCASH' or 'BANK'." }, { status: 400 });
     }
 
-    if (!provider || !["PAYPAL", "PAYONEER"].includes(provider)) {
-      return NextResponse.json({ success: false, error: "Invalid provider" }, { status: 400 });
-    }
+    const method = methodRaw as Method;
+    const defaults = pickDefaults(method);
+    const provider: Provider = explicitProvider ?? defaults.provider;
 
-    // Narrow provider to our local union type
-    const prov = provider as PayoutProvider;
+    const percentBps = defaults.percentBps;
+    const fixedPhp = defaults.fixedPhp;
 
-    // If quoteFeeCents is still typed to a Prisma enum, keep `as any` to satisfy its signature
-    const { feeCents, netCents } = quoteFeeCents(prov as any, amountCents);
+    const percentFeePhp = Math.floor((amountPhp * percentBps) / 10_000);
+    const estFeePhp = percentFeePhp + fixedPhp;
+    const netPhp = Math.max(0, amountPhp - estFeePhp);
 
-    return NextResponse.json({ success: true, amountCents, feeCents, netCents });
-  } catch (e) {
-    console.error("POST /api/payouts/quote error", e);
-    return NextResponse.json({ success: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json({
+      ok: true,
+      userId,
+      input: { amountPhp, method, provider },
+      fees: { percentBps, fixedPhp, percentFeePhp, estFeePhp },
+      payout: { grossPhp: amountPhp, netPhp, currency: "PHP" },
+    });
+  } catch (e: any) {
+    console.error("POST /api/payouts/quote error:", e);
+    return NextResponse.json({ ok: false, error: "Server error", detail: e?.message ?? String(e) }, { status: 500 });
   }
 }

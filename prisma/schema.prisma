@@ -61,6 +61,8 @@ model User {
   referredBy               User?                @relation("UserReferrals", fields: [referredById], references: [id])
   referrals                User[]               @relation("UserReferrals")
   verificationTokens       VerificationToken[]  @relation("UserToVerificationTokens")
+  paypalEmail              String?              @db.VarChar(191)
+  paypalVerified           Boolean              @default(false)
 
   @@index([deletedAt])
 }
@@ -87,28 +89,40 @@ model PayoutRequest {
 }
 
 model Payout {
-  id               String          @id @default(cuid())
+  id               String    @id @default(cuid())
   userId           String
   amount           Float
   method           String
   status           String
   details          String?
-  createdAt        DateTime        @default(now())
+  createdAt        DateTime  @default(now())
   approvedAt       DateTime?
   paidAt           DateTime?
   externalPayoutId String?
-  feeCents         Int             @default(0)
-  netCents         Int             @default(0)
+  feeCents         Int       @default(0)
+  netCents         Int       @default(0)
   payoutAccountId  String?
-  paypalBatchId    String?         @db.VarChar(191)
-  provider         PayoutProvider?
-  receiverEmail    String?         @db.VarChar(191)
-  statusEnum       PayoutStatus    @default(PENDING)
-  transactionId    String?         @db.VarChar(191)
-  user             User            @relation(fields: [userId], references: [id])
+  paypalBatchId    String?   @db.VarChar(191)
+
+  // Provider + structured status for engine logic
+  provider   PayoutProvider?
+  statusEnum PayoutStatus    @default(PENDING)
+
+  // Receiver & identifiers
+  receiverEmail String? @db.VarChar(191)
+  transactionId String? @db.VarChar(191)
+
+  // NEW: batch wiring
+  batchId String?
+  batch   PayoutBatch? @relation(fields: [batchId], references: [id])
+
+  user        User          @relation(fields: [userId], references: [id])
+  PayoutAudit PayoutAudit[]
 
   @@index([userId, status])
   @@index([userId, statusEnum])
+  @@index([batchId])
+  @@index([provider, statusEnum])
 }
 
 model PayoutAccount {
@@ -215,9 +229,8 @@ model SmartLink {
   destinationsJson Json?
   merchantRule     MerchantRule? @relation("MerchantRuleToSmartLink", fields: [merchantRuleId], references: [id])
   user             User          @relation("UserToSmartLink", fields: [userId], references: [id])
-  clicks         Click[]
+  clicks           Click[]
 }
-
 
 model ReferralGroup {
   id         String   @id @default(cuid())
@@ -450,19 +463,25 @@ enum PolicySeverity {
   HIGH
 }
 
+// EXTENDED: added WISE and GCASHBIZ for PH wiring
 enum PayoutProvider {
   PAYPAL
   PAYONEER
   MANUAL
   XENDIT
   PAYMONGO
+  WISE
+  GCASHBIZ
 }
 
+// EXTENDED: added QUEUED and SUBMITTED for batch engine
 enum PayoutStatus {
   PENDING
   PROCESSING
   PAID
   FAILED
+  QUEUED
+  SUBMITTED
 }
 
 enum PayoutMethod {
@@ -520,6 +539,7 @@ model AdminActionLog {
   targetId   String?
   details    Json?
 }
+
 model Click {
   id       String    @id @default(cuid())
   linkId   String
@@ -527,4 +547,41 @@ model Click {
   ts       DateTime  @default(now())
   ua       String?
   referrer String?
+}
+
+/**
+ * =========================
+ * NEW: Batching + Audits
+ * =========================
+ */
+
+model PayoutBatch {
+  id              String         @id @default(cuid())
+  provider        PayoutProvider
+  status          PayoutStatus
+  totalGrossCents Int            @default(0)
+  totalNetCents   Int            @default(0)
+  providerBatchId String? // e.g., PayPal sender_batch_id
+  submittedAt     DateTime?
+  completedAt     DateTime?
+  meta            Json?
+
+  payouts Payout[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider, status])
+  @@index([submittedAt])
+}
+
+model PayoutAudit {
+  id        String   @id @default(cuid())
+  payoutId  String
+  payout    Payout   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  action    String // e.g., "QUEUED", "SUBMITTED", "PAID", "FAILED"
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([payoutId, action])
 }

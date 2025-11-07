@@ -1,7 +1,6 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import React from "react";
 
@@ -10,11 +9,9 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-
   async function handleLogout() {
-    await signOut({ callbackUrl: "/" });
-    router.push("/logout");
+    // Properly sign out and redirect to landing page
+    await signOut({ callbackUrl: "/", redirect: true });
   }
 
   return (

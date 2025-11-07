@@ -1,0 +1,7 @@
+id,userEmail,userId,amountPhp,method,provider,status,requestedAt,processedAt,gcashNumber,bankName,bankAccountNumber,processorNote
+cmhn15e4v0005ois8qo0e02a6,clwzud5zr0000v4l5gnkz1oz3@dev.local,clwzud5zr0000v4l5gnkz1oz3,777,GCASH,MANUAL,PAID,2025-11-06T06:12:43.088Z,2025-11-06T15:48:14.834Z,09171234567,,,Paid via admin page
+cmhn01nxd0001ois8f35au794,clwzud5zr0000v4l5gnkz1oz3@dev.local,clwzud5zr0000v4l5gnkz1oz3,1234,GCASH,MANUAL,PAID,2025-11-06T05:41:49.537Z,2025-11-06T05:58:48.435Z,09171234567,,,Paid via manual dev batch
+cmhle2m370001oi4olcmofxev,epo78741@gmail.com,cmg8omvcz0000mn9ae1u2dzsv,350,GCASH,MANUAL,PAID,2025-11-05T02:38:56.081Z,2025-11-05T04:50:09.090Z,09171234567,,,Marked paid via admin API
+cmgsnvh4i000epl2yrs8k87wa,epo78741@gmail.com,cmg8omvcz0000mn9ae1u2dzsv,500,GCASH,MANUAL,PAID,2025-10-16T00:08:00.115Z,2025-11-05T05:05:35.429Z,09123456789,,,Marked paid via admin API
+cmgo74cat0001tf2ymnwwq8wu,epo78741@yahoo.com,cmftc9h970000p84mn7w32ykh,500,GCASH,MANUAL,PAID,2025-10-12T21:07:55.589Z,2025-11-05T05:41:55.992Z,09123456789,,,Marked paid via admin UI
+cmgbp5y3u0001oipw47yhbxxp,ertorig3@gmail.com,cmfbyhwog0000qi42l55ut0wi,600,GCASH,MANUAL,PAID,2025-10-04T03:12:03.306Z,2025-10-04T03:47:26.233Z,09171234567,,,InstaPay ref# 123456
