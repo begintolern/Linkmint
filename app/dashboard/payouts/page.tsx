@@ -48,10 +48,9 @@ async function loadSummary(): Promise<SummaryResp> {
   const res = await fetch(`${base}/api/user/payouts/summary`, {
     method: "GET",
     cache: "no-store",
-    headers: { "Accept": "application/json" },
+    headers: { Accept: "application/json" },
   });
 
-  // If not authed in browser, try dev bypass if enabled
   if (res.status === 401) {
     const allowDev =
       process.env.ALLOW_DEV_PAYOUTS_REQUEST === "1" ||
@@ -185,11 +184,11 @@ export default async function PayoutsSummaryPage() {
                 View Earnings
               </a>
               <a
-                href="/dashboard" // replace later when we add a user payout request form
+                href="/dashboard/payouts/request"
                 className="rounded-md border px-3 py-2 text-sm hover:bg-gray-100"
                 title="Request a payout"
               >
-                Request Payout (soon)
+                Request Payout
               </a>
             </div>
           </>
