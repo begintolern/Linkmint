@@ -8,15 +8,41 @@ import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 type Body = {
-  merchantId?: string;       // accepted but not stored
-  destinationUrl?: string;
-  source?: string;           // accepted but not stored
+  merchantId?: string;        // accepted but not stored
+  destinationUrl?: string;    // preferred key
+  url?: string;               // legacy key (fallback)
+  source?: string;            // accepted but not stored
 };
 
+/** Optional explicit ID→name mapping still honored if provided */
 const MERCHANT_NAME_BY_ID: Record<string, string> = {
   cmfvvoxsj0000oij8u4oadeo5: "Lazada PH",
   cmfu940920003oikshotzltnp: "Shopee",
 };
+
+/** Domain keyword → merchant name */
+const MERCHANT_BY_DOMAIN: Array<{ test: RegExp; name: string }> = [
+  { test: /(^|\.)lazada\.(?:com\.ph|sg|co\.id|co\.th|com\.my|vn)$/i, name: "Lazada" },
+  { test: /(^|\.)shopee\.(?:ph|sg|co\.id|co\.th|com\.my|vn)$/i, name: "Shopee" },
+  { test: /(^|\.)amazon\.(?:com|sg|co\.jp|de|co\.uk|ca|com\.au)$/i, name: "Amazon" },
+  { test: /(^|\.)involve\.asia$/i, name: "Involve Asia Offer" },
+  { test: /(^|\.)tiktok\.com$/i, name: "TikTok Shop" },
+  { test: /(^|\.)aliexpress\.com$/i, name: "AliExpress" },
+];
+
+/** Try to infer merchant from hostname */
+function detectMerchantFromHost(hostname: string | null | undefined): string | null {
+  if (!hostname) return null;
+  const host = hostname.toLowerCase();
+  for (const rule of MERCHANT_BY_DOMAIN) {
+    if (rule.test.test(host)) return rule.name;
+  }
+  // light heuristics
+  if (host.includes("lazada")) return "Lazada";
+  if (host.includes("shopee")) return "Shopee";
+  if (host.includes("amazon")) return "Amazon";
+  return null;
+}
 
 function randomId(len = 6) {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -45,7 +71,7 @@ function getPreferredBase(req: NextRequest) {
       const proto = isLocal ? "http" : u.protocol.replace(":", "");
       return `${proto}://${u.host}`.replace(/\/+$/, "");
     } catch {
-      // fallback below
+      // fall through
     }
   }
 
@@ -73,12 +99,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    // --- Parse request body
+    // --- Parse request body (accept both destinationUrl and url)
     const body = (await req.json()) as Body;
-    const destinationUrl = body.destinationUrl?.trim();
+    const rawUrl = (body.destinationUrl ?? body.url ?? "").trim();
     const merchantId = body.merchantId?.trim();
 
-    if (!destinationUrl) {
+    if (!rawUrl) {
       return NextResponse.json(
         { ok: false, message: "destinationUrl is required" },
         { status: 400 }
@@ -87,22 +113,26 @@ export async function POST(req: NextRequest) {
 
     let parsed: URL;
     try {
-      parsed = new URL(destinationUrl);
+      parsed = new URL(rawUrl);
     } catch {
       return NextResponse.json(
-        { ok: false, message: "destinationUrl must be a valid URL (https://...)" },
+        { ok: false, message: "destinationUrl must be a valid URL (https://…)" },
         { status: 400 }
       );
     }
 
-    const merchantName = MERCHANT_NAME_BY_ID[merchantId ?? ""] ?? "Unknown";
+    // --- Determine merchant name
+    const explicitName = MERCHANT_NAME_BY_ID[merchantId ?? ""];
+    const detectedName = detectMerchantFromHost(parsed.hostname);
+    const merchantName = explicitName || detectedName || "Unknown";
     const merchantDomain = parsed.hostname || null;
 
+    // --- Create short link
     const id = randomId(6);
     const base = getPreferredBase(req);
     const shortUrl = `${base}/r/${id}`;
 
-    // ✅ Store fields that exist in the Prisma model only
+    // ✅ Store only columns that exist in Prisma
     await prisma.smartLink.create({
       data: {
         id,
@@ -110,14 +140,20 @@ export async function POST(req: NextRequest) {
         merchantRuleId: null,
         merchantName,
         merchantDomain,
-        originalUrl: destinationUrl,
+        originalUrl: rawUrl,
         shortUrl,
         label: null,
-        destinationsJson: { default: destinationUrl },
+        destinationsJson: { default: rawUrl },
       },
     });
 
-    return NextResponse.json({ ok: true, id, shortUrl, merchant: merchantName });
+    return NextResponse.json({
+      ok: true,
+      id,
+      shortUrl,
+      merchant: merchantName,
+      domain: merchantDomain,
+    });
   } catch (err) {
     console.error("smartlinks/create error:", err);
     return NextResponse.json({ ok: false, message: "Server error" }, { status: 500 });
