@@ -17,7 +17,10 @@ export default async function Page() {
   const role = (jar.get("role")?.value || "").toLowerCase();
   const hasAdminKey = !!jar.get("admin_key")?.value;
 
-  if (!(role === "admin" || hasAdminKey)) {
+  // ✅ Allow when running locally (NODE_ENV !== "production")
+  const isDev = process.env.NODE_ENV !== "production";
+
+  if (!isDev && !(role === "admin" || hasAdminKey)) {
     notFound();
   }
 
