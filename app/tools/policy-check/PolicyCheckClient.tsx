@@ -1,10 +1,11 @@
+// app/tools/policy-check/PolicyCheckClient.tsx
 "use client";
 
 import { useState } from "react";
 
 export default function PolicyCheckClient() {
-  const [input, setInput] = useState("");
-  const [description, setDescription] = useState("");
+  const [input, setInput] = useState("");           // product URL
+  const [description, setDescription] = useState(""); // optional note/copy
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
@@ -13,7 +14,7 @@ export default function PolicyCheckClient() {
 
     const urlInput = input.trim();
     if (!urlInput) {
-      setResult({ ok: false, error: "Missing URL" });
+      setResult({ ok: false, error: "Missing product URL" });
       return;
     }
 
@@ -21,7 +22,7 @@ export default function PolicyCheckClient() {
     setResult(null);
 
     try {
-      // --- Policy check first
+      // 1) Policy check (keeps 'url' for backward-compat with this API)
       const checkRes = await fetch("/api/policy-check/log", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -30,20 +31,18 @@ export default function PolicyCheckClient() {
           description: description || "Policy check run",
         }),
       });
-
       const checkData = await checkRes.json();
       console.log("Policy check result:", checkData);
 
-      // --- SmartLink creation
+      // 2) SmartLink create — uses destinationUrl (required by that API)
       const linkRes = await fetch("/api/smartlinks/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: urlInput,
-          description: description || "SmartLink created via PolicyCheck tool",
+          destinationUrl: urlInput, // <-- key fix
+          label: description || "SmartLink via PolicyCheck tool",
         }),
       });
-
       const linkData = await linkRes.json();
       console.log("SmartLink creation result:", linkData);
 
@@ -61,14 +60,10 @@ export default function PolicyCheckClient() {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">
-        Policy Pre-Check (AI-assisted)
-      </h1>
+      <h1 className="text-2xl font-semibold mb-4">Policy Pre-Check (AI-assisted)</h1>
 
       <p className="text-sm text-gray-600 mb-4">
-        Paste your link title/description. We’ll flag common merchant/network
-        risks (gift cards, coupon stacking, self-purchase, etc.). Results are
-        suggestions — not legal advice.
+        Paste a product URL. We’ll run a policy scan and try to create a SmartLink for it.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -76,7 +71,7 @@ export default function PolicyCheckClient() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Paste merchant URL (e.g. Shopee product link)"
+          placeholder="Paste product URL (e.g., Lazada/Shopee link)"
           className="w-full border rounded p-2 text-sm"
         />
 
@@ -108,4 +103,3 @@ export default function PolicyCheckClient() {
     </div>
   );
 }
-
