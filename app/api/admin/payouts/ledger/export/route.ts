@@ -7,8 +7,19 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 
+type Status = "PENDING" | "PROCESSING" | "PAID" | "FAILED";
+
 function ok(v: unknown) {
   return typeof v === "string" && v.trim().length > 0;
+}
+
+function parseDate(d?: string | null) {
+  if (!d) return undefined;
+  const v = d.trim();
+  // Accept yyyy-mm-dd or full ISO
+  const iso = v.length === 10 ? `${v}T00:00:00.000Z` : v;
+  const dt = new Date(iso);
+  return isNaN(dt.getTime()) ? undefined : dt;
 }
 
 // Gate: allow either (a) logged-in admin session OR (b) x-admin-key header
@@ -62,6 +73,9 @@ export async function GET(req: NextRequest) {
 
     const url = new URL(req.url);
     const userId = (url.searchParams.get("userId") || "").trim();
+    const status = (url.searchParams.get("status") || "").trim().toUpperCase() as Status | "";
+    const fromParam = url.searchParams.get("from"); // yyyy-mm-dd or ISO
+    const toParam = url.searchParams.get("to");     // yyyy-mm-dd or ISO
 
     if (!ok(userId)) {
       return new Response(JSON.stringify({ ok: false, error: "MISSING_USER_ID" }), {
@@ -70,8 +84,26 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const from = parseDate(fromParam);
+    const toRaw = parseDate(toParam);
+    // make "to" inclusive by pushing to end-of-day if only date provided
+    const to =
+      toRaw && toParam && toParam.length === 10
+        ? new Date(new Date(toRaw).setUTCHours(23, 59, 59, 999))
+        : toRaw;
+
+    const where: any = { userId };
+    if (status && ["PENDING", "PROCESSING", "PAID", "FAILED"].includes(status)) {
+      where.status = status;
+    }
+    if (from || to) {
+      where.requestedAt = {};
+      if (from) where.requestedAt.gte = from;
+      if (to) where.requestedAt.lte = to;
+    }
+
     const rows = await prisma.payoutRequest.findMany({
-      where: { userId },
+      where,
       orderBy: { requestedAt: "desc" },
       select: {
         id: true,
@@ -116,8 +148,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // filename includes filters for easy auditing
+    const parts = [
+      `payouts_${userId}`,
+      status ? `status-${status}` : "",
+      from ? `from-${from.toISOString().slice(0, 10)}` : "",
+      to ? `to-${to.toISOString().slice(0, 10)}` : "",
+    ].filter(Boolean);
+
+    const filename = `${parts.join("_") || `payouts_${userId}`}.csv`;
     const csv = lines.join("\r\n");
-    const filename = `payouts_${userId}.csv`;
 
     return new Response(csv, {
       status: 200,
