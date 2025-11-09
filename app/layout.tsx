@@ -1,7 +1,6 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { SessionProvider } from "next-auth/react";
+import Providers from "./providers";
 
 const siteName = "linkmint.co";
 const siteTitle = "Linkmint turns your shares into income — every link can earn.";
@@ -62,30 +61,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        {/* SEO: Organization schema for brand/entity trust */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "Linkmint (linkmint.co)",
-              url: "https://linkmint.co",
-              logo: "https://linkmint.co/og-image.png",
-              contactPoint: [
+              "name": "Linkmint (linkmint.co)",
+              "url": "https://linkmint.co",
+              "logo": "https://linkmint.co/og-image.png",
+              "contactPoint": [
                 {
                   "@type": "ContactPoint",
-                  contactType: "customer support",
-                  email: "admin@linkmint.co",
-                  areaServed: ["PH", "US"],
-                  availableLanguage: ["en", "tl"],
-                },
-              ],
+                  "contactType": "customer support",
+                  "email": "admin@linkmint.co",
+                  "areaServed": ["PH", "US"],
+                  "availableLanguage": ["en", "tl"]
+                }
+              ]
+              // Add social profiles later via `sameAs`
             }),
           }}
         />
       </head>
       <body>
-        <SessionProvider>{children}</SessionProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
