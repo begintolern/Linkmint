@@ -1,127 +1,112 @@
 // app/dashboard/page.tsx
+"use client";
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
-import { getServerSession } from "next-auth/next";
-import type { Session } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth/options";
-import DashboardPageHeader from "@/components/DashboardPageHeader";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import PayoutNotice from "./_components/PayoutNotice";
 
-type AppUser = {
-  id?: string;
-  email?: string;
-  name?: string;
-  role?: string;
-};
+type WhoAmI =
+  | {
+      ok: true;
+      user: { id?: string | null; email?: string | null; name?: string | null; role?: string | null };
+    }
+  | { ok: false; error: string };
 
-export default async function DashboardPage() {
-  const session = (await getServerSession(authOptions)) as Session | null;
-  if (!session) {
-    redirect("/api/auth/signin?callbackUrl=/dashboard");
+export default function DashboardPage() {
+  const [me, setMe] = useState<WhoAmI | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let abort = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/whoami", { cache: "no-store" });
+        const data = (await res.json()) as WhoAmI;
+        if (!abort) setMe(data);
+      } catch (e) {
+        if (!abort) setMe({ ok: false, error: "NETWORK" });
+      } finally {
+        if (!abort) setLoading(false);
+      }
+    })();
+    return () => {
+      abort = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="max-w-5xl mx-auto p-6">
+        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <p className="text-sm text-gray-600 mt-2">Loading…</p>
+      </main>
+    );
   }
 
-  const user = (session?.user ?? {}) as AppUser;
-  const name = user?.email ? user.email.split("@")[0] : user?.name ?? "there";
+  if (!me || !me.ok || !me.user?.id) {
+    return (
+      <main className="max-w-5xl mx-auto p-6">
+        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <div className="mt-4 rounded-lg border p-4 bg-yellow-50 text-yellow-800">
+          You’re not signed in. Please{" "}
+          <Link href="/login" className="underline">
+            log in
+          </Link>{" "}
+          to access your dashboard.
+        </div>
+      </main>
+    );
+  }
 
-  const tiles = [
-    {
-      href: "/dashboard/create-link",
-      title: "Create Smart Link",
-      subtitle: "Generate a tracked, compliant link",
-      tone: "emerald",
-    },
-    {
-      href: "/dashboard/links",
-      title: "Manage Links (Advanced)",
-      subtitle: "View history, refresh, clear, bulk actions",
-      tone: "indigo",
-    },
-    {
-      href: "/dashboard/merchants",
-      title: "Explore Merchants",
-      subtitle: "Policies, payouts, rules",
-      tone: "blue",
-    },
-    {
-      href: "/dashboard/merchants/ai",
-      title: "AI Suggestions (beta)",
-      subtitle: "Heuristic trending offers",
-      tone: "purple",
-    },
-    {
-      href: "/dashboard/earnings",
-      title: "Earnings",
-      subtitle: "Commissions & performance",
-      tone: "yellow",
-    },
-    {
-      href: "/dashboard/payouts",
-      title: "Payouts",
-      subtitle: "History & accounts",
-      tone: "rose",
-    },
-    {
-      href: "/dashboard/referrals",
-      title: "Referrals",
-      subtitle: "Invite friends · 5% bonus",
-      tone: "green",
-    },
-    {
-      href: "/dashboard/settings",
-      title: "Settings",
-      subtitle: "Manage your account",
-      tone: "emerald",
-    },
-  ] as const;
-
-  const toneClass = (tone: string) => {
-    switch (tone) {
-      case "emerald":
-        return "bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700";
-      case "blue":
-        return "bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700";
-      case "purple":
-        return "bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700";
-      case "yellow":
-        return "bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-700";
-      case "rose":
-        return "bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700";
-      case "indigo":
-        return "bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700";
-      case "green":
-        return "bg-green-50 hover:bg-green-100 border-green-200 text-green-700";
-      default:
-        return "bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-800";
-    }
-  };
+  const userId = me.user.id!;
+  const email = me.user.email || "—";
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <DashboardPageHeader
-        title="Overview"
-        subtitle={`Welcome back, ${name}! Manage your links, merchants, and payouts.`}
-      />
-
-      {/* 🇵🇭 PH payout update notice */}
-      <PayoutNotice />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tiles.map((t) => (
-          <Link
-            key={t.href}
-            href={t.href}
-            className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-black/10 ${toneClass(
-              t.tone
-            )}`}
-          >
-            <h3 className="text-base font-semibold">{t.title}</h3>
-            <p className="mt-1 text-sm opacity-80">{t.subtitle}</p>
-          </Link>
-        ))}
+    <main className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Dashboard</h1>
+        <div className="text-sm text-gray-600">
+          <span className="font-mono">{email}</span>
+        </div>
       </div>
+
+      {/* Quick actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Link
+          href="/dashboard/create-link"
+          className="rounded-xl border p-4 hover:bg-gray-50"
+        >
+          <div className="text-sm font-medium">Create SmartLink</div>
+          <div className="text-xs text-gray-600 mt-1">Make a new link to share</div>
+        </Link>
+
+        <Link
+          href="/dashboard/links"
+          className="rounded-xl border p-4 hover:bg-gray-50"
+        >
+          <div className="text-sm font-medium">Your Links</div>
+          <div className="text-xs text-gray-600 mt-1">View and manage links</div>
+        </Link>
+
+        <Link
+          href={`/dashboard/payouts`}
+          className="rounded-xl border p-4 hover:bg-gray-50"
+        >
+          <div className="text-sm font-medium">Payouts</div>
+          <div className="text-xs text-gray-600 mt-1">Request and track payouts</div>
+        </Link>
+      </div>
+
+      {/* Example of guarded usage */}
+      <section className="rounded-xl border p-4">
+        <div className="text-sm font-medium mb-2">Account</div>
+        <div className="text-xs text-gray-600">
+          User ID: <span className="font-mono">{userId}</span>
+        </div>
+      </section>
     </main>
   );
 }
