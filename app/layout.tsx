@@ -62,7 +62,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        {/* SEO: Organization schema for brand/entity trust */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -86,7 +85,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {/* Wrap the app to enable client-side session context */}
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
