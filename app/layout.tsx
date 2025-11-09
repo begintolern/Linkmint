@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { SessionProvider } from "next-auth/react";
 
 const siteName = "linkmint.co";
 const siteTitle = "Linkmint turns your shares into income — every link can earn.";
@@ -68,24 +69,26 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              "name": "Linkmint (linkmint.co)",
-              "url": "https://linkmint.co",
-              "logo": "https://linkmint.co/og-image.png",
-              "contactPoint": [
+              name: "Linkmint (linkmint.co)",
+              url: "https://linkmint.co",
+              logo: "https://linkmint.co/og-image.png",
+              contactPoint: [
                 {
                   "@type": "ContactPoint",
-                  "contactType": "customer support",
-                  "email": "admin@linkmint.co",
-                  "areaServed": ["PH", "US"],
-                  "availableLanguage": ["en", "tl"]
-                }
-              ]
-              // Add social profiles later via `sameAs`: ["https://twitter.com/…", "https://www.facebook.com/…"]
+                  contactType: "customer support",
+                  email: "admin@linkmint.co",
+                  areaServed: ["PH", "US"],
+                  availableLanguage: ["en", "tl"],
+                },
+              ],
             }),
           }}
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* Wrap the app to enable client-side session context */}
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
