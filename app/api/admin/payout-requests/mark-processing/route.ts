@@ -1,61 +1,54 @@
-// app/api/admin/payout-requests/mark-processing/route.ts
 export const dynamic = "force-dynamic";
-export const fetchCache = "no-store";
-export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-function assertAdmin(req: Request) {
-  const key = req.headers.get("x-admin-key") || "";
-  return !!process.env.ADMIN_API_KEY && key === process.env.ADMIN_API_KEY;
-}
-
-// tiny inline sender (keeps this step self-contained)
-async function sendTelegram(text: string) {
+/** Accept any of:
+ *  1) NextAuth session with role ADMIN
+ *  2) Cookie admin_key == ADMIN_API_KEY
+ *  3) Header x-admin-key == ADMIN_API_KEY  (optional, for tools)
+ */
+async function assertAdmin(req: Request) {
   try {
-    if (!process.env.OPS_ALERTS_ENABLED) return;
-    if (String(process.env.OPS_ALERTS_ENABLED) === "0") return;
+    // 1) NextAuth session
+    const session = (await getServerSession(authOptions)) as any;
+    if (session?.user?.role === "ADMIN") return true;
 
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chat = process.env.TELEGRAM_CHAT_ID;
-    if (!token || !chat) return;
+    // 2) Cookie admin_key
+    const jar = cookies();
+    const cookieKey = jar.get("admin_key")?.value || "";
 
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-      body: JSON.stringify({
-        chat_id: chat,
-        text,
-        // no parse_mode — keep plain text for safety
-        disable_web_page_preview: true,
-      }),
-    });
-  } catch (_) {
-    // non-blocking; ignore alert errors
+    // 3) Header x-admin-key
+    const headerKey = req.headers.get("x-admin-key") || "";
+
+    const expected = process.env.ADMIN_API_KEY || "";
+    if (expected && (cookieKey === expected || headerKey === expected)) return true;
+
+    return false;
+  } catch {
+    return false;
   }
 }
 
 export async function POST(req: Request) {
-  try {
-    if (!assertAdmin(req)) {
-      return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
-    }
+  if (!(await assertAdmin(req))) {
+    return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
+  }
 
-    const { id, note } = (await req.json().catch(() => ({}))) as { id?: string; note?: string };
+  try {
+    const body = await req.json().catch(() => ({} as any));
+    const id = String(body?.id || "");
     if (!id) {
       return NextResponse.json({ ok: false, error: "MISSING_ID" }, { status: 400 });
     }
 
     const updated = await prisma.payoutRequest.update({
       where: { id },
-      data: {
-        status: "PROCESSING",
-        processedAt: new Date(),
-        processorNote: note ?? "Marked PROCESSING by admin",
-      },
+      data: { status: "PROCESSING" as any },
       select: {
         id: true,
         userId: true,
@@ -66,31 +59,15 @@ export async function POST(req: Request) {
         requestedAt: true,
         processedAt: true,
         processorNote: true,
-        user: { select: { email: true } },
       },
     });
-
-    // fire-and-forget Telegram
-    const email = updated.user?.email || updated.userId;
-    const msg =
-      [
-        "🔶 Payout PROCESSING",
-        `• Request: ${updated.id}`,
-        `• User: ${email}`,
-        `• Amount: ₱${updated.amountPhp}`,
-        `• Method: ${updated.method} (${updated.provider})`,
-        updated.processorNote ? `• Note: ${updated.processorNote}` : null,
-        updated.requestedAt ? `• Requested: ${updated.requestedAt.toISOString()}` : null,
-        updated.processedAt ? `• Changed: ${updated.processedAt.toISOString()}` : null,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-    sendTelegram(msg);
 
     return NextResponse.json({ ok: true, request: updated });
   } catch (e: any) {
     console.error("POST /admin/payout-requests/mark-processing error:", e);
-    return NextResponse.json({ ok: false, error: "SERVER_ERROR", detail: e?.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "SERVER_ERROR", detail: e?.message },
+      { status: 500 }
+    );
   }
 }

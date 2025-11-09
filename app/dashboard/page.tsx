@@ -7,15 +7,19 @@ export const revalidate = 0;
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import DashboardClient from "./DashboardClient";
 
 type WhoAmI =
   | {
       ok: true;
-      user: { id?: string | null; email?: string | null; name?: string | null; role?: string | null };
+      user?: { id?: string | null; email?: string | null; name?: string | null; role?: string | null } | null;
+      // some builds of /api/whoami return top-level fields instead of user{}
+      id?: string | null;
+      email?: string | null;
     }
   | { ok: false; error: string };
 
-export default function DashboardPage() {
+export default function Page() {
   const [me, setMe] = useState<WhoAmI | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,8 +30,8 @@ export default function DashboardPage() {
         const res = await fetch("/api/whoami", { cache: "no-store" });
         const data = (await res.json()) as WhoAmI;
         if (!abort) setMe(data);
-      } catch (e) {
-        if (!abort) setMe({ ok: false, error: "NETWORK" });
+      } catch {
+        if (!abort) setMe({ ok: false, error: "NETWORK" } as any);
       } finally {
         if (!abort) setLoading(false);
       }
@@ -39,16 +43,16 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="max-w-5xl mx-auto p-6">
+      <main className="max-w-6xl mx-auto p-6">
         <h1 className="text-xl font-semibold">Dashboard</h1>
         <p className="text-sm text-gray-600 mt-2">Loading…</p>
       </main>
     );
   }
 
-  if (!me || !me.ok || !me.user?.id) {
+  if (!me || !("ok" in me) || !me.ok) {
     return (
-      <main className="max-w-5xl mx-auto p-6">
+      <main className="max-w-6xl mx-auto p-6">
         <h1 className="text-xl font-semibold">Dashboard</h1>
         <div className="mt-4 rounded-lg border p-4 bg-yellow-50 text-yellow-800">
           You’re not signed in. Please{" "}
@@ -61,52 +65,25 @@ export default function DashboardPage() {
     );
   }
 
-  const userId = me.user.id!;
-  const email = me.user.email || "—";
+  // Support both shapes:
+  const userId = me.user?.id ?? (me as any).id ?? null;
+  const email = me.user?.email ?? (me as any).email ?? null;
 
-  return (
-    <main className="max-w-5xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <div className="text-sm text-gray-600">
-          <span className="font-mono">{email}</span>
+  if (!userId) {
+    return (
+      <main className="max-w-6xl mx-auto p-6">
+        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <div className="mt-4 rounded-lg border p-4 bg-yellow-50 text-yellow-800">
+          You’re not signed in. Please{" "}
+          <Link href="/login" className="underline">
+            log in
+          </Link>{" "}
+          to access your dashboard.
         </div>
-      </div>
+      </main>
+    );
+  }
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Link
-          href="/dashboard/create-link"
-          className="rounded-xl border p-4 hover:bg-gray-50"
-        >
-          <div className="text-sm font-medium">Create SmartLink</div>
-          <div className="text-xs text-gray-600 mt-1">Make a new link to share</div>
-        </Link>
-
-        <Link
-          href="/dashboard/links"
-          className="rounded-xl border p-4 hover:bg-gray-50"
-        >
-          <div className="text-sm font-medium">Your Links</div>
-          <div className="text-xs text-gray-600 mt-1">View and manage links</div>
-        </Link>
-
-        <Link
-          href={`/dashboard/payouts`}
-          className="rounded-xl border p-4 hover:bg-gray-50"
-        >
-          <div className="text-sm font-medium">Payouts</div>
-          <div className="text-xs text-gray-600 mt-1">Request and track payouts</div>
-        </Link>
-      </div>
-
-      {/* Example of guarded usage */}
-      <section className="rounded-xl border p-4">
-        <div className="text-sm font-medium mb-2">Account</div>
-        <div className="text-xs text-gray-600">
-          User ID: <span className="font-mono">{userId}</span>
-        </div>
-      </section>
-    </main>
-  );
+  // >>> This renders your 6 colored cards via DashboardClient
+  return <DashboardClient userId={userId} email={email} />;
 }
