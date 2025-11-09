@@ -1,9 +1,10 @@
 // app/admin/payouts/page.tsx
 export const dynamic = "force-dynamic";
-export const fetchCache = "no-store";
+export const fetchCache = "force-no-store";
 export const revalidate = 0;
 
 import React from "react";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function fmt(iso?: string | null) {
@@ -21,14 +22,6 @@ function fmt(iso?: string | null) {
   }
 }
 
-function daysSince(iso?: string | null) {
-  if (!iso) return null;
-  const then = new Date(iso).getTime();
-  if (!Number.isFinite(then)) return null;
-  const now = Date.now();
-  return Math.floor((now - then) / (1000 * 60 * 60 * 24));
-}
-
 type Row = {
   id: string;
   userId: string;
@@ -42,7 +35,7 @@ type Row = {
   gcashNumber?: string | null;
   bankName?: string | null;
   bankAccountNumber?: string | null;
-  user?: { email?: string | null; createdAt?: string | null };
+  user?: { email?: string | null };
 };
 
 async function listPayoutRequests(status?: string) {
@@ -63,78 +56,14 @@ async function listPayoutRequests(status?: string) {
   return data;
 }
 
-/** -------- Server actions (secure admin calls) -------- */
-async function markProcessingAction(formData: FormData) {
-  "use server";
-  const id = String(formData.get("id") || "");
-  if (!id) return;
-
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
-  await fetch(`${base}/api/admin/payout-requests/mark-processing`, {
-    method: "POST",
-    headers: {
-      "x-admin-key": process.env.ADMIN_API_KEY || "",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ id, note: "Marked PROCESSING via admin page" }),
-    cache: "no-store",
-  }).catch(() => {});
-
-  // Auto-jump to PROCESSING tab with flash
-  redirect("/admin/payouts?status=PROCESSING&flash=processing");
-}
-
-async function denyAction(formData: FormData) {
-  "use server";
-  const id = String(formData.get("id") || "");
-  if (!id) return;
-
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
-  await fetch(`${base}/api/admin/payout-requests/deny`, {
-    method: "POST",
-    headers: {
-      "x-admin-key": process.env.ADMIN_API_KEY || "",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ id, note: "Denied via admin page" }),
-    cache: "no-store",
-  }).catch(() => {});
-
-  // Auto-jump to FAILED tab with flash
-  redirect("/admin/payouts?status=FAILED&flash=denied");
-}
-
-async function markPaidAction(formData: FormData) {
-  "use server";
-  const id = String(formData.get("id") || "");
-  if (!id) return;
-
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
-  await fetch(`${base}/api/admin/payout-requests/mark-paid`, {
-    method: "POST",
-    headers: {
-      "x-admin-key": process.env.ADMIN_API_KEY || "",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ id, note: "Marked PAID via admin page" }),
-    cache: "no-store",
-  }).catch(() => {});
-
-  // Auto-jump to PAID tab with flash
-  redirect("/admin/payouts?status=PAID&flash=paid");
-}
-
-/** ---- Page ---- */
 export default async function AdminPayoutsPage({
   searchParams,
 }: {
-  searchParams?: { status?: string; batch?: string; paid?: string; flash?: string };
+  searchParams?: { status?: string; batch?: string; paid?: string };
 }) {
   const status = searchParams?.status;
   const createdBatchId = searchParams?.batch;
   const paidBatchId = searchParams?.paid;
-  const flash = searchParams?.flash;
-
   const data = await listPayoutRequests(status);
   const rows = data.rows || [];
 
@@ -160,7 +89,6 @@ export default async function AdminPayoutsPage({
           </div>
         </div>
 
-        {/* Banners */}
         {createdBatchId && (
           <div className="mb-3 rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
             Manual batch created: <span className="font-mono">{createdBatchId}</span>
@@ -169,21 +97,6 @@ export default async function AdminPayoutsPage({
         {paidBatchId && (
           <div className="mb-3 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
             Batch marked PAID: <span className="font-mono">{paidBatchId}</span>
-          </div>
-        )}
-        {flash === "processing" && (
-          <div className="mb-3 rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
-            Request marked <strong>PROCESSING</strong>.
-          </div>
-        )}
-        {flash === "denied" && (
-          <div className="mb-3 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-            Request <strong>DENIED</strong>.
-          </div>
-        )}
-        {flash === "paid" && (
-          <div className="mb-3 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
-            Request marked <strong>PAID</strong>.
           </div>
         )}
 
@@ -213,106 +126,32 @@ export default async function AdminPayoutsPage({
                   </td>
                 </tr>
               ) : (
-                rows.map((r) => {
-                  const d = daysSince(r.user?.createdAt);
-                  const honeymoon = typeof d === "number" ? d < 30 : false;
-                  const badge =
-                    d == null ? (
-                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] text-gray-600">
-                        unknown age
+                rows.map((r) => (
+                  <tr key={r.id} className="border-t border-gray-100">
+                    <td className="px-3 py-2 font-mono text-[12px]">{r.id}</td>
+                    <td className="px-3 py-2">
+                      <div className="font-medium">{r.user?.email || r.userId}</div>
+                      <div className="text-xs text-gray-500">{r.userId}</div>
+                    </td>
+                    <td className="px-3 py-2">₱{r.amountPhp}</td>
+                    <td className="px-3 py-2">{r.method}</td>
+                    <td className="px-3 py-2">{r.provider}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-col text-xs">
+                        <span>Req: {fmt(r.requestedAt)}</span>
+                        <span>Proc: {fmt(r.processedAt)}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">
+                        {r.status}
                       </span>
-                    ) : honeymoon ? (
-                      <span className="inline-flex items-center rounded-full bg-yellow-100 text-yellow-800 px-2 py-0.5 text-[10px] font-semibold">
-                        New User (Honeymoon · {d}d)
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-green-100 text-green-800 px-2 py-0.5 text-[10px] font-semibold">
-                        Eligible ({d}d)
-                      </span>
-                    );
-
-                  return (
-                    <tr key={r.id} className="border-t border-gray-100">
-                      <td className="px-3 py-2 font-mono text-[12px]">{r.id}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <div>
-                            <div className="font-medium">{r.user?.email || r.userId}</div>
-                            <div className="text-xs text-gray-500">{r.userId}</div>
-                          </div>
-                          {badge}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">₱{r.amountPhp}</td>
-                      <td className="px-3 py-2">{r.method}</td>
-                      <td className="px-3 py-2">{r.provider}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-col text-xs">
-                          <span>Req: {fmt(r.requestedAt)}</span>
-                          <span>Proc: {fmt(r.processedAt)}</span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs">
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <a
-                            href={`/admin/payouts/ledger/${r.userId}`}
-                            className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                            title="Open user payout ledger"
-                          >
-                            Ledger
-                          </a>
-
-                          {/* Mark Processing */}
-                          {r.status === "PENDING" && (
-                            <form action={markProcessingAction}>
-                              <input type="hidden" name="id" value={r.id} />
-                              <button
-                                type="submit"
-                                className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                                title="Mark as Processing"
-                              >
-                                Mark Processing
-                              </button>
-                            </form>
-                          )}
-
-                          {/* Mark Paid */}
-                          {r.status === "PROCESSING" && (
-                            <form action={markPaidAction}>
-                              <input type="hidden" name="id" value={r.id} />
-                              <button
-                                type="submit"
-                                className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                                title="Mark as Paid"
-                              >
-                                Mark Paid
-                              </button>
-                            </form>
-                          )}
-
-                          {/* Deny */}
-                          {(r.status === "PENDING" || r.status === "PROCESSING") && (
-                            <form action={denyAction} className="inline">
-                              <input type="hidden" name="id" value={r.id} />
-                              <button
-                                type="submit"
-                                className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                                title="Deny request"
-                              >
-                                Deny
-                              </button>
-                            </form>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                    </td>
+                    <td className="px-3 py-2">
+                      <span className="text-xs text-gray-500">—</span>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
