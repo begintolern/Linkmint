@@ -1,49 +1,54 @@
+// components/Header.tsx
 "use client";
 
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
-  const { data: session, status } = useSession();
-  const isAuthed = status === "authenticated";
-  const name = session?.user?.name ?? session?.user?.email ?? "there";
+  const pathname = usePathname();
+
+  // Simple nav items — no client session checks; auth is handled server-side
+  const nav = [
+    { href: "/dashboard", label: "Overview" },
+    { href: "/dashboard/earnings", label: "Earnings" },
+    { href: "/dashboard/links", label: "Links" },
+    { href: "/dashboard/referrals", label: "Referrals" },
+  ];
 
   return (
     <header className="w-full border-b bg-white">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        {/* left: brand domain (optional, can hide on mobile) */}
+        {/* Left: brand */}
         <div className="text-sm text-gray-500 hidden sm:block">linkmint.co</div>
 
-        {/* center: logo/title */}
-        <Link href={isAuthed ? "/dashboard" : "/"} className="text-lg font-semibold">
+        {/* Center: title */}
+        <Link href="/dashboard" className="text-lg font-semibold text-teal-700">
           Linkmint
         </Link>
 
-        {/* right: auth state */}
-        <div className="flex items-center gap-3">
-          {isAuthed ? (
-            <>
-              <span className="hidden sm:block text-sm text-gray-600">Hi, {name.split("@")[0]}</span>
-              <button
-                className="rounded-md bg-red-500 px-3 py-1.5 text-white text-sm hover:bg-red-600"
-                onClick={() => signOut({ callbackUrl: "/" })}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link href="/login" className="text-sm hover:underline">
-                Login
-              </Link>
-              <Link
-                href="/signup"
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-white text-sm hover:bg-blue-700"
-              >
-                Sign Up
-              </Link>
-            </>
-          )}
+        {/* Right: nav & logout */}
+        <div className="flex items-center gap-4">
+          {nav.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              className={`text-sm transition-colors ${
+                pathname?.startsWith(n.href)
+                  ? "text-teal-700 font-medium"
+                  : "text-gray-600 hover:text-teal-700"
+              }`}
+            >
+              {n.label}
+            </Link>
+          ))}
+
+          <button
+            className="rounded-md bg-red-500 px-3 py-1.5 text-white text-sm hover:bg-red-600"
+            onClick={() => signOut({ callbackUrl: "/" })}
+          >
+            Logout
+          </button>
         </div>
       </div>
     </header>

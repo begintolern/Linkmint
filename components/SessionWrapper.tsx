@@ -1,9 +1,8 @@
 // components/SessionWrapper.tsx
-'use client';
-
-import { SessionProvider } from 'next-auth/react';
-import { ReactNode } from 'react';
+"use client";
+import { ReactNode } from "react";
 
 export default function SessionWrapper({ children }: { children: ReactNode }) {
-  return <SessionProvider>{children}</SessionProvider>;
+  // No client-side session gating here; server already enforces auth.
+  return <>{children}</>;
 }

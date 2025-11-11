@@ -1,7 +1,6 @@
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+// app/api/ping/route.ts
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  return NextResponse.json({ ok: true, now: Date.now() });
+  return NextResponse.json({ ok: true, route: "ping" });
 }

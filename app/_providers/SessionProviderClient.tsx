@@ -1,12 +1,11 @@
-// app/providers.tsx
+// app/_providers/SessionProviderClient.tsx
 "use client";
 
 import { SessionProvider } from "next-auth/react";
 import type { ReactNode } from "react";
 
-export default function Providers({ children }: { children: ReactNode }) {
-  // No client-side auth gating or messages here.
-  // Server-side guards in layout/page handle protection.
+export default function SessionProviderClient({ children }: { children: ReactNode }) {
+  // Keep this a thin wrapper only; no “not signed in” UI here.
   return (
     <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false}>
       {children}

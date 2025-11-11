@@ -1,31 +1,40 @@
 // app/dashboard/components/ReferralLinkCard.tsx
 "use client";
-import { useSession } from "next-auth/react";
+
 import { useEffect, useState } from "react";
 
+type SessionLite = {
+  user?: { referralCode?: string | null } | null;
+};
+
 export default function ReferralLinkCard() {
-  const auth = typeof useSession === "function" ? useSession() : undefined;
-  const session = auth?.data ?? null;
-  const codeFromHook = (session?.user as any)?.referralCode as string | undefined;
-
-  const [code, setCode] = useState<string | undefined>(codeFromHook);
+  const [code, setCode] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    // update from hook when it changes
-    if (codeFromHook && codeFromHook !== code) setCode(codeFromHook);
-  }, [codeFromHook]);
+    let isMounted = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/session", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!res.ok) throw new Error("session fetch failed");
+        const j = (await res.json()) as SessionLite | null;
+        const c = j?.user?.referralCode ?? null;
+        if (isMounted) setCode(c);
+      } catch {
+        if (isMounted) setCode(null);
+      } finally {
+        if (isMounted) setLoaded(true);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  useEffect(() => {
-    // fallback: fetch session directly if code still missing
-    if (!code) {
-      fetch("/api/auth/session")
-        .then((r) => r.json())
-        .then((j) => setCode(j?.user?.referralCode || undefined))
-        .catch(() => {});
-    }
-  }, [code]);
-
-  if (!code) return null;
+  if (!loaded || !code) return null; // render nothing if user has no code yet
 
   const link = `https://linkmint.co/signup?ref=${code}`;
 
@@ -39,7 +48,9 @@ export default function ReferralLinkCard() {
         className="w-full border rounded p-2 text-sm"
         onClick={(e) => (e.target as HTMLInputElement).select()}
       />
-      <p className="text-xs text-gray-500 mt-1">Share this link with friends to invite them.</p>
+      <p className="text-xs text-gray-500 mt-1">
+        Share this link with friends to invite them.
+      </p>
     </div>
   );
 }

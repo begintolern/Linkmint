@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import FooterDisclosure from "./components/FooterDisclosure";
+import Providers from "./providers"; // client wrapper
 
 const siteName = "linkmint.co";
 const siteTitle = "Linkmint turns your shares into income — every link can earn.";
@@ -53,7 +54,6 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   robots: {
-    // keep admin/tools pages out of search if needed; public pages still indexable
     index: true,
     follow: true,
   },
@@ -87,14 +87,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   availableLanguage: ["en", "tl"],
                 },
               ],
-              // Add social profiles later via `sameAs`: ["https://twitter.com/…", "https://www.facebook.com/…"]
             }),
           }}
         />
       </head>
       <body>
-        {children}
-        <FooterDisclosure />
+        <Providers>
+          {children}
+          <FooterDisclosure />
+        </Providers>
       </body>
     </html>
   );

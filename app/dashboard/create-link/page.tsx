@@ -1,4 +1,3 @@
-// app/dashboard/create-link/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -7,7 +6,7 @@ import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth/options";
 import CreateLinkClient from "./CreateLinkClient";
-import CompactRecent from "./CompactRecent";
+import RecentLinksClient from "@/components/RecentLinksClient";
 
 export default async function CreateLinkPage() {
   const session = (await getServerSession(authOptions)) as Session | null;
@@ -24,12 +23,13 @@ export default async function CreateLinkPage() {
         </p>
       </header>
 
-      {/* Form-only (header removed in client) */}
+      {/* Form: actual Smart Link creation */}
       <CreateLinkClient />
 
       <hr className="my-4 border-gray-200" />
 
-      <CompactRecent />
+      {/* Full interactive recent links list */}
+      <RecentLinksClient />
     </main>
   );
 }

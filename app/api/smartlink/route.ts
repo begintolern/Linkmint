@@ -5,27 +5,22 @@ import type { Session } from "next-auth";
 import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import {
-  createInvolveAsiaShortlink,
-  createAccesstradeShortlink,
-  genSubId,
-} from "@/lib/affiliates/deeplink";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-// Temporary PH affiliate map (fallback if API fails)
+// Temporary PH affiliate map (no DB migration required)
 const AFFILIATE_MAP: Record<string, string> = {
   "shopee.ph": "https://invl.me/cln2cek",
   "lazada.com.ph": "https://atid.me/00p2cf002mmu",
 };
 
-// --- quick GET to prove the route exists
+// --- quick GET to confirm route is live
 export async function GET() {
   return NextResponse.json({ ok: true, route: "smartlink", methods: ["GET", "POST"] });
 }
 
-// ---- allow/deny helper -----------------------
+// ---------- allow/deny helper ----------
 type SourceCheckResult = { ok: true } | { ok: false; reason: string };
 
 function norm(s: string | null | undefined) {
@@ -45,7 +40,7 @@ function validateSource(
         v
           .map((x) => (typeof x === "string" ? x : String(x ?? "")))
           .map((x) => x.trim().toLowerCase())
-          .filter(Boolean)
+          .filter(Boolean),
       );
     }
     if (typeof v === "string") {
@@ -53,14 +48,14 @@ function validateSource(
         v
           .split(",")
           .map((x) => x.trim().toLowerCase())
-          .filter(Boolean)
+          .filter(Boolean),
       );
     }
     return new Set();
   };
 
   const allowed = toSet((merchant as any).allowedSources);
-  const disallowed = toSet((merchant as any).disallowedSources);
+  const disallowed = toSet((merchant as any).disallowedSources); // <-- fixed key
 
   if (disallowed.has(src)) {
     return {
@@ -77,7 +72,7 @@ function validateSource(
   return { ok: true };
 }
 
-// ---- helpers -------------------------------
+// ---------- helpers ----------
 function normalizeUrl(input: string): URL | null {
   try {
     const hasProto = /^https?:\/\//i.test(input.trim());
@@ -87,16 +82,6 @@ function normalizeUrl(input: string): URL | null {
   } catch {
     return null;
   }
-}
-
-function isShopeeHost(h: string) {
-  const host = h.replace(/^www\./, "").toLowerCase();
-  return host === "shopee.ph" || host.endsWith(".shopee.ph");
-}
-
-function isLazadaHost(h: string) {
-  const host = h.replace(/^www\./, "").toLowerCase();
-  return host === "lazada.com.ph" || host.endsWith(".lazada.com.ph");
 }
 
 type RuleLite = {
@@ -110,16 +95,14 @@ type RuleLite = {
   allowedRegions: string[] | null;
   market?: string | null;
   allowedSources?: unknown;
+  // affiliateUrl?: string | null; // if you later add this column
 };
 
 async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
   const host = hostname.toLowerCase().replace(/^www\./, "");
   const rule = await prisma.merchantRule.findFirst({
     where: {
-      OR: [
-        { domainPattern: { contains: host } },
-        { merchantName: { contains: host } },
-      ],
+      OR: [{ domainPattern: { contains: host } }, { merchantName: { contains: host } }],
       active: true,
     },
   });
@@ -130,10 +113,7 @@ async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
     const tld = parts.slice(-2).join(".");
     const alt = await prisma.merchantRule.findFirst({
       where: {
-        OR: [
-          { domainPattern: { contains: tld } },
-          { merchantName: { contains: tld } },
-        ],
+        OR: [{ domainPattern: { contains: tld } }, { merchantName: { contains: tld } }],
         active: true,
       },
     });
@@ -143,10 +123,9 @@ async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
   return null;
 }
 
-// ---- types ---------------------------------
+// ---------- handler ----------
 type PostBody = { url?: string; label?: string; source?: string };
 
-// ---- handler -------------------------------
 export async function POST(req: NextRequest) {
   // auth
   const raw = await getServerSession(authOptions);
@@ -156,8 +135,7 @@ export async function POST(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     userId = (token as any)?.sub || (token as any)?.id;
   }
-  if (!userId)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // input
   const body = (await req.json().catch(() => ({}))) as PostBody;
@@ -165,14 +143,14 @@ export async function POST(req: NextRequest) {
   const label = body?.label?.trim() || null;
   const source = (body?.source ?? "").trim();
 
-  if (!rawUrl)
-    return NextResponse.json({ error: "Missing url" }, { status: 400 });
+  if (!rawUrl) return NextResponse.json({ error: "Missing url" }, { status: 400 });
   const parsed = normalizeUrl(rawUrl);
-  if (!parsed)
+  if (!parsed) {
     return NextResponse.json(
       { error: "Invalid URL. Please include a full product URL." },
-      { status: 400 }
+      { status: 400 },
     );
+  }
 
   // resolve rule
   const hostname = parsed.hostname;
@@ -202,10 +180,9 @@ export async function POST(req: NextRequest) {
         ok: true,
         link: shortUrl,
         shortUrl,
-        warning:
-          "No merchant rule matched; link may not earn commissions.",
+        warning: "No merchant rule matched; link may not earn commissions.",
       },
-      { status: 200 }
+      { status: 200 },
     );
   }
 
@@ -223,7 +200,7 @@ export async function POST(req: NextRequest) {
         reason: `This merchant (${rule.merchantName}) is not enabled for the Philippines.`,
         merchant: { id: rule.id, name: rule.merchantName, market },
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -236,7 +213,7 @@ export async function POST(req: NextRequest) {
         error: "This merchant is not yet approved for commissions.",
         merchant: { name: rule.merchantName, status: rule.status ?? "INACTIVE" },
       },
-      { status: 422 }
+      { status: 422 },
     );
   }
 
@@ -256,44 +233,22 @@ export async function POST(req: NextRequest) {
           reason:
             "This merchant requires a traffic source (tiktok, instagram, facebook, youtube).",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
     const check = validateSource(rule as any, source);
     if (!check.ok)
       return NextResponse.json(
         { ok: false, error: "SOURCE_BLOCKED", reason: check.reason },
-        { status: 400 }
+        { status: 400 },
       );
   }
 
-  // --- Determine affiliate link ---
+  // Determine affiliate link
   const hostKey = hostname.replace(/^www\./, "").toLowerCase();
-
-  let resolvedAffiliate: string | null = null;
-  try {
-    const subId = genSubId();
-    if (isShopeeHost(hostKey)) {
-      resolvedAffiliate =
-        (await createInvolveAsiaShortlink({
-          productUrl: parsed.toString(),
-          subId,
-        })) || null;
-    } else if (isLazadaHost(hostKey)) {
-      resolvedAffiliate =
-        (await createAccesstradeShortlink({
-          productUrl: parsed.toString(),
-          subId,
-        })) || null;
-    }
-  } catch {
-    // ignore failures
-  }
-
   const affiliateUrl =
-    resolvedAffiliate ??
     AFFILIATE_MAP[hostKey] ??
-    (rule as any).affiliateUrl ??
+    (rule as any).affiliateUrl ?? // future-proof if you add this column later
     parsed.toString();
 
   // create smartlink
@@ -304,7 +259,7 @@ export async function POST(req: NextRequest) {
       merchantName: rule.merchantName,
       merchantDomain: rule.domainPattern ?? hostname,
       originalUrl: parsed.toString(),
-      shortUrl: affiliateUrl,
+      shortUrl: affiliateUrl, // tracked link
       label,
     },
   });

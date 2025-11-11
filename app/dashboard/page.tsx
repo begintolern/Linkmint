@@ -2,12 +2,15 @@
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+import LinksCard from "./_components/LinksCard";
+import ReferralLinkCard from "./components/ReferralLinkCard";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth/options";
 import DashboardPageHeader from "@/components/DashboardPageHeader";
 import Link from "next/link";
+import ColoredStats from "./_components/ColoredStats";
 import PayoutNotice from "./_components/PayoutNotice";
 
 type AppUser = {
@@ -19,8 +22,8 @@ type AppUser = {
 
 export default async function DashboardPage() {
   const session = (await getServerSession(authOptions)) as Session | null;
-  if (!session) {
-    redirect("/api/auth/signin?callbackUrl=/dashboard");
+  if (!session?.user?.id) {
+    redirect("/login?next=/dashboard");
   }
 
   const user = (session?.user ?? {}) as AppUser;
@@ -108,6 +111,10 @@ export default async function DashboardPage() {
       {/* 🇵🇭 PH payout update notice */}
       <PayoutNotice />
 
+      {/* Live stats */}
+      <ColoredStats />
+
+      {/* Action tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {tiles.map((t) => (
           <Link
@@ -121,6 +128,16 @@ export default async function DashboardPage() {
             <p className="mt-1 text-sm opacity-80">{t.subtitle}</p>
           </Link>
         ))}
+      </div>
+
+      {/* Recent Links Card */}
+      <div className="pt-4">
+        <LinksCard />
+      </div>
+
+      {/* Referral Link Card */}
+      <div className="pt-4">
+        <ReferralLinkCard />
       </div>
     </main>
   );

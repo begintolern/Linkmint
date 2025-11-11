@@ -1,50 +1,53 @@
 // app/api/whoami/route.ts
 export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
-import { prisma } from "@/lib/db";
 
-const ADMINS = (process.env.ADMINS ??
-  "epo78741@yahoo.com,admin@linkmint.co,ertorig3@gmail.com")
-  .split(",")
-  .map(s => s.trim())
-  .filter(Boolean);
+type WhoAmIResponse =
+  | {
+      ok: true;
+      user: {
+        id?: string | null;
+        email?: string | null;
+        name?: string | null;
+        role?: string | null;
+      };
+    }
+  | { ok: false; error: string };
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ ok: false, error: "NO_SESSION" }, { status: 200 });
+    // Avoid `in` — guard with typeof/object checks
+    const hasUser =
+      session != null &&
+      typeof session === "object" &&
+      (session as any).user != null;
+
+    if (!hasUser) {
+      return NextResponse.json<WhoAmIResponse>(
+        { ok: false, error: "NO_SESSION" },
+        { status: 200 }
+      );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, email: true, name: true, role: true, disabled: true },
-    });
+    const u = (session as any).user ?? {};
+    const id = typeof u.id === "string" ? u.id : null;
+    const email = typeof u.email === "string" ? u.email : null;
+    const name = typeof u.name === "string" ? u.name : null;
+    const role = typeof u.role === "string" ? u.role : null;
 
-    if (!user) {
-      return NextResponse.json({ ok: false, error: "USER_NOT_FOUND" }, { status: 200 });
-    }
-    if (user.disabled) {
-      return NextResponse.json({ ok: false, error: "USER_DISABLED" }, { status: 200 });
-    }
-
-    const isAdmin = ADMINS.includes(user.email ?? "");
-
-    // Backward compatible fields (email, admins, isAdmin) + the normalized `user` object
-    return NextResponse.json({
+    return NextResponse.json<WhoAmIResponse>({
       ok: true,
-      email: user.email ?? null,
-      admins: ADMINS,
-      isAdmin,
-      user, // { id, email, name, role, disabled }
+      user: { id, email, name, role },
     });
-  } catch (err) {
-    return NextResponse.json({ ok: false, error: "SERVER_ERROR" }, { status: 500 });
+  } catch {
+    return NextResponse.json<WhoAmIResponse>(
+      { ok: false, error: "SERVER_ERROR" },
+      { status: 500 }
+    );
   }
 }
