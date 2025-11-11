@@ -197,5 +197,25 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     })
     .catch((e) => console.error("[shortlink][ClickEvent] error:", e));
 
+  // 🔔 Telegram alert (non-blocking)
+  if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+    const msg =
+      `🔗 Click logged\n` +
+      `Merchant: ${link.merchantName}\n` +
+      `Domain: ${link.merchantDomain}\n` +
+      `SmartLink ID: ${link.id}\n` +
+      `User ID: ${link.userId || "anon"}`;
+
+    fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        chat_id: process.env.TELEGRAM_CHAT_ID,
+        text: msg,
+        disable_notification: false,
+      }),
+    }).catch((e) => console.error("[telegram] sendMessage failed", e));
+  }
+
   return NextResponse.redirect(outboundUrl, { status: 302 });
 }
