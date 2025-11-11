@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * Animated, read-only tutorial that explains:
@@ -69,12 +69,15 @@ export default function TutorialPage() {
     return () => clearInterval(t);
   }, [playing]);
 
-  // Keyboard navigation
+  // Keyboard navigation (prevents page scroll on Space)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") setIdx((i) => Math.min(i + 1, STEPS.length - 1));
       if (e.key === "ArrowLeft") setIdx((i) => Math.max(i - 1, 0));
-      if (e.key.toLowerCase() === " ") setPlaying((p) => !p);
+      if (e.code === "Space") {
+        e.preventDefault();
+        setPlaying((p) => !p);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -107,22 +110,32 @@ export default function TutorialPage() {
         <section aria-labelledby="stage-title" className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 md:p-6">
           <div className="mb-4 flex items-center justify-between">
             {/* Step tabs */}
-            <ol className="flex flex-wrap gap-2">
-              {STEPS.map((s, i) => (
-                <button
-                  key={s.id}
-                  onClick={() => setIdx(i)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs ${
-                    idx === i
-                      ? "border-emerald-500 bg-emerald-500/10 text-emerald-200"
-                      : "border-slate-700 text-slate-300 hover:bg-slate-800"
-                  }`}
-                  aria-current={idx === i}
-                >
-                  {s.icon}
-                  {s.title}
-                </button>
-              ))}
+            <ol className="flex flex-wrap gap-2" role="tablist" aria-label="Tutorial steps">
+              {STEPS.map((s, i) => {
+                const selected = idx === i;
+                return (
+                  <button
+                    key={s.id}
+                    id={`tab-${s.id}`}
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls={`panel-${s.id}`}
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => {
+                      setPlaying(false); // pause autoplay on manual selection
+                      setIdx(i);
+                    }}
+                    className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs ${
+                      selected
+                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-200"
+                        : "border-slate-700 text-slate-300 hover:bg-slate-800"
+                    }`}
+                  >
+                    {s.icon}
+                    {s.title}
+                  </button>
+                );
+              })}
             </ol>
 
             {/* Controls */}
@@ -160,6 +173,9 @@ export default function TutorialPage() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={step.id}
+                role="tabpanel"
+                id={`panel-${step.id}`}
+                aria-labelledby={`tab-${step.id}`}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0, transition: { duration: 0.25 } }}
                 exit={{ opacity: 0, y: -8, transition: { duration: 0.2 } }}
@@ -203,11 +219,15 @@ export default function TutorialPage() {
             </li>
             <li className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 h-4 w-4 text-yellow-400" />
-              <span><b>No self-purchase</b>, spam clicks, or bot traffic. Violations hurt TrustScore.</span>
+              <span>
+                <b>No self-purchase</b>, spam clicks, or bot traffic. Violations hurt TrustScore.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <BadgePercent className="mt-0.5 h-4 w-4 text-blue-300" />
-              <span><b>No coupon stacking</b> unless explicitly allowed by the merchant.</span>
+              <span>
+                <b>No coupon stacking</b> unless explicitly allowed by the merchant.
+              </span>
             </li>
             <li className="flex items-start gap-2">
               <Receipt className="mt-0.5 h-4 w-4 text-sky-300" />
@@ -231,8 +251,7 @@ export default function TutorialPage() {
           </div>
 
           <p className="mt-4 text-xs text-slate-400">
-            Transparency first: Link statuses (Pending, Approved, Paid, Reversed) show exactly
-            what happened and why.
+            Transparency first: Link statuses (Pending, Approved, Paid, Reversed) show exactly what happened and why.
           </p>
         </aside>
       </div>
@@ -263,9 +282,8 @@ function WelcomePanel() {
       <div>
         <h3 className="text-lg font-semibold">Create, share, earn — with compliance built in.</h3>
         <p className="mt-2 text-sm text-slate-300">
-          This 90-second tour shows how you go from <b>idea → smart link → share → commission</b>.
-          You’ll also see how we surface <b>merchant rules</b>, prevent violations, and explain
-          <b> why some purchases don’t qualify</b>.
+          This 90-second tour shows how you go from <b>idea → smart link → share → commission</b>. You’ll also see how we
+          surface <b>merchant rules</b>, prevent violations, and explain <b>why some purchases don’t qualify</b>.
         </p>
         <ul className="mt-4 space-y-1 text-sm text-slate-300">
           <li>• AI Suggestions turn topics into draft copy & merchant ideas</li>
@@ -291,9 +309,9 @@ function AIPanel() {
       <div>
         <h3 className="text-lg font-semibold">AI Suggestions</h3>
         <p className="mt-2 text-sm text-slate-300">
-          Type a product, merchant, or theme (e.g., <i>“beginner camera under $500”</i>). Our AI
-          returns <b>offer ideas</b>, <b>network hints</b>, platform-fit titles and captions, plus
-          short <b>CTAs</b>. Click <i>Use Draft</i> to prefill your Smart Link form.
+          Type a product, merchant, or theme (e.g., <i>“beginner camera under $500”</i>). Our AI returns <b>offer ideas</b>,{" "}
+          <b>network hints</b>, platform-fit titles and captions, plus short <b>CTAs</b>. Click <i>Use Draft</i> to prefill
+          your Smart Link form.
         </p>
         <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 p-3 text-xs text-slate-300">
           <p className="mb-1 font-semibold">Rule reminder:</p>
@@ -324,7 +342,7 @@ function MerchantsPanel() {
       { icon: <BadgePercent className="h-3.5 w-3.5" />, text: "No coupon stacking" },
       { icon: <Receipt className="h-3.5 w-3.5" />, text: "Gift cards excluded" },
       { icon: <Globe2 className="h-3.5 w-3.5" />, text: "Geo restrictions apply" },
-      { icon: <Clock className="h-3.5 w-3.5" />, text: "30-day cookie window" },
+      { icon: <Clock className="h-3.5 w-3.5" />, text: "Typical cookie window (varies by merchant)" },
     ],
     []
   );
@@ -334,9 +352,8 @@ function MerchantsPanel() {
       <div>
         <h3 className="text-lg font-semibold">Explore Merchants</h3>
         <p className="mt-2 text-sm text-slate-300">
-          Browse compatible merchants and networks. Each card shows <b>allowed platforms</b>,{" "}
-          <b>cookie window</b>, and <b>policy flags</b> from our Merchant Rules database so you stay
-          compliant.
+          Browse compatible merchants and networks. Each card shows <b>allowed platforms</b>, <b>cookie window</b>, and{" "}
+          <b>policy flags</b> from our Merchant Rules database so you stay compliant.
         </p>
         <ul className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-200">
           {rules.map((r, i) => (
@@ -374,10 +391,9 @@ function CreatePanel() {
       <div>
         <h3 className="text-lg font-semibold">Create Smart Link</h3>
         <p className="mt-2 text-sm text-slate-300">
-          Fill the form: <b>Destination URL</b>, <b>Title</b>, <b>Short caption</b>, target{" "}
-          <b>Platform</b>, <b>Network</b>, optional <b>UTM/source</b>, and <b>Audience tags</b>.
-          We’ll normalize your link and attach tracking. Disclosure helper suggests a compliant
-          blurb per platform.
+          Fill the form: <b>Destination URL</b>, <b>Title</b>, <b>Short caption</b>, target <b>Platform</b>,{" "}
+          <b>Network</b>, optional <b>UTM/source</b>, and <b>Audience tags</b>. We’ll normalize your link and attach
+          tracking. Disclosure helper suggests a compliant blurb per platform.
         </p>
         <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 p-3 text-xs text-slate-300">
           <p className="mb-1 font-semibold">Rule reminder:</p>
@@ -403,7 +419,7 @@ function CreatePanel() {
 
 function PolicyPanel() {
   const findings = [
-    { sev: "MEDIUM", text: "Coupon stacking often disallowed — remove ‘stack with any code’." },
+    { sev: "MEDIUM", text: "Coupon stacking often disallowed — remove “stack with any code”." },
     { sev: "LOW", text: "Avoid implying guaranteed savings if terms vary by region." },
   ];
   return (
@@ -411,9 +427,8 @@ function PolicyPanel() {
       <div>
         <h3 className="text-lg font-semibold">Policy Pre-Check</h3>
         <p className="mt-2 text-sm text-slate-300">
-          Paste your caption and run a check. We flag common risks like <b>gift cards</b>,{" "}
-          <b>coupon stacking</b>, <b>self-purchase</b>, or <b>prohibited claims</b>. Use suggested
-          fixes before sharing to avoid reversals.
+          Paste your caption and run a check. We flag common risks like <b>gift cards</b>, <b>coupon stacking</b>,{" "}
+          <b>self-purchase</b>, or <b>prohibited claims</b>. Use suggested fixes before sharing to avoid reversals.
         </p>
         <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 p-3 text-xs text-slate-300">
           <p className="mb-1 font-semibold">Severity scale:</p>
@@ -457,9 +472,9 @@ function TrackPanel() {
       <div>
         <h3 className="text-lg font-semibold">Share & Track</h3>
         <p className="mt-2 text-sm text-slate-300">
-          After you share, we track clicks and attribute purchases. Commissions start as{" "}
-          <b>Pending</b> and move to <b>Approved</b> only after the affiliate network clears funds.
-          Some purchases may be <b>Disqualified</b> — and we show the reason clearly.
+          After you share, we track clicks and attribute purchases. Commissions start as <b>Pending</b> and move to{" "}
+          <b>Approved</b> only after the affiliate network clears funds. Some purchases may be <b>Disqualified</b> — and
+          we show the reason clearly.
         </p>
         <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 p-3 text-xs text-slate-300">
           <p className="mb-1 font-semibold">Why a purchase may not qualify:</p>
@@ -501,9 +516,9 @@ function PayoutsPanel() {
       <div>
         <h3 className="text-lg font-semibold">Payouts & TrustScore</h3>
         <p className="mt-2 text-sm text-slate-300">
-          Balances show <b>Pending</b>, <b>Approved</b>, and <b>Paid</b>. Withdrawals are available
-          only after <b>funds are received from the affiliate partner</b>. TrustScore improves with
-          clean traffic and valid conversions — but even high TrustScore cannot bypass payout rules.
+          Balances show <b>Pending</b>, <b>Approved</b>, and <b>Paid</b>. Withdrawals are available only after{" "}
+          <b>funds are received from the affiliate partner</b>. TrustScore improves with clean traffic and valid
+          conversions — but even high TrustScore cannot bypass payout rules.
         </p>
         <ul className="mt-3 space-y-1 text-sm text-slate-300">
           <li>• No early payouts</li>

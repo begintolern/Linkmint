@@ -1,15 +1,48 @@
 // components/UserMenu.tsx
 "use client";
 
-import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
+type SessionLite = {
+  user?: { name?: string | null; email?: string | null } | null;
+};
+
 export default function UserMenu() {
-  const { data } = useSession();
-  const name = data?.user?.name || data?.user?.email || "Account";
-  const initial = (name || "?").slice(0, 1).toUpperCase();
   const [open, setOpen] = useState(false);
+  const [name, setName] = useState<string>("Account");
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/session", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!res.ok) throw new Error("session fetch failed");
+        const j = (await res.json()) as SessionLite | null;
+        const display =
+          j?.user?.name ||
+          j?.user?.email ||
+          "Account";
+        if (active) setName(display);
+      } catch {
+        if (active) setName("Account");
+      } finally {
+        if (active) setLoaded(true);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Until we check once, render nothing (prevents UI flicker)
+  if (!loaded) return null;
+
+  const initial = (name || "?").slice(0, 1).toUpperCase();
 
   return (
     <div className="relative">

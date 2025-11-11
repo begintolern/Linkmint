@@ -1,13 +1,15 @@
+// app/providers.tsx
 "use client";
 
-import * as React from "react";
 import { SessionProvider } from "next-auth/react";
+import type { ReactNode } from "react";
 
-type Props = {
-  children: React.ReactNode;
-};
-
-export default function Providers({ children }: Props) {
-  // You can pass session via props later if needed
-  return <SessionProvider>{children}</SessionProvider>;
+export default function Providers({ children }: { children: ReactNode }) {
+  // No client-side auth gating or messages here.
+  // Server-side guards in layout/page handle protection.
+  return (
+    <SessionProvider refetchOnWindowFocus={false} refetchWhenOffline={false}>
+      {children}
+    </SessionProvider>
+  );
 }

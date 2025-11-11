@@ -1,0 +1,79 @@
+{
+  "merchantKey": "lazada-ph",
+  "displayName": "Lazada PH (App)",
+  "region": ["PH", "SEA"],
+  "appOnly": true,
+  "cookieWindowDays": 7,
+  "conversionRequirements": [
+    "User must add ≥1 product to cart",
+    "User must complete payment successfully",
+    "Order must be placed and paid in Lazada App"
+  ],
+  "reportingDelayHours": 24,
+  "validationWindowDaysMin": 60,
+  "validationWindowDaysMax": 75,
+  "trafficPolicy": {
+    "banned": [
+      "Adult/Pornographic/Violent content",
+      "Gambling",
+      "Pop-Up & Pop-Under",
+      "Search Engine Marketing (SEM)",
+      "Self Conversion",
+      "Brand Bidding",
+      "Incentive Traffic / Loyalty programs offering rewards for clicks or installs",
+      "Cashback",
+      "Coupon & Discount Code sites (unapproved)",
+      "Sub-affiliate networks (unapproved)"
+    ],
+    "conditionallyAllowed": [
+      "Social Media Ads (must have Lazada approval)",
+      "Email Marketing (must have Lazada approval)",
+      "Display Ads / Display Banners (allowed only if non-intrusive)",
+      "Direct Linking (allowed only to approved creatives)",
+      "Deep Linking (allowed only through official app links)"
+    ],
+    "allowed": [
+      "Content Sites / Blogs / Review Pages",
+      "Native Ads (contextual placements only)",
+      "Social Media Posts / Organic Sharing",
+      "Push Notifications (non-incentivized, opt-in)",
+      "Social Messenger Apps (non-spam use)",
+      "Organic Referral Traffic"
+    ]
+  },
+  "invalidReasons": [
+    "Fraudulent transaction (manual or automated detection)",
+    "Collusion (affiliate/sub-affiliate linked to seller)",
+    "Cancelled order",
+    "Returned order",
+    "Reseller intent",
+    "Unauthorized traffic/source",
+    "Outside cookie period",
+    "Not last click",
+    "Duplicate order/conversion",
+    "Incomplete purchase",
+    "Failed transparency check"
+  ],
+  "commissionModel": "sale_percent",
+  "commissionNotes": "New and Existing customers baseline −1%. Tiered category % applies per Lazada rules.",
+  "tiers": [
+    { "name": "non commissionable", "ratePercent": 0.0 },
+    { "name": "tier 1 commission", "ratePercent": 1.89 },
+    { "name": "tier 2 commission", "ratePercent": 2.20 },
+    { "name": "tier 3 commission", "ratePercent": 2.52 },
+    { "name": "tier 4 commission", "ratePercent": 2.83 },
+    { "name": "tier 5 commission", "ratePercent": 3.15 },
+    { "name": "new_customer_tier2", "ratePercent": 2.20 },
+    { "name": "new_customer_tier3", "ratePercent": 2.52 },
+    { "name": "new_customer_tier4", "ratePercent": 2.83 },
+    { "name": "new_customer_tier5", "ratePercent": 3.15 }
+  ],
+  "uiBadges": ["APP ONLY", "7-DAY COOKIE", "60-75d VALIDATION"],
+  "payoutMessaging": "Payouts only after network approval (60–75 days typical).",
+  "enforcement": {
+    "requireAppDeepLink": true,
+    "blockSem": true,
+    "requireChannelPreapproval": ["social", "edm"],
+    "blockIncentivizedTraffic": true
+  }
+}

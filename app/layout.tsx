@@ -1,6 +1,8 @@
+// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import Providers from "./providers";
+import FooterDisclosure from "./components/FooterDisclosure";
+import Providers from "./providers"; // client wrapper
 
 const siteName = "linkmint.co";
 const siteTitle = "Linkmint turns your shares into income — every link can earn.";
@@ -51,6 +53,10 @@ export const metadata: Metadata = {
     shortcut: ["/favicon-2025.svg"],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export const viewport: Viewport = {
@@ -64,29 +70,32 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* SEO: Organization schema for brand/entity trust */}
         <script
           type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              "name": "Linkmint (linkmint.co)",
-              "url": "https://linkmint.co",
-              "logo": "https://linkmint.co/og-image.png",
-              "contactPoint": [
+              name: "Linkmint (linkmint.co)",
+              url: "https://linkmint.co",
+              logo: "https://linkmint.co/og-image.png",
+              contactPoint: [
                 {
                   "@type": "ContactPoint",
-                  "contactType": "customer support",
-                  "email": "admin@linkmint.co",
-                  "areaServed": ["PH", "US"],
-                  "availableLanguage": ["en", "tl"]
-                }
-              ]
-              // Add social profiles later via `sameAs`
+                  contactType: "customer support",
+                  email: "admin@linkmint.co",
+                  areaServed: ["PH", "US"],
+                  availableLanguage: ["en", "tl"],
+                },
+              ],
             }),
           }}
         />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <FooterDisclosure />
+        </Providers>
       </body>
     </html>
   );

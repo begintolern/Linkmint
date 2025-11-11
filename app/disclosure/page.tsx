@@ -1,97 +1,109 @@
 // app/disclosure/page.tsx
-import Link from "next/link";
+export const dynamic = "force-static";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-export const revalidate = 0;
+import type { Metadata } from "next";
 
-export const metadata = {
-  title: "Affiliate Disclosure | linkmint.co",
+export const metadata: Metadata = {
+  title: "Disclosure",
   description:
-    "Transparency about how Linkmint earns commission from partner merchants and affiliate networks.",
+    "How linkmint.co makes money, how commissions work, and what you should expect when you click or purchase through our links.",
+  alternates: { canonical: "/disclosure" },
 };
 
 export default function DisclosurePage() {
-  const updated = new Date().toISOString().slice(0, 10);
-
   return (
-    <main className="max-w-3xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Earnings & FTC Disclosure</h1>
-      <p className="text-sm text-gray-500">Last updated: {updated}</p>
+    <main className="max-w-3xl mx-auto px-5 py-10 prose prose-slate">
+      <h1 className="!mb-2">Disclosure</h1>
+      <p className="text-sm text-gray-500 !mt-0">Last updated: {new Date().toLocaleDateString()}</p>
 
+      <h2>Plain-English summary</h2>
       <p>
-        <strong>Linkmint</strong> participates in affiliate programs. This means we may earn a
-        commission when users click links and complete qualifying actions (such as purchases or
-        sign-ups) with partner advertisers or networks. There is <em>no additional cost</em> to you.
+        linkmint.co is an affiliate-link platform. When you click a link we host and then buy something,
+        the merchant may pay a commission. That commission never changes your price. We show clear labels
+        so you know when a link can earn.
       </p>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">What This Means</h2>
-        <ul className="list-disc pl-6 space-y-1">
-          <li>
-            Some links on our site and in our app are tracking links. If you click them and take a
-            qualifying action, we may receive a commission.
-          </li>
-          <li>Commissions are paid by advertisers/networks and do not increase your price.</li>
-          <li>
-            Earnings shown in the dashboard are estimates until confirmed by the applicable
-            advertiser or network and may be adjusted or reversed.
-          </li>
-        </ul>
-      </section>
+      <h2>How it works</h2>
+      <ul>
+        <li>
+          <strong>Smart links:</strong> Our users generate “smart links” that point to merchant pages
+          (e.g., product detail pages). When a purchase is confirmed by the merchant or network, a
+          commission is recorded.
+        </li>
+        <li>
+          <strong>No extra cost:</strong> The purchase price you see at the merchant is the same whether
+          or not a link earns a commission.
+        </li>
+        <li>
+          <strong>Timing:</strong> Many merchants take time (often 7–45 days) to approve commissions
+          to account for returns, fraud checks, and policy review.
+        </li>
+        <li>
+          <strong>Payouts to sharers:</strong> After commissions are approved and funds are received from
+          the network/merchant, eligible users can request payout (see our “Trust Center” and “Payouts”
+          pages for timing and rules).
+        </li>
+      </ul>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Integrity & Independence</h2>
-        <p>
-          We aim to present accurate information and fairly represent partner offers. Compensation
-          may influence placement or availability of offers, but it does not change our commitment
-          to transparency.
-        </p>
-      </section>
+      <h2>Our relationships</h2>
+      <p>
+        We participate in multiple affiliate programs and networks. Examples include:
+      </p>
+      <ul>
+        <li>Marketplace programs (e.g., Lazada, Shopee) via their official affiliate programs or approved networks.</li>
+        <li>General affiliate networks (e.g., impact.com, CJ, Rakuten, and others as onboarded).</li>
+      </ul>
+      <p>
+        Each program has its own rules. If a merchant or network disallows a category (e.g., gift cards,
+        coupon stacking, self-purchase), we aim to block or flag it in our tools. Final approval is always
+        the merchant/network’s decision.
+      </p>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">User Earnings</h2>
-        <p>
-          Users may receive a portion of qualifying commissions according to our payout policy and
-          any applicable program rules. Amounts are subject to advertiser/network confirmation,
-          fraud checks, holdbacks, and compliance review.
-        </p>
-      </section>
+      <h2>Disclosures you’ll see on linkmint.co</h2>
+      <ul>
+        <li>
+          <strong>“This link can earn a commission.”</strong> Placed near shareable links and on pages
+          where users create or view smart links.
+        </li>
+        <li>
+          <strong>“Commission pending/approved.”</strong> Appears in dashboard areas and admin views to
+          clarify status.
+        </li>
+      </ul>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Offer Accuracy & Changes</h2>
-        <p>
-          We strive for accuracy, but offers can change without notice. Always check the merchant’s
-          site for current price, terms, and eligibility before you purchase or sign up.
-        </p>
-      </section>
+      <h2>Example scenarios</h2>
+      <ul>
+        <li>
+          <strong>Product review → purchase:</strong> You read a user’s mini-review and click the link to
+          a merchant. If you buy, a commission may be paid to linkmint.co and the sharer.
+        </li>
+        <li>
+          <strong>Coupon code applied:</strong> If the merchant pays commission with coupons, the purchase
+          may still qualify. Some merchants disallow coupon + affiliate combo; in that case, no commission
+          is paid.
+        </li>
+        <li>
+          <strong>Return/refund:</strong> If you return your item, the commission is usually voided.
+        </li>
+      </ul>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Transparency & Your Privacy</h2>
-        <p>
-          For more details on how Linkmint works, please review our{" "}
-          <Link href="/terms" className="text-blue-600 hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="text-blue-600 hover:underline">
-            Privacy Policy
-          </Link>
-          .
-        </p>
-      </section>
+      <h2>Editorial independence</h2>
+      <p>
+        linkmint.co provides tools that let users share links. We do not accept payment to alter prices at
+        merchants, and we don’t inflate or change merchant pricing. Recommendations by users are their own.
+      </p>
 
-      <section className="space-y-2">
-        <h2 className="text-xl font-semibold">Questions</h2>
-        <p>
-          If you have questions about our disclosures or how affiliate commissions work, contact us
-          at{" "}
-          <a className="text-blue-600 underline" href="mailto:support@linkmint.co">
-            support@linkmint.co
-          </a>
-          .
-        </p>
-      </section>
+      <h2>Contact</h2>
+      <p>
+        Questions about this disclosure? Email <a href="mailto:admin@linkmint.co">admin@linkmint.co</a>.
+      </p>
+
+      <hr />
+
+      <p className="text-xs text-gray-500">
+        Note: We may update program participation and wording as merchants or networks change their rules.
+        When that happens, we’ll update this page and adjust our tools.
+      </p>
     </main>
   );
 }

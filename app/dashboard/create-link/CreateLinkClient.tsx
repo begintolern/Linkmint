@@ -3,25 +3,45 @@
 
 import { useState } from "react";
 
-type CreateResponse =
-  | { ok: true; id: string; shortUrl?: string; merchant?: string }
-  | { ok: false; error?: string; message?: string };
+type DetectOk = { ok: true; key: string; displayName: string };
+type DetectErr = { ok: false; error: string };
+type Detect = DetectOk | DetectErr;
 
-const PH_MERCHANTS = [
-  { hostIncludes: "lazada.com.ph", id: "cmfvvoxsj0000oij8u4oadeo5", name: "Lazada PH" },
-  { hostIncludes: "shopee.ph",     id: "cmfu940920003oikshotzltnp", name: "Shopee"     },
-];
+type CreateOk = {
+  ok: true;
+  id: string;            // internal smartLink id OR short code
+  shortUrl?: string;     // if the API returns a short url
+  merchant?: string;     // optional echo
+};
+type CreateErr = { ok: false; error?: string; message?: string };
+type CreateResp = CreateOk | CreateErr;
 
-function detectMerchant(urlStr: string) {
+const KEY_V1 = "recent-links";
+const KEY_V2 = "recent-links:v2";
+
+function saveRecent(entry: {
+  id: string;
+  shortUrl: string;
+  merchant?: string;
+  destinationUrl: string;
+}) {
   try {
-    const u = new URL(urlStr);
-    const host = u.hostname.toLowerCase();
-    for (const m of PH_MERCHANTS) {
-      if (host.includes(m.hostIncludes)) return m;
-    }
-    return null;
-  } catch {
-    return null;
+    // v1 (legacy)
+    const rawV1 = localStorage.getItem(KEY_V1);
+    const listV1 = rawV1 ? (JSON.parse(rawV1) as any[]) : [];
+    listV1.unshift({ ...entry, createdAt: Date.now(), pinned: false });
+    localStorage.setItem(KEY_V1, JSON.stringify(listV1.slice(0, 20)));
+
+    // v2 (preferred)
+    const rawV2 = localStorage.getItem(KEY_V2);
+    const listV2 = rawV2 ? (JSON.parse(rawV2) as any[]) : [];
+    listV2.unshift({ ...entry, createdAt: Date.now(), pinned: false });
+    localStorage.setItem(KEY_V2, JSON.stringify(listV2.slice(0, 50)));
+
+    // notify listeners
+    window.dispatchEvent(new Event("lm-recent-links-changed"));
+  } catch (e) {
+    console.warn("recent save failed:", e);
   }
 }
 
@@ -42,34 +62,41 @@ export default function CreateLinkClient() {
       return;
     }
 
-    const merchant = detectMerchant(url);
-    if (!merchant) {
-      setError("We only support Lazada PH and Shopee PH URLs for now.");
-      return;
-    }
-
     setBusy(true);
     try {
-      const res = await fetch("/api/smartlinks/create", {
+      // 1) Detect merchant
+      const detRes = await fetch(
+        `/api/merchants/detect?url=${encodeURIComponent(url)}`,
+        { cache: "no-store", credentials: "include" }
+      );
+      const det = (await detRes.json()) as Detect;
+
+      if (!detRes.ok || !("ok" in det) || det.ok === false) {
+        setError("Unsupported or invalid URL. We currently support Lazada PH and Shopee PH.");
+        return;
+      }
+
+      // 2) Create smartlink with merchantKey + destinationUrl
+      const createRes = await fetch("/api/smartlinks/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          merchantId: merchant.id,
+          merchantKey: det.key,        // <-- switched from merchantId to merchantKey
           destinationUrl: url,
           source: "dashboard",
         }),
       });
 
-      let data: CreateResponse;
+      let data: CreateResp;
       try {
-        data = (await res.json()) as CreateResponse;
+        data = (await createRes.json()) as CreateResp;
       } catch {
         setError("Unexpected server response.");
         return;
       }
 
-      if (!res.ok || !("ok" in data) || data.ok === false) {
+      if (!createRes.ok || !("ok" in data) || data.ok === false) {
         const msg =
           ("message" in data && data.message) ||
           ("error" in data && data.error) ||
@@ -78,33 +105,23 @@ export default function CreateLinkClient() {
         return;
       }
 
-      // Save to localStorage "recent-links" (keep last 10)
-      try {
-        const raw = localStorage.getItem("recent-links");
-        const arr = raw ? JSON.parse(raw) : [];
-        const list: any[] = Array.isArray(arr) ? arr : [];
-        const entry = {
-          id: data.id,
-          shortUrl: data.shortUrl ?? "",
-          merchant: data.merchant ?? merchant.name,
-          destinationUrl: url,
-          createdAt: Date.now(),
-        };
-        list.unshift(entry);
-        localStorage.setItem("recent-links", JSON.stringify(list.slice(0, 10)));
+      const shortUrl = (data.shortUrl ?? "").toString();
+      const id = data.id;
 
-        // notify compact list to refresh immediately
-        window.dispatchEvent(new Event("lm-recent-links-changed"));
-      } catch (err) {
-        console.error("localStorage save error", err);
-      }
+      // 3) Save to recent (v2 + legacy v1) so both /links and CompactRecent see it
+      saveRecent({
+        id,
+        shortUrl,
+        merchant: data.merchant || det.displayName,
+        destinationUrl: url,
+      });
 
       setInfo(
-        data.shortUrl
-          ? `Link created! Short URL: ${data.shortUrl}`
-          : `Link created! ID: ${data.id}`
+        shortUrl
+          ? `Link created! Short URL: ${shortUrl}`
+          : `Link created! ID: ${id}`
       );
-      // Optional: clear field
+      // keep the field for quick edits; or uncomment to clear:
       // setProductUrl("");
     } catch (err) {
       console.error("create link error", err);
@@ -116,14 +133,12 @@ export default function CreateLinkClient() {
 
   return (
     <div className="max-w-xl space-y-4">
-      {/* Header removed to avoid duplication with page header */}
-
       <form onSubmit={handleCreate} className="space-y-3">
         <input
           type="url"
           value={productUrl}
           onChange={(e) => setProductUrl(e.target.value)}
-          placeholder="https://www.lazada.com.ph/products/..."
+          placeholder="https://www.lazada.com.ph/products/...  or  https://shopee.ph/..."
           className="w-full rounded border px-3 py-2"
           required
         />

@@ -32,7 +32,7 @@ function appendSubid(productUrl: string, subid: string): string {
   }
 }
 
-/** Involve Asia wrapper (for Lazada PH etc.) */
+/** Involve Asia wrapper (optional fallback) */
 function wrapWithInvolveAsia(productUrl: string, subid: string): string | null {
   const base = (process.env.INVOLVEASIA_BASE_URL || "").trim();
   if (!base) return null;
@@ -46,8 +46,7 @@ function wrapWithInvolveAsia(productUrl: string, subid: string): string | null {
     const out = new URL(base);
     out.searchParams.set(deeplinkParam, productUrl);
     out.searchParams.set(subidParam, subid);
-    if (affIdParam && affIdValue)
-      out.searchParams.set(affIdParam, affIdValue);
+    if (affIdParam && affIdValue) out.searchParams.set(affIdParam, affIdValue);
     out.searchParams.set("lm_subid", subid);
     out.searchParams.set("utm_source", "linkmint");
     return out.toString();
@@ -56,7 +55,7 @@ function wrapWithInvolveAsia(productUrl: string, subid: string): string | null {
   }
 }
 
-/** Shopee Affiliate wrapper (for Shopee PH etc.) */
+/** Shopee wrapper (optional fallback) */
 function wrapWithShopee(productUrl: string, subid: string): string | null {
   const base = (process.env.SHOPEE_BASE_URL || "").trim();
   if (!base) return null;
@@ -70,8 +69,7 @@ function wrapWithShopee(productUrl: string, subid: string): string | null {
     const out = new URL(base);
     out.searchParams.set(deeplinkParam, productUrl);
     out.searchParams.set(subidParam, subid);
-    if (affIdParam && affIdValue)
-      out.searchParams.set(affIdParam, affIdValue);
+    if (affIdParam && affIdValue) out.searchParams.set(affIdParam, affIdValue);
     out.searchParams.set("lm_subid", subid);
     out.searchParams.set("utm_source", "linkmint");
     return out.toString();
@@ -80,7 +78,7 @@ function wrapWithShopee(productUrl: string, subid: string): string | null {
   }
 }
 
-/** Central outbound URL builder */
+/** Fallback builder if we don't already have a tracked shortUrl */
 function buildOutboundUrl(opts: {
   productUrl: string;
   smartLinkId: string;
@@ -90,32 +88,29 @@ function buildOutboundUrl(opts: {
   const network = (merchant?.network || "").trim().toLowerCase();
   const domain = (merchant?.domain || "").trim().toLowerCase();
 
-  // Involve Asia → Lazada PH
+  // If you ever store Shopee under "Involve Asia", this wrapper may still apply.
   const isIA = network === "involve asia";
-  const isLazadaPH =
-    !!domain && (domain === "lazada.com.ph" || domain.endsWith(".lazada.com.ph"));
+  const isLazadaPH = !!domain && (domain === "lazada.com.ph" || domain.endsWith(".lazada.com.ph"));
   if (isIA && isLazadaPH) {
     const wrapped = wrapWithInvolveAsia(productUrl, smartLinkId);
     if (wrapped) return wrapped;
   }
 
-  // Shopee Affiliate → Shopee PH
-  const isShopee = network === "shopee affiliate";
-  const isShopeePH =
-    !!domain && (domain === "shopee.ph" || domain.endsWith(".shopee.ph"));
-  if (isShopee && isShopeePH) {
+  // If you later store Shopee as "Shopee Affiliate"
+  const isShopeeAff = network === "shopee affiliate";
+  const isShopeePH = !!domain && (domain === "shopee.ph" || domain.endsWith(".shopee.ph"));
+  if (isShopeeAff && isShopeePH) {
     const wrapped = wrapWithShopee(productUrl, smartLinkId);
     if (wrapped) return wrapped;
   }
 
-  // Fallback
+  // Generic fallback
   return appendSubid(productUrl, smartLinkId);
 }
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const id = (params?.id || "").trim();
-  if (!id)
-    return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
+  if (!id) return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
 
   const link = await prisma.smartLink.findUnique({
     where: { id },
@@ -126,27 +121,29 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       merchantName: true,
       merchantDomain: true,
       originalUrl: true,
+      shortUrl: true,            // <-- pull tracked affiliate short link
       createdAt: true,
       merchantRule: { select: { network: true, domainPattern: true } },
     },
   });
 
   if (!link || !link.originalUrl) {
-    return NextResponse.json(
-      { ok: false, error: "LINK_NOT_FOUND" },
-      { status: 404 }
-    );
+    return NextResponse.json({ ok: false, error: "LINK_NOT_FOUND" }, { status: 404 });
   }
 
-  const outboundUrl = buildOutboundUrl({
-    productUrl: link.originalUrl,
-    smartLinkId: link.id,
-    merchant: {
-      network: link.merchantRule?.network ?? null,
-      domain: link.merchantDomain ?? link.merchantRule?.domainPattern ?? null,
-      name: link.merchantName ?? null,
-    },
-  });
+  // ✅ Prefer the tracked affiliate link we already created in /api/smartlink
+  const tracked = (link.shortUrl || "").trim();
+  const outboundUrl =
+    tracked ||
+    buildOutboundUrl({
+      productUrl: link.originalUrl,
+      smartLinkId: link.id,
+      merchant: {
+        network: link.merchantRule?.network ?? null,
+        domain: link.merchantDomain ?? link.merchantRule?.domainPattern ?? null,
+        name: link.merchantName ?? null,
+      },
+    });
 
   // Request metadata
   const ip = getClientIp(req);
@@ -168,22 +165,19 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     at: new Date().toISOString(),
   };
 
-  // --- EventLog (relation-safe, no ip/userId mix)
+  // EventLog (non-blocking)
   const eventData: any = {
     type: "CLICK",
     message: "SmartLink click",
     detail: JSON.stringify(detailPayload),
     severity: 1,
   };
-  if (link.userId) {
-    eventData.user = { connect: { id: link.userId } };
-  }
+  if (link.userId) eventData.user = { connect: { id: link.userId } };
+  prisma.eventLog.create({ data: eventData }).catch((e) =>
+    console.error("[shortlink][EventLog] error:", e)
+  );
 
-  prisma.eventLog
-    .create({ data: eventData })
-    .catch((e) => console.error("[shortlink][EventLog] error:", e));
-
-  // --- ClickEvent (used by admin/clicks)
+  // ClickEvent (non-blocking)
   prisma.clickEvent
     .create({
       data: {

@@ -5,9 +5,25 @@ import type { Session } from "next-auth";
 import { getToken } from "next-auth/jwt";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
+import {
+  createInvolveAsiaShortlink,
+  createAccesstradeShortlink,
+  genSubId,
+} from "@/lib/affiliates/deeplink";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
+
+// Temporary PH affiliate map (fallback if API fails)
+const AFFILIATE_MAP: Record<string, string> = {
+  "shopee.ph": "https://invl.me/cln2cek",
+  "lazada.com.ph": "https://atid.me/00p2cf002mmu",
+};
+
+// --- quick GET to prove the route exists
+export async function GET() {
+  return NextResponse.json({ ok: true, route: "smartlink", methods: ["GET", "POST"] });
+}
 
 // ---- allow/deny helper -----------------------
 type SourceCheckResult = { ok: true } | { ok: false; reason: string };
@@ -44,13 +60,19 @@ function validateSource(
   };
 
   const allowed = toSet((merchant as any).allowedSources);
-  const disallowed = toSet((merchant as any).disallowed);
+  const disallowed = toSet((merchant as any).disallowedSources);
 
   if (disallowed.has(src)) {
-    return { ok: false, reason: `${merchant.merchantName}: the source "${source}" is not allowed by the merchant's program rules.` };
+    return {
+      ok: false,
+      reason: `${merchant.merchantName}: the source "${source}" is not allowed by the merchant's program rules.`,
+    };
   }
   if (allowed.size > 0 && !allowed.has(src)) {
-    return { ok: false, reason: `${merchant.merchantName}: the source "${source}" is not in the allowed sources.` };
+    return {
+      ok: false,
+      reason: `${merchant.merchantName}: the source "${source}" is not in the allowed sources.`,
+    };
   }
   return { ok: true };
 }
@@ -65,6 +87,16 @@ function normalizeUrl(input: string): URL | null {
   } catch {
     return null;
   }
+}
+
+function isShopeeHost(h: string) {
+  const host = h.replace(/^www\./, "").toLowerCase();
+  return host === "shopee.ph" || host.endsWith(".shopee.ph");
+}
+
+function isLazadaHost(h: string) {
+  const host = h.replace(/^www\./, "").toLowerCase();
+  return host === "lazada.com.ph" || host.endsWith(".lazada.com.ph");
 }
 
 type RuleLite = {
@@ -82,7 +114,6 @@ type RuleLite = {
 
 async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
   const host = hostname.toLowerCase().replace(/^www\./, "");
-  // Loosen the search (don't require approved here; handle gating later)
   const rule = await prisma.merchantRule.findFirst({
     where: {
       OR: [
@@ -94,7 +125,6 @@ async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
   });
   if (rule) return rule as any;
 
-  // Second chance: some records store TLD with subdomain variations
   const parts = host.split(".");
   if (parts.length > 2) {
     const tld = parts.slice(-2).join(".");
@@ -126,7 +156,8 @@ export async function POST(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     userId = (token as any)?.sub || (token as any)?.id;
   }
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // input
   const body = (await req.json().catch(() => ({}))) as PostBody;
@@ -134,7 +165,8 @@ export async function POST(req: NextRequest) {
   const label = body?.label?.trim() || null;
   const source = (body?.source ?? "").trim();
 
-  if (!rawUrl) return NextResponse.json({ error: "Missing url" }, { status: 400 });
+  if (!rawUrl)
+    return NextResponse.json({ error: "Missing url" }, { status: 400 });
   const parsed = normalizeUrl(rawUrl);
   if (!parsed)
     return NextResponse.json(
@@ -146,7 +178,7 @@ export async function POST(req: NextRequest) {
   const hostname = parsed.hostname;
   const rule = await findRuleByHost(hostname);
 
-  // no rule -> make generic link (non-commission)
+  // no rule -> generic link (non-commission)
   if (!rule) {
     const generic = await prisma.smartLink.create({
       data: {
@@ -166,33 +198,37 @@ export async function POST(req: NextRequest) {
     const shortUrl = base ? `${base}/l/${generic.id}` : `/l/${generic.id}`;
 
     return NextResponse.json(
-      { ok: true, link: shortUrl, shortUrl, warning: "No merchant rule matched; link may not earn commissions." },
+      {
+        ok: true,
+        link: shortUrl,
+        shortUrl,
+        warning:
+          "No merchant rule matched; link may not earn commissions.",
+      },
       { status: 200 }
     );
   }
 
-  // gating (PH-first policy + approval)
-  const status = String(rule.status ?? "").toLowerCase(); // 'approved' | 'active' | 'pending' | ''
+  // PH-first gating + approval
+  const status = String(rule.status ?? "").toLowerCase();
   const market = (rule as any).market ?? null;
   const isApproved = status === "approved" || status === "active";
   const isPH = market === "PH";
 
-  // Enforce PH market
   if (market && !isPH) {
     return NextResponse.json(
       {
         ok: false,
         error: "MARKET_BLOCKED",
-        reason: "This merchant is not enabled for the Philippines.",
+        reason: `This merchant (${rule.merchantName}) is not enabled for the Philippines.`,
         merchant: { id: rule.id, name: rule.merchantName, market },
       },
       { status: 400 }
     );
   }
 
-  // If still pending but PH + active, allow with warning (so testing can proceed)
   if (!isApproved && isPH) {
-    // continue but flag warning
+    // allow but warn
   } else if (!isApproved) {
     return NextResponse.json(
       {
@@ -204,21 +240,61 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // allow/deny source lists if present
-  const hasAllow = Array.isArray((rule as any).allowedSources) && (rule as any).allowedSources.length > 0;
-  const denyList = (rule as any).disallowed;
+  // allow/deny source lists
+  const hasAllow =
+    Array.isArray((rule as any).allowedSources) &&
+    (rule as any).allowedSources.length > 0;
+  const denyList = (rule as any).disallowedSources;
   const hasDeny = Array.isArray(denyList) && denyList.length > 0;
 
   if (hasAllow || hasDeny) {
     if (!source) {
       return NextResponse.json(
-        { ok: false, error: "SOURCE_REQUIRED", reason: "This merchant requires a traffic source (tiktok, instagram, facebook, youtube)." },
+        {
+          ok: false,
+          error: "SOURCE_REQUIRED",
+          reason:
+            "This merchant requires a traffic source (tiktok, instagram, facebook, youtube).",
+        },
         { status: 400 }
       );
     }
     const check = validateSource(rule as any, source);
-    if (!check.ok) return NextResponse.json({ ok: false, error: "SOURCE_BLOCKED", reason: check.reason }, { status: 400 });
+    if (!check.ok)
+      return NextResponse.json(
+        { ok: false, error: "SOURCE_BLOCKED", reason: check.reason },
+        { status: 400 }
+      );
   }
+
+  // --- Determine affiliate link ---
+  const hostKey = hostname.replace(/^www\./, "").toLowerCase();
+
+  let resolvedAffiliate: string | null = null;
+  try {
+    const subId = genSubId();
+    if (isShopeeHost(hostKey)) {
+      resolvedAffiliate =
+        (await createInvolveAsiaShortlink({
+          productUrl: parsed.toString(),
+          subId,
+        })) || null;
+    } else if (isLazadaHost(hostKey)) {
+      resolvedAffiliate =
+        (await createAccesstradeShortlink({
+          productUrl: parsed.toString(),
+          subId,
+        })) || null;
+    }
+  } catch {
+    // ignore failures
+  }
+
+  const affiliateUrl =
+    resolvedAffiliate ??
+    AFFILIATE_MAP[hostKey] ??
+    (rule as any).affiliateUrl ??
+    parsed.toString();
 
   // create smartlink
   const created = await prisma.smartLink.create({
@@ -228,7 +304,7 @@ export async function POST(req: NextRequest) {
       merchantName: rule.merchantName,
       merchantDomain: rule.domainPattern ?? hostname,
       originalUrl: parsed.toString(),
-      shortUrl: parsed.toString(),
+      shortUrl: affiliateUrl,
       label,
     },
   });
@@ -250,7 +326,8 @@ export async function POST(req: NextRequest) {
     },
   };
   if (!isApproved && isPH) {
-    payload.warning = "Merchant is PENDING but PH-enabled; commissions may be limited until full approval.";
+    payload.warning =
+      "Merchant is PENDING but PH-enabled; commissions may be limited until full approval.";
   }
 
   return NextResponse.json(payload, { status: 200 });

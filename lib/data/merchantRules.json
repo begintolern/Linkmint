@@ -1,0 +1,22 @@
+[
+  {
+    "merchant": "Shopee PH",
+    "network": "Involve Asia",
+    "baseUrl": "https://invl.me/cln2cek",
+    "country": "PH",
+    "payoutType": "CPS",
+    "commissionRate": "2.4%",
+    "status": "active",
+    "notes": "Shopee Philippines affiliate link via Involve Asia"
+  },
+  {
+    "merchant": "Lazada PH",
+    "network": "Accesstrade",
+    "baseUrl": "https://atid.me/00p2cf002mmu",
+    "country": "PH",
+    "payoutType": "CPS",
+    "commissionRate": "Up to 4.8%",
+    "status": "active",
+    "notes": "Lazada Philippines affiliate link via Accesstrade"
+  }
+]

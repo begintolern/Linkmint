@@ -1,3 +1,4 @@
+// app/components/RecentLinksClient.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -32,17 +33,13 @@ function normalize(items: RecentLink[]): RecentLink[] {
   }));
 }
 
-/** Merge with **v2 preferred** so pin state persists. */
 function mergePreferV2(v1: RecentLink[], v2: RecentLink[]): RecentLink[] {
   const map = new Map<string, RecentLink>();
-  // write older (v1) first…
   for (const it of v1) map.set(it.id, it);
-  // …then overwrite with v2 (preferred)
   for (const it of v2) map.set(it.id, it);
   return Array.from(map.values());
 }
 
-/** Load: v2 preferred, dedupe, normalize, sort (pinned first, then newest) */
 function loadRecent(): RecentLink[] {
   const v2 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V2) : null);
   const v1 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V1) : null);
@@ -77,7 +74,7 @@ export default function RecentLinksClient() {
     setBusy(true);
     const data = loadRecent();
     setItems(data);
-    saveV2(data); // always normalize into v2
+    saveV2(data);
     const ts = Date.now();
     setLastRefreshed(ts);
     setNotice(`Refreshed ${new Date(ts).toLocaleTimeString()}`);

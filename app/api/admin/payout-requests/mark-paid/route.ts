@@ -1,59 +1,56 @@
-// app/api/admin/payout-requests/mark-paid/route.ts
 export const dynamic = "force-dynamic";
-export const fetchCache = "no-store";
-export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
-function assertAdmin(req: Request) {
-  const key = req.headers.get("x-admin-key") || "";
-  return !!process.env.ADMIN_API_KEY && key === process.env.ADMIN_API_KEY;
-}
-
-// fire-and-forget Telegram sender
-async function sendTelegram(text: string) {
+// Accept any of:
+// 1) NextAuth session with role ADMIN
+// 2) Cookie admin_key == ADMIN_API_KEY
+// 3) Header x-admin-key == ADMIN_API_KEY
+async function isAdmin(req: Request) {
   try {
-    if (!process.env.OPS_ALERTS_ENABLED || String(process.env.OPS_ALERTS_ENABLED) === "0") return;
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chat = process.env.TELEGRAM_CHAT_ID;
-    if (!token || !chat) return;
+    const session = (await getServerSession(authOptions)) as any;
+    if (session?.user?.role?.toUpperCase?.() === "ADMIN") return true;
 
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-      body: JSON.stringify({
-        chat_id: chat,
-        text,
-        disable_web_page_preview: true,
-      }),
-    });
+    const jar = cookies();
+    const cookieKey = jar.get("admin_key")?.value || "";
+    const headerKey = req.headers.get("x-admin-key") || "";
+    const expected = process.env.ADMIN_API_KEY || "";
+    if (expected && (cookieKey === expected || headerKey === expected)) return true;
+
+    return false;
   } catch {
-    // non-blocking
+    return false;
   }
 }
 
 export async function POST(req: Request) {
-  try {
-    if (!assertAdmin(req)) {
-      return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
-    }
+  if (!(await isAdmin(req))) {
+    return NextResponse.json({ ok: false, error: "FORBIDDEN" }, { status: 403 });
+  }
 
-    const { id, note } = (await req.json().catch(() => ({}))) as {
-      id?: string;
-      note?: string;
-    };
+  try {
+    const body = await req.json().catch(() => ({} as any));
+    const id = (body?.id ?? "").toString().trim();
+    const noteRaw = typeof body?.note === "string" ? body.note : "Marked paid via admin UI";
+    const note = noteRaw.slice(0, 250);
+
     if (!id) {
       return NextResponse.json({ ok: false, error: "MISSING_ID" }, { status: 400 });
     }
 
+    // IMPORTANT: only write fields that exist on PayoutRequest.
+    // Do NOT write transactionId or other fields if not in schema.
     const updated = await prisma.payoutRequest.update({
       where: { id },
       data: {
-        status: "PAID",
+        status: "PAID",           // Prisma enum value
         processedAt: new Date(),
-        processorNote: note ?? "Marked PAID by admin",
+        processorNote: note,
       },
       select: {
         id: true,
@@ -65,43 +62,15 @@ export async function POST(req: Request) {
         requestedAt: true,
         processedAt: true,
         processorNote: true,
-        user: { select: { email: true } },
       },
     });
 
-    // Telegram alert (green)
-    const email = updated.user?.email || updated.userId;
-    const msg =
-      [
-        "🟢 Payout PAID",
-        `• Request: ${updated.id}`,
-        `• User: ${email}`,
-        `• Amount: ₱${updated.amountPhp}`,
-        `• Method: ${updated.method} (${updated.provider})`,
-        updated.processorNote ? `• Note: ${updated.processorNote}` : null,
-        updated.requestedAt ? `• Requested: ${updated.requestedAt.toISOString()}` : null,
-        updated.processedAt ? `• Paid: ${updated.processedAt.toISOString()}` : null,
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-    sendTelegram(msg);
-
-    // Optional system log (non-blocking)
-    try {
-      await prisma.systemLog.create({
-        data: {
-          id: `payout_paid_${updated.id}`,
-          type: "PAYOUT_PAID",
-          message: `Payout request marked PAID (${updated.method}/${updated.provider})`,
-          json: JSON.stringify({ id: updated.id, userId: updated.userId, amountPhp: updated.amountPhp }),
-        },
-      });
-    } catch {}
-
     return NextResponse.json({ ok: true, request: updated });
   } catch (e: any) {
-    console.error("POST /api/admin/payout-requests/mark-paid error:", e);
-    return NextResponse.json({ ok: false, error: "SERVER_ERROR", detail: e?.message }, { status: 500 });
+    console.error("POST /admin/payout-requests/mark-paid error:", e?.message || e);
+    return NextResponse.json(
+      { ok: false, error: "SERVER_ERROR", detail: e?.message || "unknown" },
+      { status: 500 }
+    );
   }
 }
