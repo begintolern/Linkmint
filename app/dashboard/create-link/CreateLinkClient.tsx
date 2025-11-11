@@ -1,158 +1,162 @@
-// app/dashboard/create-link/CreateLinkClient.tsx
 "use client";
 
 import { useState } from "react";
-
-type DetectOk = { ok: true; key: string; displayName: string };
-type DetectErr = { ok: false; error: string };
-type Detect = DetectOk | DetectErr;
-
-type CreateOk = {
-  ok: true;
-  id: string;            // internal smartLink id OR short code
-  shortUrl?: string;     // if the API returns a short url
-  merchant?: string;     // optional echo
-};
-type CreateErr = { ok: false; error?: string; message?: string };
-type CreateResp = CreateOk | CreateErr;
-
-const KEY_V1 = "recent-links";
-const KEY_V2 = "recent-links:v2";
-
-function saveRecent(entry: {
-  id: string;
-  shortUrl: string;
-  merchant?: string;
-  destinationUrl: string;
-}) {
-  try {
-    // v1 (legacy)
-    const rawV1 = localStorage.getItem(KEY_V1);
-    const listV1 = rawV1 ? (JSON.parse(rawV1) as any[]) : [];
-    listV1.unshift({ ...entry, createdAt: Date.now(), pinned: false });
-    localStorage.setItem(KEY_V1, JSON.stringify(listV1.slice(0, 20)));
-
-    // v2 (preferred)
-    const rawV2 = localStorage.getItem(KEY_V2);
-    const listV2 = rawV2 ? (JSON.parse(rawV2) as any[]) : [];
-    listV2.unshift({ ...entry, createdAt: Date.now(), pinned: false });
-    localStorage.setItem(KEY_V2, JSON.stringify(listV2.slice(0, 50)));
-
-    // notify listeners
-    window.dispatchEvent(new Event("lm-recent-links-changed"));
-  } catch (e) {
-    console.warn("recent save failed:", e);
-  }
-}
+import Link from "next/link";
 
 export default function CreateLinkClient() {
-  const [productUrl, setProductUrl] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [copied, setCopied] = useState<null | "ok" | "err">(null);
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setInfo(null);
+    if (!url.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setCopied(null);
 
-    const url = productUrl.trim();
-    if (!url) {
-      setError("Please paste a product URL.");
-      return;
-    }
-
-    setBusy(true);
     try {
-      // 1) Detect merchant
-      const detRes = await fetch(
-        `/api/merchants/detect?url=${encodeURIComponent(url)}`,
-        { cache: "no-store", credentials: "include" }
-      );
-      const det = (await detRes.json()) as Detect;
-
-      if (!detRes.ok || !("ok" in det) || det.ok === false) {
-        setError("Unsupported or invalid URL. We currently support Lazada PH and Shopee PH.");
-        return;
-      }
-
-      // 2) Create smartlink with merchantKey + destinationUrl
-      const createRes = await fetch("/api/smartlinks/create", {
+      const res = await fetch("/api/smartlink", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          merchantKey: det.key,        // <-- switched from merchantId to merchantKey
-          destinationUrl: url,
-          source: "dashboard",
-        }),
+        body: JSON.stringify({ url }),
       });
-
-      let data: CreateResp;
-      try {
-        data = (await createRes.json()) as CreateResp;
-      } catch {
-        setError("Unexpected server response.");
-        return;
-      }
-
-      if (!createRes.ok || !("ok" in data) || data.ok === false) {
-        const msg =
-          ("message" in data && data.message) ||
-          ("error" in data && data.error) ||
-          "Failed to create link.";
-        setError(msg);
-        return;
-      }
-
-      const shortUrl = (data.shortUrl ?? "").toString();
-      const id = data.id;
-
-      // 3) Save to recent (v2 + legacy v1) so both /links and CompactRecent see it
-      saveRecent({
-        id,
-        shortUrl,
-        merchant: data.merchant || det.displayName,
-        destinationUrl: url,
-      });
-
-      setInfo(
-        shortUrl
-          ? `Link created! Short URL: ${shortUrl}`
-          : `Link created! ID: ${id}`
-      );
-      // keep the field for quick edits; or uncomment to clear:
-      // setProductUrl("");
+      const json = await res.json();
+      setResult(json);
     } catch (err) {
-      console.error("create link error", err);
-      setError("Network error while creating the link.");
+      console.error(err);
+      alert("Something went wrong creating your link.");
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
+  }
+
+  async function copyToClipboard(text: string) {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // fallback
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied("ok");
+      setTimeout(() => setCopied(null), 1500);
+    } catch {
+      setCopied("err");
+      setTimeout(() => setCopied(null), 2000);
+    }
+  }
+
+  function resetForm() {
+    setUrl("");
+    setResult(null);
+    setCopied(null);
   }
 
   return (
-    <div className="max-w-xl space-y-4">
-      <form onSubmit={handleCreate} className="space-y-3">
+    <div className="space-y-6">
+      {/* Top nav */}
+      <div className="flex items-center justify-between border-b pb-3">
+        <h2 className="text-lg font-semibold">Create Smart Link</h2>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard"
+            className="text-sm px-3 py-1.5 rounded-md border hover:bg-gray-50"
+          >
+            ← Dashboard
+          </Link>
+          <Link
+            href="/dashboard/links"
+            className="text-sm px-3 py-1.5 rounded-md border hover:bg-gray-50"
+          >
+            View Links
+          </Link>
+        </div>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="url"
-          value={productUrl}
-          onChange={(e) => setProductUrl(e.target.value)}
-          placeholder="https://www.lazada.com.ph/products/...  or  https://shopee.ph/..."
-          className="w-full rounded border px-3 py-2"
+          placeholder="Paste product URL (Shopee, Lazada, etc.)"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="w-full border rounded-lg p-3 text-sm"
           required
         />
         <button
           type="submit"
-          disabled={busy}
-          className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+          disabled={loading}
+          className="px-4 py-2 rounded-md bg-teal-600 text-white text-sm hover:bg-teal-700 disabled:opacity-50"
         >
-          {busy ? "Creating..." : "Create Link"}
+          {loading ? "Creating..." : "Create Smart Link"}
         </button>
       </form>
 
-      {error && <div className="text-red-600 text-sm">{error}</div>}
-      {info && <div className="text-green-700 text-sm">{info}</div>}
+      {/* Result */}
+      {result && result.ok && (
+        <div className="p-4 border rounded-md bg-white shadow-sm space-y-3">
+          <div className="space-y-1">
+            <p className="font-medium text-sm">Your link is ready:</p>
+            <a
+              href={result.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline break-all text-sm"
+            >
+              {result.link}
+            </a>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => copyToClipboard(result.link)}
+              className="px-3 py-1.5 rounded-md border text-sm hover:bg-gray-50"
+            >
+              Copy
+            </button>
+            <Link
+              href="/dashboard/links"
+              className="px-3 py-1.5 rounded-md border text-sm hover:bg-gray-50"
+            >
+              Go to Links
+            </Link>
+            <button
+              onClick={resetForm}
+              className="px-3 py-1.5 rounded-md border text-sm hover:bg-gray-50"
+            >
+              Create another
+            </button>
+          </div>
+
+          {/* tiny inline toast */}
+          {copied === "ok" && (
+            <div className="text-xs text-emerald-700">Link copied.</div>
+          )}
+          {copied === "err" && (
+            <div className="text-xs text-rose-700">
+              Couldn’t copy automatically—select the link and copy.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Footer helper */}
+      <div className="border-t pt-3 text-sm text-gray-600 flex items-center justify-between">
+        <span className="opacity-80">Need help creating links?</span>
+        <Link
+          href="/tutorial"
+          className="px-3 py-1.5 rounded-md border hover:bg-gray-50"
+        >
+          Open Tutorial
+        </Link>
+      </div>
     </div>
   );
 }

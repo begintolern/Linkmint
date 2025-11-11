@@ -1,9 +1,7 @@
-// app/dashboard/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import LinksCard from "./_components/LinksCard";
-import ReferralLinkCard from "./components/ReferralLinkCard";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
@@ -22,8 +20,8 @@ type AppUser = {
 
 export default async function DashboardPage() {
   const session = (await getServerSession(authOptions)) as Session | null;
-  if (!session?.user?.id) {
-    redirect("/login?next=/dashboard");
+  if (!session) {
+    redirect("/api/auth/signin?callbackUrl=/dashboard");
   }
 
   const user = (session?.user ?? {}) as AppUser;
@@ -38,8 +36,8 @@ export default async function DashboardPage() {
     },
     {
       href: "/dashboard/links",
-      title: "Manage Links (Advanced)",
-      subtitle: "View history, refresh, clear, bulk actions",
+      title: "Manage Links",
+      subtitle: "History, refresh, bulk actions",
       tone: "indigo",
     },
     {
@@ -47,12 +45,6 @@ export default async function DashboardPage() {
       title: "Explore Merchants",
       subtitle: "Policies, payouts, rules",
       tone: "blue",
-    },
-    {
-      href: "/dashboard/merchants/ai",
-      title: "AI Suggestions (beta)",
-      subtitle: "Heuristic trending offers",
-      tone: "purple",
     },
     {
       href: "/dashboard/earnings",
@@ -102,43 +94,58 @@ export default async function DashboardPage() {
   };
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <DashboardPageHeader
-        title="Overview"
-        subtitle={`Welcome back, ${name}! Manage your links, merchants, and payouts.`}
-      />
+    <main className="mx-auto max-w-6xl space-y-5 px-4 sm:px-6 py-5">
+      {/* Heading */}
+      <div className="flex flex-col gap-2">
+        <DashboardPageHeader
+          title="Overview"
+          subtitle={`Welcome back, ${name}! Manage your links, merchants, and payouts.`}
+        />
+
+        {/* Quick actions (mobile-first) */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          <Link href="/dashboard/create-link" className="btn-primary whitespace-nowrap">
+            + Create Smart Link
+          </Link>
+          <Link href="/dashboard/links" className="btn-secondary whitespace-nowrap">
+            Manage Links
+          </Link>
+          <Link href="/dashboard/earnings" className="btn-secondary whitespace-nowrap">
+            View Earnings
+          </Link>
+        </div>
+      </div>
 
       {/* 🇵🇭 PH payout update notice */}
       <PayoutNotice />
 
-      {/* Live stats */}
-      <ColoredStats />
+      {/* Live stats (Pending / Approved / Processing / Paid / Failed / Bonus) */}
+      <section aria-label="stats">
+        <ColoredStats />
+      </section>
 
-      {/* Action tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tiles.map((t) => (
-          <Link
-            key={t.href}
-            href={t.href}
-            className={`flex flex-col justify-between rounded-2xl border p-4 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-black/10 ${toneClass(
-              t.tone
-            )}`}
-          >
-            <h3 className="text-base font-semibold">{t.title}</h3>
-            <p className="mt-1 text-sm opacity-80">{t.subtitle}</p>
-          </Link>
-        ))}
-      </div>
+      {/* Action tiles — mobile stacks, tablet 2-up, desktop 3-up */}
+      <section aria-label="actions">
+        <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {tiles.map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className={`flex min-h-[94px] flex-col justify-between rounded-2xl border p-4 shadow-sm transition focus:outline-none focus:ring-2 focus:ring-black/10 ${toneClass(
+                t.tone
+              )}`}
+            >
+              <h3 className="text-base font-semibold">{t.title}</h3>
+              <p className="mt-1 text-sm opacity-80">{t.subtitle}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-      {/* Recent Links Card */}
-      <div className="pt-4">
+      {/* Recent Links Card (kept at the bottom; fully responsive) */}
+      <section aria-label="recent-links" className="pt-1">
         <LinksCard />
-      </div>
-
-      {/* Referral Link Card */}
-      <div className="pt-4">
-        <ReferralLinkCard />
-      </div>
+      </section>
     </main>
   );
 }

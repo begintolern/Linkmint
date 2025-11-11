@@ -2,21 +2,88 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Optional: simple defaults */
+/* Base theme defaults */
 :root {
   color-scheme: light dark;
 }
+
+/* Ensure full-height app */
 html, body, #__next {
   height: 100%;
 }
+
+/* ----------------------------- */
+/* ✅ Tailwind component helpers */
+/* ----------------------------- */
 @layer components {
-  .btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed; }
-  .btn-primary { @apply btn bg-emerald-600 text-white hover:bg-emerald-700; }
-  .btn-secondary { @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50; }
-  .input { @apply block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600; }
-  .card { @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm; }
-  .badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold; }
-  .badge-pending { @apply badge bg-amber-100 text-amber-800; }
-  .badge-approved { @apply badge bg-emerald-100 text-emerald-800; }
-  .badge-paid { @apply badge bg-slate-900 text-white; }
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700;
+  }
+  .btn-secondary {
+    @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
+  }
+  .input {
+    @apply block w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-600;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  .badge-pending {
+    @apply badge bg-amber-100 text-amber-800;
+  }
+  .badge-approved {
+    @apply badge bg-emerald-100 text-emerald-800;
+  }
+  .badge-paid {
+    @apply badge bg-slate-900 text-white;
+  }
+}
+
+/* ------------------------------------ */
+/* ✅ Mobile Safety & Responsive Tweaks */
+/* ------------------------------------ */
+
+/* Prevent zooming quirks, text scaling, horizontal scroll */
+html, body {
+  overscroll-behavior-y: contain;
+  -webkit-text-size-adjust: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Ensure images, videos, iframes fit screen width */
+img, video, iframe {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+
+/* Handle long URLs, file names, and code overflow gracefully */
+a, code, pre {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Improve tap targets and mobile feedback */
+button, a[role="button"] {
+  -webkit-tap-highlight-color: rgba(0,0,0,0.08);
+}
+
+/* Smooth scrolling for iOS and mobile browsers */
+body {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Small text legibility improvement on smaller screens */
+@media (max-width: 640px) {
+  body {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
 }

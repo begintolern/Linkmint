@@ -2,165 +2,186 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-type SafeLink = {
-  id: string;
-  shortUrl: string | null;
-  merchantName: string | null;
-  destinationUrl: string | null;
-  createdAt: string; // ISO
-  clicks: number;
-};
-
-type TrendPoint = { date: string; count: number };
-type TrendMap = Record<string, TrendPoint[]>; // linkId -> series
-
-async function apiGet<T>(path: string): Promise<T | null> {
-  try {
-    const res = await fetch(path, { method: "GET", cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
-  }
-}
+type TrendPoint = { id: string; timestamp: string };
+type TrendResponse = { ok: boolean; trend?: TrendPoint[]; error?: string };
 
 export default function LinksCard() {
   const [loading, setLoading] = useState(true);
-  const [links, setLinks] = useState<SafeLink[]>([]);
-  const [trends, setTrends] = useState<TrendMap>({});
-  const [err, setErr] = useState<string | null>(null);
+  const [trend, setTrend] = useState<TrendPoint[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const load = useCallback(async () => {
+  const fetchTrend = useCallback(async () => {
     setLoading(true);
-    setErr(null);
-    const data = await apiGet<{ ok: boolean; links: SafeLink[] }>("/api/links");
-    if (!data?.ok) {
-      setErr("Can’t reach the links API.");
-      setLinks([]);
-      setTrends({});
+    setError(null);
+    try {
+      const res = await fetch("/api/links-trend", { cache: "no-store" });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      const json = (await res.json()) as TrendResponse;
+      if (!json.ok) throw new Error(json.error || "Unknown error");
+      setTrend(json.trend ?? []);
+    } catch (e: any) {
+      setError(
+        e?.message?.includes("401")
+          ? "You’re not signed in. Please log in to view recent links."
+          : e?.message || "Failed to load recent links."
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-    const top = data.links.slice(0, 6);
-    setLinks(top);
-
-    // Fetch trends for the visible link IDs (gracefully optional)
-    const ids = top.map((l) => l.id).join(",");
-    const trendResp = await apiGet<{ ok: boolean; trends: TrendMap }>(`/api/links-trend?ids=${encodeURIComponent(ids)}`);
-    if (trendResp?.ok && trendResp.trends) {
-      setTrends(trendResp.trends);
-    } else {
-      setTrends({});
-    }
-    setLoading(false);
   }, []);
 
+  // initial + on refresh
   useEffect(() => {
-    load();
-  }, [load]);
+    fetchTrend();
+  }, [fetchTrend, refreshKey]);
 
-  const content = useMemo(() => {
-    if (loading) {
-      return <div className="p-6 text-sm text-gray-500">Loading…</div>;
-    }
-    if (err) {
-      return <div className="p-6 text-sm text-amber-800 bg-amber-50 border-t border-amber-100">{err}</div>;
-    }
-    if (links.length === 0) {
-      return (
-        <div className="p-6 text-sm text-gray-500">
-          No links yet.{" "}
-          <Link href="/dashboard/create-link" className="text-teal-700 hover:underline font-medium">
-            Create your first link
-          </Link>
-          .
-        </div>
-      );
-    }
-
-    return (
-      <ul className="divide-y divide-gray-100">
-        {links.map((l) => {
-          const series = trends[l.id] ?? [];
-          return (
-            <li key={l.id} className="px-5 py-3">
-              <div className="flex items-start gap-3">
-                <div className="mt-1 h-2 w-2 rounded-full bg-gray-300" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="truncate">
-                      <div className="text-sm font-medium text-gray-800 truncate">{l.merchantName ?? "—"}</div>
-                      <a
-                        href={l.destinationUrl ?? "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block truncate text-xs text-gray-600 hover:text-teal-700 hover:underline"
-                        title={l.destinationUrl ?? ""}
-                      >
-                        {l.destinationUrl ?? "—"}
-                      </a>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <a
-                        href={l.shortUrl ?? "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-teal-700 hover:underline"
-                      >
-                        {l.shortUrl ? l.shortUrl.replace(/^https?:\/\//, "") : "—"}
-                      </a>
-                      <div className="text-[11px] text-gray-500">
-                        Clicks: <span className="font-medium text-gray-700">{l.clicks}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mini trend (last 7 days if available) */}
-                  {series.length > 0 && (
-                    <div className="mt-2 h-16 w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={series}>
-                          <XAxis dataKey="date" hide />
-                          <YAxis hide />
-                          <Tooltip
-                            formatter={(v: any) => [`${v} clicks`, ""]}
-                            labelFormatter={(label) => `Date: ${label}`}
-                          />
-                          <Line type="monotone" dataKey="count" dot={false} strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+  // compress timestamps to HH:mm or day label
+  const data = useMemo(() => {
+    // Show at most 20 points; newest last
+    const sorted = [...trend].sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
-  }, [loading, err, links, trends]);
+    const trimmed = sorted.slice(-20);
+
+    return trimmed.map((p) => {
+      const d = new Date(p.timestamp);
+      const label =
+        trimmed.length > 12
+          ? `${d.getMonth() + 1}/${d.getDate()}`
+          : `${d.getHours().toString().padStart(2, "0")}:${d
+              .getMinutes()
+              .toString()
+              .padStart(2, "0")}`;
+      return { label, clicks: 1 };
+    });
+  }, [trend]);
+
+  const totalClicks = useMemo(
+    () => (trend ? trend.length : 0),
+    [trend]
+  );
+
+  const onRefresh = () => setRefreshKey((k) => k + 1);
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <h3 className="text-sm font-semibold text-gray-800">Your recent links</h3>
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/links" className="text-xs text-teal-700 hover:underline">
-            View all
-          </Link>
+    <section className="card">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-base sm:text-lg font-semibold">
+            Your recent links
+          </h2>
+          <p className="text-xs text-gray-500">
+            Live click trend from your latest shortlinks
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            type="button"
-            onClick={load}
-            className="text-xs rounded-lg border px-3 py-1 hover:bg-gray-50 active:bg-gray-100"
-            title="Refresh"
+            className="btn-secondary text-xs sm:text-sm"
+            onClick={onRefresh}
+            disabled={loading}
+            aria-busy={loading}
           >
-            Refresh
+            {loading ? "Refreshing…" : "Refresh"}
           </button>
+          <Link
+            href="/dashboard/links"
+            className="btn-primary text-xs sm:text-sm"
+          >
+            Manage
+          </Link>
         </div>
       </div>
-      {content}
-    </div>
+
+      {/* Body */}
+      <div className="mt-3">
+        {/* Error state */}
+        {error && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800 text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Loading state */}
+        {!error && loading && (
+          <div className="h-32 grid place-items-center text-sm text-gray-500">
+            Loading…
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!error && !loading && data.length === 0 && (
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+            No recent clicks yet. Create a{" "}
+            <Link href="/dashboard/create-link" className="underline">
+              smart link
+            </Link>{" "}
+            and share it to start tracking.
+          </div>
+        )}
+
+        {/* Chart + KPI */}
+        {!error && !loading && data.length > 0 && (
+          <div className="grid gap-3 sm:grid-cols-5">
+            {/* KPI */}
+            <div className="order-2 sm:order-1 sm:col-span-2">
+              <div className="rounded-xl border border-gray-200 p-4">
+                <div className="text-xs text-gray-500">Total recent clicks</div>
+                <div className="text-2xl font-semibold">{totalClicks}</div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Last {Math.min(20, trend.length)} events
+                </div>
+              </div>
+            </div>
+            {/* Chart */}
+            <div className="order-1 sm:order-2 sm:col-span-3">
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={data}
+                    margin={{ top: 10, right: 10, bottom: 10, left: 0 }}
+                  >
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 11 }}
+                      stroke="#94a3b8"
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 11 }}
+                      stroke="#94a3b8"
+                    />
+                    <Tooltip
+                      formatter={(v: any) => [`${v} click${v === 1 ? "" : "s"}`, "Events"]}
+                      labelClassName="text-xs"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="clicks"
+                      dot={false}
+                      strokeWidth={2}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

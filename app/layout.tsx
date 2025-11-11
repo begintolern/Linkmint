@@ -1,8 +1,7 @@
-// app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import FooterDisclosure from "./components/FooterDisclosure";
-import Providers from "./providers"; // client wrapper
+import Providers from "./providers"; // <-- client wrapper
 
 const siteName = "linkmint.co";
 const siteTitle = "Linkmint turns your shares into income — every link can earn.";
@@ -61,11 +60,13 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#0ea5a4",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full antialiased">
       <head>
         {/* SEO: Organization schema for brand/entity trust */}
         <script
@@ -91,10 +92,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body>
+      {/* Mobile safety: prevent horizontal scroll, improve scrolling, consistent bg */}
+      <body className="min-h-screen bg-gray-50 overflow-x-hidden touch-pan-y">
         <Providers>
-          {children}
-          <FooterDisclosure />
+          <div className="min-h-screen flex flex-col">
+            <div className="flex-1">{children}</div>
+            <FooterDisclosure />
+          </div>
         </Providers>
       </body>
     </html>
