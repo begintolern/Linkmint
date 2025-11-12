@@ -277,13 +277,13 @@ export async function POST(req: NextRequest) {
       resolvedAffiliate =
         (await createInvolveAsiaShortlink({
           productUrl: parsed.toString(),
-          subId,
+          subid: subId,
         })) || null;
     } else if (isLazadaHost(hostKey)) {
       resolvedAffiliate =
         (await createAccesstradeShortlink({
           productUrl: parsed.toString(),
-          subId,
+          subid: subId,
         })) || null;
     }
   } catch {
