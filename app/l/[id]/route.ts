@@ -5,6 +5,8 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// -------- helpers -------------------------------------------------
+
 // Extract best-effort IP behind proxies/CDNs
 function getClientIp(req: Request): string | null {
   const xf = req.headers.get("x-forwarded-for");
@@ -88,9 +90,10 @@ function buildOutboundUrl(opts: {
   const network = (merchant?.network || "").trim().toLowerCase();
   const domain = (merchant?.domain || "").trim().toLowerCase();
 
-  // If you ever store Shopee under "Involve Asia", this wrapper may still apply.
+  // If you ever store Shopee/Lazada under "Involve Asia"
   const isIA = network === "involve asia";
-  const isLazadaPH = !!domain && (domain === "lazada.com.ph" || domain.endsWith(".lazada.com.ph"));
+  const isLazadaPH =
+    !!domain && (domain === "lazada.com.ph" || domain.endsWith(".lazada.com.ph"));
   if (isIA && isLazadaPH) {
     const wrapped = wrapWithInvolveAsia(productUrl, smartLinkId);
     if (wrapped) return wrapped;
@@ -98,7 +101,8 @@ function buildOutboundUrl(opts: {
 
   // If you later store Shopee as "Shopee Affiliate"
   const isShopeeAff = network === "shopee affiliate";
-  const isShopeePH = !!domain && (domain === "shopee.ph" || domain.endsWith(".shopee.ph"));
+  const isShopeePH =
+    !!domain && (domain === "shopee.ph" || domain.endsWith(".shopee.ph"));
   if (isShopeeAff && isShopeePH) {
     const wrapped = wrapWithShopee(productUrl, smartLinkId);
     if (wrapped) return wrapped;
@@ -107,6 +111,20 @@ function buildOutboundUrl(opts: {
   // Generic fallback
   return appendSubid(productUrl, smartLinkId);
 }
+
+/** Hint to keep Lazada in web on mobile */
+function forceDesktopForLazada(u: string, isMobile: boolean): string {
+  if (!isMobile) return u;
+  try {
+    const url = new URL(u);
+    if (!url.searchParams.has("from")) url.searchParams.set("from", "pc");
+    return url.toString();
+  } catch {
+    return u;
+  }
+}
+
+// -------- handler -------------------------------------------------
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const id = (params?.id || "").trim();
@@ -121,7 +139,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       merchantName: true,
       merchantDomain: true,
       originalUrl: true,
-      shortUrl: true,            // <-- pull tracked affiliate short link
+      shortUrl: true,
       createdAt: true,
       merchantRule: { select: { network: true, domainPattern: true } },
     },
@@ -131,7 +149,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     return NextResponse.json({ ok: false, error: "LINK_NOT_FOUND" }, { status: 404 });
   }
 
-  // ✅ Prefer the tracked affiliate link we already created in /api/smartlink
   const tracked = (link.shortUrl || "").trim();
   const outboundUrl =
     tracked ||
@@ -146,10 +163,17 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     });
 
   // Request metadata
+  const ua = req.headers.get("user-agent") || "";
+  const isMobile = /iphone|ipad|ipod|android|mobile/i.test(ua);
   const ip = getClientIp(req);
-  const ua = req.headers.get("user-agent") || null;
   const referer = req.headers.get("referer") || null;
   const country = req.headers.get("cf-ipcountry") || null;
+
+  // Apply “stay on web” hint for Lazada on mobile requests
+  const isLazada =
+    (link.merchantDomain ?? "").includes("lazada.com.ph") ||
+    (link.merchantRule?.domainPattern ?? "").includes("lazada.com.ph");
+  const finalUrl = isLazada ? forceDesktopForLazada(outboundUrl, isMobile) : outboundUrl;
 
   const detailPayload = {
     smartLinkId: link.id,
@@ -157,7 +181,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     merchantName: link.merchantName,
     merchantDomain: link.merchantDomain,
     network: link.merchantRule?.network ?? null,
-    outboundUrl,
+    outboundUrl: finalUrl,
     ip,
     ua,
     referer,
@@ -188,8 +212,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
         userId: link.userId ?? null,
         merchantId: link.merchantRuleId ?? null,
         ip: ip ?? null,
-        userAgent: ua ?? null,
-        url: outboundUrl,
+        userAgent: ua || null,
+        url: finalUrl,
         referer: referer ?? null,
         meta: { country },
         linkId: link.id,
@@ -197,25 +221,5 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     })
     .catch((e) => console.error("[shortlink][ClickEvent] error:", e));
 
-  // 🔔 Telegram alert (non-blocking)
-  if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
-    const msg =
-      `🔗 Click logged\n` +
-      `Merchant: ${link.merchantName}\n` +
-      `Domain: ${link.merchantDomain}\n` +
-      `SmartLink ID: ${link.id}\n` +
-      `User ID: ${link.userId || "anon"}`;
-
-    fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        chat_id: process.env.TELEGRAM_CHAT_ID,
-        text: msg,
-        disable_notification: false,
-      }),
-    }).catch((e) => console.error("[telegram] sendMessage failed", e));
-  }
-
-  return NextResponse.redirect(outboundUrl, { status: 302 });
+  return NextResponse.redirect(finalUrl, { status: 302 });
 }
