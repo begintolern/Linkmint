@@ -238,9 +238,9 @@ export async function POST(req: NextRequest) {
   const isLazadaHost = /(^|\.)lazada\.com\.ph$/.test(merchantDomain);
 
   if (isShopeeHost || ruleNetwork.includes("shopee")) {
-    trackedUrl = buildShopeeUrl(parsed.toString(), created.id);
+    trackedUrl = await buildShopeeUrl(parsed.toString(), created.id);
   } else if (isLazadaHost || ruleNetwork.includes("involve") || ruleNetwork.includes("lazada")) {
-    trackedUrl = buildLazadaUrl(parsed.toString(), created.id);
+    trackedUrl = await buildLazadaUrl(parsed.toString(), created.id);
   }
 
   // Fallback: just append subid to the product URL
