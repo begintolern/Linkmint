@@ -1,83 +1,127 @@
 // app/components/recentLinks.ts
 "use client";
 
-// Shared localStorage utils for “recent links” (used by CompactRecent + others)
+import { useEffect, useState } from "react";
 
-export type RecentLink = {
+type RecentLink = {
   id: string;
-  shortUrl: string;
-  destinationUrl: string;
-  merchant?: string | null;
-  createdAt?: number;   // epoch ms
-  pinned?: boolean;
+  shortUrl?: string | null;
+  originalUrl?: string | null;
+  merchantName?: string | null;
+  createdAt?: string;
 };
 
-const KEY_V1 = "recent-links";
-const KEY_V2 = "recent-links:v2";
+export default function RecentLinks({ limit = 10 }: { limit?: number }) {
+  const [links, setLinks] = useState<RecentLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-function parseList(raw: string | null): RecentLink[] {
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as RecentLink[]) : [];
-  } catch {
-    return [];
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setError(null);
+        setLoading(true);
+
+        const res = await fetch("/api/links", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        let items: RecentLink[] = Array.isArray(data?.links) ? data.links : [];
+
+        // Take newest first if API already sorts that way, just slice
+        if (limit && items.length > limit) {
+          items = items.slice(0, limit);
+        }
+
+        if (!cancelled) {
+          setLinks(items);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError("Could not load recent links.");
+          setLinks([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [limit]);
+
+  if (loading && links.length === 0) {
+    return (
+      <div className="text-xs sm:text-sm text-gray-500">
+        Loading recent links…
+      </div>
+    );
   }
-}
 
-function normalize(items: RecentLink[]): RecentLink[] {
-  return items.map((x) => ({
-    ...x,
-    createdAt: typeof x.createdAt === "number" ? x.createdAt : Date.now(),
-    pinned: typeof x.pinned === "boolean" ? x.pinned : false,
-  }));
-}
-
-function mergePreferV2(v1: RecentLink[], v2: RecentLink[]): RecentLink[] {
-  const map = new Map<string, RecentLink>();
-  for (const it of v1) map.set(it.id, it);
-  for (const it of v2) map.set(it.id, it); // v2 overwrites v1
-  return Array.from(map.values());
-}
-
-function sortLinks(a: RecentLink, b: RecentLink) {
-  const pinDelta = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
-  if (pinDelta !== 0) return pinDelta;
-  return (b.createdAt ?? 0) - (a.createdAt ?? 0);
-}
-
-export function loadRecentLinks(): RecentLink[] {
-  if (typeof window === "undefined") return [];
-  const v2 = parseList(localStorage.getItem(KEY_V2));
-  const v1 = parseList(localStorage.getItem(KEY_V1));
-  const merged = mergePreferV2(v1, v2);
-  return normalize(merged).sort(sortLinks);
-}
-
-export function saveRecentLinks(list: RecentLink[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY_V2, JSON.stringify(normalize(list).sort(sortLinks)));
-    window.dispatchEvent(new Event("lm-recent-links-changed"));
-  } catch (e) {
-    console.warn("recentLinks: save failed", e);
+  if (error && links.length === 0) {
+    return (
+      <div className="text-xs sm:text-sm text-red-600">
+        {error}
+      </div>
+    );
   }
-}
 
-export function clearRecentLinks() {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.removeItem(KEY_V1);
-    localStorage.removeItem(KEY_V2);
-    window.dispatchEvent(new Event("lm-recent-links-changed"));
-  } catch (e) {
-    console.warn("recentLinks: clear failed", e);
+  if (!loading && links.length === 0) {
+    return (
+      <div className="text-xs sm:text-sm text-gray-500">
+        You haven&apos;t created any links yet.
+      </div>
+    );
   }
-}
 
-export function addRecentLink(entry: RecentLink) {
-  const list = loadRecentLinks();
-  const map = new Map(list.map((x) => [x.id, x]));
-  map.set(entry.id, { ...entry, createdAt: entry.createdAt ?? Date.now() });
-  saveRecentLinks(Array.from(map.values()).slice(0, 20));
+  return (
+    <div className="space-y-2">
+      {links.map((link) => {
+        const dest = link.originalUrl || link.shortUrl || "";
+        let host = "";
+        try {
+          host = dest ? new URL(dest).hostname.replace(/^www\./, "") : "";
+        } catch {
+          host = "";
+        }
+
+        const smartPath = `/l/${link.id}`;
+        const smartLabel = `linkmint.co${smartPath}`;
+
+        return (
+          <div
+            key={link.id}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-3 border-b border-slate-100 pb-2 last:border-b-0 last:pb-0"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase text-slate-500">
+                  {link.merchantName || host || "Merchant"}
+                </span>
+              </div>
+              {dest && (
+                <div className="mt-0.5 text-[11px] sm:text-xs text-slate-500 truncate">
+                  {dest}
+                </div>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              <a
+                href={smartPath}
+                className="text-[11px] sm:text-xs text-emerald-700 hover:text-emerald-800 hover:underline break-all"
+                title={smartLabel}
+              >
+                {smartLabel}
+              </a>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }

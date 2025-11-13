@@ -236,10 +236,18 @@ export async function POST(req: NextRequest) {
 
   const isShopeeHost = /(^|\.)shopee\.ph$/.test(merchantDomain);
   const isLazadaHost = /(^|\.)lazada\.com\.ph$/.test(merchantDomain);
+  const isZaloraHost = /(^|\.)zalora\.com\.ph$/.test(merchantDomain);
 
   if (isShopeeHost || ruleNetwork.includes("shopee")) {
     trackedUrl = await buildShopeeUrl(parsed.toString(), created.id);
-  } else if (isLazadaHost || ruleNetwork.includes("involve") || ruleNetwork.includes("lazada")) {
+  } else if (
+    isLazadaHost ||
+    isZaloraHost ||
+    ruleNetwork.includes("involve") ||
+    ruleNetwork.includes("lazada") ||
+    ruleNetwork.includes("zalora")
+  ) {
+    // Zalora PH (via Involve Asia / ACCESSTRADE) also uses the Lazada-style builder
     trackedUrl = await buildLazadaUrl(parsed.toString(), created.id);
   }
 

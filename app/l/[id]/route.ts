@@ -5,8 +5,6 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// -------- helpers -------------------------------------------------
-
 // Extract best-effort IP behind proxies/CDNs
 function getClientIp(req: Request): string | null {
   const xf = req.headers.get("x-forwarded-for");
@@ -26,8 +24,9 @@ function appendSubid(productUrl: string, subid: string): string {
   try {
     const u = new URL(productUrl);
     if (!u.searchParams.has("lm_subid")) u.searchParams.set("lm_subid", subid);
-    if (!u.searchParams.has("utm_source"))
+    if (!u.searchParams.has("utm_source")) {
       u.searchParams.set("utm_source", "linkmint");
+    }
     return u.toString();
   } catch {
     return productUrl;
@@ -90,7 +89,6 @@ function buildOutboundUrl(opts: {
   const network = (merchant?.network || "").trim().toLowerCase();
   const domain = (merchant?.domain || "").trim().toLowerCase();
 
-  // If you ever store Shopee/Lazada under "Involve Asia"
   const isIA = network === "involve asia";
   const isLazadaPH =
     !!domain && (domain === "lazada.com.ph" || domain.endsWith(".lazada.com.ph"));
@@ -99,7 +97,6 @@ function buildOutboundUrl(opts: {
     if (wrapped) return wrapped;
   }
 
-  // If you later store Shopee as "Shopee Affiliate"
   const isShopeeAff = network === "shopee affiliate";
   const isShopeePH =
     !!domain && (domain === "shopee.ph" || domain.endsWith(".shopee.ph"));
@@ -112,23 +109,14 @@ function buildOutboundUrl(opts: {
   return appendSubid(productUrl, smartLinkId);
 }
 
-/** Hint to keep Lazada in web on mobile */
-function forceDesktopForLazada(u: string, isMobile: boolean): string {
-  if (!isMobile) return u;
-  try {
-    const url = new URL(u);
-    if (!url.searchParams.has("from")) url.searchParams.set("from", "pc");
-    return url.toString();
-  } catch {
-    return u;
-  }
-}
-
-// -------- handler -------------------------------------------------
-
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   const id = (params?.id || "").trim();
-  if (!id) return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
+  console.log("[shortlink][GET] hit with id:", id);
+
+  if (!id) {
+    console.warn("[shortlink][GET] missing id param");
+    return NextResponse.json({ ok: false, error: "BAD_ID" }, { status: 400 });
+  }
 
   const link = await prisma.smartLink.findUnique({
     where: { id },
@@ -146,6 +134,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
 
   if (!link || !link.originalUrl) {
+    console.warn("[shortlink][GET] link not found for id:", id);
     return NextResponse.json({ ok: false, error: "LINK_NOT_FOUND" }, { status: 404 });
   }
 
@@ -162,18 +151,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       },
     });
 
-  // Request metadata
-  const ua = req.headers.get("user-agent") || "";
-  const isMobile = /iphone|ipad|ipod|android|mobile/i.test(ua);
+  console.log("[shortlink][GET] redirecting:", {
+    id: link.id,
+    outboundUrl,
+    merchant: link.merchantName,
+  });
+
   const ip = getClientIp(req);
+  const ua = req.headers.get("user-agent") || null;
   const referer = req.headers.get("referer") || null;
   const country = req.headers.get("cf-ipcountry") || null;
-
-  // Apply “stay on web” hint for Lazada on mobile requests
-  const isLazada =
-    (link.merchantDomain ?? "").includes("lazada.com.ph") ||
-    (link.merchantRule?.domainPattern ?? "").includes("lazada.com.ph");
-  const finalUrl = isLazada ? forceDesktopForLazada(outboundUrl, isMobile) : outboundUrl;
 
   const detailPayload = {
     smartLinkId: link.id,
@@ -181,7 +168,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     merchantName: link.merchantName,
     merchantDomain: link.merchantDomain,
     network: link.merchantRule?.network ?? null,
-    outboundUrl: finalUrl,
+    outboundUrl,
     ip,
     ua,
     referer,
@@ -189,37 +176,55 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     at: new Date().toISOString(),
   };
 
-  // EventLog (non-blocking)
-  const eventData: any = {
-    type: "CLICK",
-    message: "SmartLink click",
-    detail: JSON.stringify(detailPayload),
-    severity: 1,
-  };
-  if (link.userId) eventData.user = { connect: { id: link.userId } };
-  prisma.eventLog.create({ data: eventData }).catch((e) =>
-    console.error("[shortlink][EventLog] error:", e)
-  );
-
-  // ClickEvent (non-blocking)
-  prisma.clickEvent
-    .create({
+  // EventLog (BLOCKING, so we actually see errors)
+  try {
+    console.log("[shortlink][EventLog] creating...");
+    await prisma.eventLog.create({
       data: {
-        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+        type: "CLICK",
+        message: "SmartLink click",
+        detail: JSON.stringify(detailPayload),
+        severity: 1,
+        ...(link.userId
+          ? {
+              user: {
+                connect: { id: link.userId },
+              },
+            }
+          : {}),
+      },
+    });
+    console.log("[shortlink][EventLog] created OK");
+  } catch (e) {
+    console.error("[shortlink][EventLog] error:", e);
+  }
+
+  // ClickEvent (BLOCKING now so we can see failures)
+  try {
+    console.log("[shortlink][ClickEvent] creating...");
+    await prisma.clickEvent.create({
+      data: {
+        id:
+          // @ts-ignore
+          globalThis.crypto?.randomUUID?.() ??
+          `${Date.now()}-${Math.random()}`,
         createdAt: new Date(),
         updatedAt: new Date(),
         source: "SHORTLINK",
         userId: link.userId ?? null,
         merchantId: link.merchantRuleId ?? null,
         ip: ip ?? null,
-        userAgent: ua || null,
-        url: finalUrl,
+        userAgent: ua ?? null,
+        url: outboundUrl,
         referer: referer ?? null,
         meta: { country },
         linkId: link.id,
       },
-    })
-    .catch((e) => console.error("[shortlink][ClickEvent] error:", e));
+    });
+    console.log("[shortlink][ClickEvent] created OK for linkId:", link.id);
+  } catch (e) {
+    console.error("[shortlink][ClickEvent] error:", e);
+  }
 
-  return NextResponse.redirect(finalUrl, { status: 302 });
+  return NextResponse.redirect(outboundUrl, { status: 302 });
 }

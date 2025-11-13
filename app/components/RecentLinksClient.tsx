@@ -1,290 +1,222 @@
 // app/components/RecentLinksClient.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-type RecentLink = {
+type SmartLink = {
   id: string;
-  shortUrl: string;
-  merchant?: string;
-  destinationUrl: string;
-  createdAt?: number;
-  pinned?: boolean;
+  shortUrl?: string | null;
+  merchantName?: string | null;
+  label?: string | null;
+  createdAt?: string | null;
 };
 
-const KEY_V1 = "recent-links";
-const KEY_V2 = "recent-links:v2";
-
-function parseList(raw: string | null): RecentLink[] {
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? (arr as RecentLink[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function normalize(items: RecentLink[]): RecentLink[] {
-  return items.map((x) => ({
-    ...x,
-    createdAt: typeof x.createdAt === "number" ? x.createdAt : Date.now(),
-    pinned: typeof x.pinned === "boolean" ? x.pinned : false,
-  }));
-}
-
-function mergePreferV2(v1: RecentLink[], v2: RecentLink[]): RecentLink[] {
-  const map = new Map<string, RecentLink>();
-  for (const it of v1) map.set(it.id, it);
-  for (const it of v2) map.set(it.id, it);
-  return Array.from(map.values());
-}
-
-function loadRecent(): RecentLink[] {
-  const v2 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V2) : null);
-  const v1 = parseList(typeof window !== "undefined" ? localStorage.getItem(KEY_V1) : null);
-  const merged = mergePreferV2(v1, v2);
-  const arr = normalize(merged);
-  return arr.sort((a, b) => {
-    const pinDelta = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
-    if (pinDelta !== 0) return pinDelta;
-    return (b.createdAt! - a.createdAt!);
-  });
-}
-
-function saveV2(items: RecentLink[]) {
-  try {
-    localStorage.setItem(KEY_V2, JSON.stringify(items));
-  } catch (e) {
-    console.warn("recent-links save failed:", e);
-  }
-}
-
-function broadcastChange() {
-  window.dispatchEvent(new Event("lm-recent-links-changed"));
-}
+type ApiResponse = {
+  ok: boolean;
+  links?: SmartLink[];
+  error?: string;
+};
 
 export default function RecentLinksClient() {
-  const [items, setItems] = useState<RecentLink[]>([]);
-  const [lastRefreshed, setLastRefreshed] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string>("");
-
-  const refresh = useCallback(() => {
-    setBusy(true);
-    const data = loadRecent();
-    setItems(data);
-    saveV2(data);
-    const ts = Date.now();
-    setLastRefreshed(ts);
-    setNotice(`Refreshed ${new Date(ts).toLocaleTimeString()}`);
-    setTimeout(() => setNotice(""), 1500);
-    setBusy(false);
-  }, []);
-
-  const clearAll = () => {
-    setBusy(true);
-    try {
-      localStorage.removeItem(KEY_V1);
-      localStorage.removeItem(KEY_V2);
-    } finally {
-      setItems([]);
-      const ts = Date.now();
-      setLastRefreshed(ts);
-      setNotice("Cleared");
-      setTimeout(() => setNotice(""), 1500);
-      setBusy(false);
-      broadcastChange();
-    }
-  };
+  const [links, setLinks] = useState<SmartLink[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    refresh();
+    let cancelled = false;
 
-    const onVis = () => {
-      if (document.visibilityState === "visible") refresh();
-    };
-    document.addEventListener("visibilitychange", onVis);
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/links", { cache: "no-store" });
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        const json = (await res.json()) as ApiResponse;
+        if (!json.ok) throw new Error(json.error || "Failed to load links");
 
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === KEY_V1 || e.key === KEY_V2) refresh();
-    };
-    window.addEventListener("storage", onStorage);
-
-    const onCustom = () => refresh();
-    window.addEventListener("lm-recent-links-changed", onCustom as EventListener);
-
-    return () => {
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("lm-recent-links-changed", onCustom as EventListener);
-    };
-  }, [refresh]);
-
-  const commit = (next: RecentLink[], toast: string) => {
-    const normalized = normalize(next).sort((a, b) => {
-      const pinDelta = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
-      if (pinDelta !== 0) return pinDelta;
-      return (b.createdAt! - a.createdAt!);
-    });
-    setItems(normalized);
-    saveV2(normalized);
-    setNotice(toast);
-    setTimeout(() => setNotice(""), 1200);
-    broadcastChange();
-  };
-
-  const togglePin = (id: string) => {
-    const next = items.map((x) => (x.id === id ? { ...x, pinned: !x.pinned } : x));
-    const nowPinned = next.find((x) => x.id === id)?.pinned;
-    commit(next, nowPinned ? "Pinned" : "Unpinned");
-  };
-
-  const removeOne = (id: string) => {
-    const next = items.filter((x) => x.id !== id);
-    commit(next, "Removed");
-  };
-
-  const copyShort = async (url: string) => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setNotice("Copied!");
-      setTimeout(() => setNotice(""), 900);
-    } catch {
-      prompt("Copy this link:", url);
+        if (!cancelled) {
+          const sorted = (json.links ?? []).sort((a, b) => {
+            const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bt - at;
+          });
+          setLinks(sorted.slice(0, 5));
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(
+            e?.message?.includes("401")
+              ? "You’re not signed in. Please log in to view your links."
+              : e?.message || "Failed to load recent links."
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
 
-  const open = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleCopy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      alert("Unable to copy automatically. Please copy the link manually.");
+    }
+  }
+
+  if (loading && !error) {
+    return (
+      <section className="card mt-4">
+        <h2 className="text-base sm:text-lg font-semibold mb-2">
+          Your recent links
+        </h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Quick access to the links you just created.
+        </p>
+        <div className="h-24 grid place-items-center text-sm text-gray-500">
+          Loading…
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="card mt-4">
+        <h2 className="text-base sm:text-lg font-semibold mb-2">
+          Your recent links
+        </h2>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-800 text-sm">
+          {error}
+        </div>
+      </section>
+    );
+  }
+
+  if (!links.length) {
+    return (
+      <section className="card mt-4">
+        <h2 className="text-base sm:text-lg font-semibold mb-2">
+          Your recent links
+        </h2>
+        <p className="text-xs text-gray-500 mb-3">
+          Quick access to the links you just created.
+        </p>
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+          You haven’t created any links yet. Create a{" "}
+          <Link href="/dashboard/create-link" className="underline">
+            smart link
+          </Link>{" "}
+          to see it here.
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section data-testid="recent-links-root" className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-semibold">Your Recent Links</h2>
-
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={busy}
-          className="rounded bg-gray-200 px-2 py-1 text-sm hover:bg-gray-300 disabled:opacity-50"
-          title="Reload from localStorage"
+    <section className="card mt-4">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h2 className="text-base sm:text-lg font-semibold">
+          Your recent links
+        </h2>
+        <Link
+          href="/dashboard/links"
+          className="text-xs sm:text-sm text-emerald-700 hover:text-emerald-800 underline"
         >
-          {busy ? "Refreshing…" : "Refresh"}
-        </button>
-
-        <button
-          type="button"
-          onClick={clearAll}
-          disabled={busy}
-          className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200 disabled:opacity-50"
-          title="Clear recent links on this device"
-        >
-          Clear
-        </button>
-
-        <span className="text-xs opacity-60">
-          {notice
-            ? notice
-            : lastRefreshed
-            ? `Last refreshed ${new Date(lastRefreshed).toLocaleTimeString()}`
-            : "—"}
-        </span>
+          View all
+        </Link>
       </div>
+      <p className="text-xs text-gray-500 mb-3">
+        Tap a short link to open it, or copy to share.
+      </p>
 
-      {items.length === 0 ? (
-        <div className="rounded border p-4 text-sm opacity-70">
-          No recent links yet. Create one from <b>Create Smart Link</b> and it will appear here.
-        </div>
-      ) : (
-        <ul className="space-y-2">
-          {items.map((l) => (
+      <ul className="space-y-3">
+        {links.map((l) => {
+          const created =
+            l.createdAt && !Number.isNaN(Date.parse(l.createdAt))
+              ? new Date(l.createdAt)
+              : null;
+
+          const displayDate = created
+            ? created.toLocaleString(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "Recently created";
+
+          const merchant = l.merchantName || "Unknown merchant";
+          const label = l.label || "";
+
+          const shortPath = `/l/${l.id}`;
+          const origin =
+            typeof window !== "undefined" ? window.location.origin : "";
+          const fullShort = origin ? `${origin}${shortPath}` : shortPath;
+
+          return (
             <li
               key={l.id}
-              className="flex flex-col gap-2 rounded border p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="rounded-xl border border-gray-200 bg-gray-50 p-3 sm:p-4"
             >
-              <div className="min-w-0">
-                <div className="truncate font-medium flex items-center gap-2">
-                  {l.pinned && (
-                    <span
-                      className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800"
-                      title="Pinned"
-                    >
-                      ★ Pinned
-                    </span>
+              {/* Top row: merchant + label + date */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">
+                    {merchant}
+                  </div>
+                  {label && (
+                    <div className="text-xs text-gray-500 truncate">
+                      {label}
+                    </div>
                   )}
-                  <span className="truncate">
-                    {l.merchant ? `${l.merchant} · ` : ""}
-                    <span className="opacity-70">ID:</span> {l.id}
-                  </span>
                 </div>
-                <div className="truncate text-sm">
-                  <span className="opacity-60">Short: </span>
-                  <a
-                    href={l.shortUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                    data-testid="recent-short-anchor"
-                  >
-                    {l.shortUrl}
-                  </a>
-                </div>
-                <div className="truncate text-xs opacity-80">Dest: {l.destinationUrl}</div>
-                <div className="mt-1 text-sm">
-                  <span className="opacity-60">Created:</span>{" "}
-                  <span className="font-medium">
-                    {new Date(l.createdAt ?? Date.now()).toLocaleString()}
-                  </span>
+                <div className="text-xs text-gray-400 sm:text-right">
+                  {displayDate}
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => togglePin(l.id)}
-                  className="rounded border px-3 py-1.5 text-sm hover:bg-yellow-50"
-                  title={l.pinned ? "Unpin" : "Pin"}
-                >
-                  {l.pinned ? "Unpin" : "Pin"}
-                </button>
+              {/* Short link line */}
+              <button
+                type="button"
+                onClick={() => window.open(shortPath, "_blank", "noopener")}
+                className="mt-2 w-full text-left text-xs font-mono text-emerald-700 break-all underline-offset-2 hover:underline"
+              >
+                {fullShort}
+              </button>
 
+              {/* Actions */}
+              <div className="mt-2 flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
-                  onClick={() => open(l.shortUrl)}
-                  className="rounded bg-blue-600 px-3 py-1.5 text-white hover:bg-blue-700"
-                  title="Open the short link"
+                  onClick={() =>
+                    window.open(shortPath, "_blank", "noopener")
+                  }
+                  className="btn-primary text-xs sm:text-sm w-full sm:w-auto justify-center"
                 >
-                  Open Short
+                  Open short
                 </button>
                 <button
                   type="button"
-                  onClick={() => copyShort(l.shortUrl)}
-                  className="rounded bg-gray-800 px-3 py-1.5 text-white hover:bg-black"
-                  title="Copy short URL"
+                  onClick={() => handleCopy(fullShort)}
+                  className="btn-secondary text-xs sm:text-sm w-full sm:w-auto justify-center"
                 >
-                  Copy Short
-                </button>
-                <button
-                  type="button"
-                  onClick={() => open(l.destinationUrl)}
-                  className="rounded bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700"
-                  title="Open product page"
-                >
-                  Open Product
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeOne(l.id)}
-                  className="rounded bg-red-600 px-3 py-1.5 text-white hover:bg-red-700"
-                  title="Remove from recent"
-                >
-                  Remove
+                  Copy short
                 </button>
               </div>
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ul>
     </section>
   );
 }
