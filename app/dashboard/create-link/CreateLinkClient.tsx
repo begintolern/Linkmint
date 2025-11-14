@@ -3,27 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 
-type ResultPayload = {
-  ok?: boolean;
-  link?: string;
-  shortUrl?: string;
-  error?: string;
-  warning?: string;
-  reason?: string;
-  merchant?: {
-    id?: string;
-    name?: string;
-    status?: string;
-    market?: string | null;
-  };
-};
-
 export default function CreateLinkClient() {
   const [url, setUrl] = useState("");
-  const [label, setLabel] = useState("");
-  const [source, setSource] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ResultPayload | null>(null);
+  const [result, setResult] = useState<any>(null);
   const [copied, setCopied] = useState<null | "ok" | "err">(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -37,19 +20,10 @@ export default function CreateLinkClient() {
       const res = await fetch("/api/smartlink", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: url.trim(),
-          label: label.trim() || undefined,
-          source: source.trim() || undefined,
-        }),
+        body: JSON.stringify({ url }),
       });
-
-      const json = (await res.json()) as ResultPayload;
+      const json = await res.json();
       setResult(json);
-      if (!res.ok || !json.ok) {
-        // surface basic error
-        console.error("Smartlink error:", json);
-      }
     } catch (err) {
       console.error(err);
       alert("Something went wrong creating your link.");
@@ -63,6 +37,7 @@ export default function CreateLinkClient() {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
       } else {
+        // fallback
         const ta = document.createElement("textarea");
         ta.value = text;
         document.body.appendChild(ta);
@@ -80,20 +55,23 @@ export default function CreateLinkClient() {
 
   function resetForm() {
     setUrl("");
-    setLabel("");
-    setSource("");
     setResult(null);
     setCopied(null);
   }
 
-  const finalLink = result?.link || result?.shortUrl || "";
+  // 🔍 Detect Shopee merchant for UX note
+  const isShopee =
+    result &&
+    (result as any).merchant &&
+    typeof (result as any).merchant.name === "string" &&
+    (result as any).merchant.name.toLowerCase().includes("shopee");
 
   return (
     <div className="space-y-6">
       {/* Top nav */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+      <div className="flex items-center justify-between border-b pb-3">
         <h2 className="text-lg font-semibold">Create Smart Link</h2>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2">
           <Link
             href="/dashboard"
             className="text-sm px-3 py-1.5 rounded-md border hover:bg-gray-50"
@@ -111,61 +89,14 @@ export default function CreateLinkClient() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* URL */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">
-            Product URL
-          </label>
-          <input
-            type="url"
-            placeholder="Paste product URL (Shopee, Lazada, Zalora, etc.)"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            className="w-full border rounded-lg p-3 text-sm"
-            required
-          />
-        </div>
-
-        {/* Label (optional) */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">
-            Link label <span className="text-xs text-gray-400">(optional)</span>
-          </label>
-          <input
-            type="text"
-            placeholder="For your eyes only (e.g. “Nike AF1 TikTok video #1”)"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            className="w-full border rounded-lg p-3 text-sm"
-          />
-        </div>
-
-        {/* Source / traffic channel */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium">
-            Traffic source
-          </label>
-          <select
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            className="w-full border rounded-lg p-3 text-sm bg-white"
-          >
-            <option value="">Select where you’ll share this</option>
-            <option value="tiktok">TikTok</option>
-            <option value="instagram">Instagram</option>
-            <option value="facebook">Facebook</option>
-            <option value="youtube">YouTube</option>
-            <option value="twitter">X / Twitter</option>
-            <option value="reddit">Reddit</option>
-            <option value="blog">Blog / website</option>
-            <option value="other">Other</option>
-          </select>
-          <p className="text-xs text-gray-500">
-            Some merchants only allow certain platforms. If required, we’ll use this
-            to block risky traffic and keep your account safe.
-          </p>
-        </div>
-
+        <input
+          type="url"
+          placeholder="Paste product URL (Shopee, Lazada, etc.)"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          className="w-full border rounded-lg p-3 text-sm"
+          required
+        />
         <button
           type="submit"
           disabled={loading}
@@ -175,44 +106,33 @@ export default function CreateLinkClient() {
         </button>
       </form>
 
-      {/* Error state (API-level) */}
-      {result && !result.ok && (
-        <div className="p-4 border border-rose-200 rounded-md bg-rose-50 text-sm text-rose-800 space-y-1">
-          <div className="font-medium">Couldn’t create this link.</div>
-          {result.reason && <div>{result.reason}</div>}
-          {!result.reason && result.error && <div>{result.error}</div>}
-          {result.merchant?.name && (
-            <div className="text-xs opacity-80">
-              Merchant: {result.merchant.name}
-              {result.merchant.status ? ` · Status: ${result.merchant.status}` : ""}
-              {result.merchant.market ? ` · Market: ${result.merchant.market}` : ""}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Success result */}
-      {result && result.ok && finalLink && (
+      {/* Result */}
+      {result && result.ok && (
         <div className="p-4 border rounded-md bg-white shadow-sm space-y-3">
           <div className="space-y-1">
             <p className="font-medium text-sm">Your link is ready:</p>
             <a
-              href={finalLink}
+              href={result.link}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 hover:underline break-all text-sm"
             >
-              {finalLink}
+              {result.link}
             </a>
-            {result.warning && (
-              <p className="text-xs text-amber-700 mt-1">{result.warning}</p>
+
+            {/* 🟡 Shopee UX note */}
+            {isShopee && (
+              <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
+                Note: Shopee may ask people to log in before they see the full
+                product page. That&apos;s normal for Shopee and does not stop
+                your commissions as long as they buy through your link.
+              </p>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              type="button"
-              onClick={() => copyToClipboard(finalLink)}
+              onClick={() => copyToClipboard(result.link)}
               className="px-3 py-1.5 rounded-md border text-sm hover:bg-gray-50"
             >
               Copy
@@ -224,7 +144,6 @@ export default function CreateLinkClient() {
               Go to Links
             </Link>
             <button
-              type="button"
               onClick={resetForm}
               className="px-3 py-1.5 rounded-md border text-sm hover:bg-gray-50"
             >
@@ -232,6 +151,7 @@ export default function CreateLinkClient() {
             </button>
           </div>
 
+          {/* tiny inline toast */}
           {copied === "ok" && (
             <div className="text-xs text-emerald-700">Link copied.</div>
           )}
@@ -244,7 +164,7 @@ export default function CreateLinkClient() {
       )}
 
       {/* Footer helper */}
-      <div className="border-t pt-3 text-sm text-gray-600 flex items-center justify-between flex-wrap gap-2">
+      <div className="border-t pt-3 text-sm text-gray-600 flex items-center justify-between">
         <span className="opacity-80">Need help creating links?</span>
         <Link
           href="/tutorial"
