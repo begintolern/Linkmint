@@ -5,6 +5,7 @@ import Link from "next/link";
 
 export default function CreateLinkClient() {
   const [url, setUrl] = useState("");
+  const [source, setSource] = useState(""); // traffic source (optional unless merchant needs it)
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [copied, setCopied] = useState<null | "ok" | "err">(null);
@@ -12,6 +13,7 @@ export default function CreateLinkClient() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim()) return;
+
     setLoading(true);
     setResult(null);
     setCopied(null);
@@ -20,8 +22,13 @@ export default function CreateLinkClient() {
       const res = await fetch("/api/smartlink", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({
+          url,
+          // send source if selected; backend will require it only for merchants that need it
+          source: source || undefined,
+        }),
       });
+
       const json = await res.json();
       setResult(json);
     } catch (err) {
@@ -37,7 +44,6 @@ export default function CreateLinkClient() {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
       } else {
-        // fallback
         const ta = document.createElement("textarea");
         ta.value = text;
         document.body.appendChild(ta);
@@ -55,16 +61,10 @@ export default function CreateLinkClient() {
 
   function resetForm() {
     setUrl("");
+    setSource("");
     setResult(null);
     setCopied(null);
   }
-
-  // 🔍 Detect Shopee merchant for UX note
-  const isShopee =
-    result &&
-    (result as any).merchant &&
-    typeof (result as any).merchant.name === "string" &&
-    (result as any).merchant.name.toLowerCase().includes("shopee");
 
   return (
     <div className="space-y-6">
@@ -91,12 +91,36 @@ export default function CreateLinkClient() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="url"
-          placeholder="Paste product URL (Shopee, Lazada, etc.)"
+          placeholder="Paste product URL (Shopee, Lazada, Zalora, etc.)"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           className="w-full border rounded-lg p-3 text-sm"
           required
         />
+
+        {/* Traffic source */}
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">
+            Traffic source
+          </label>
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="w-full border rounded-lg p-2.5 text-sm bg-white"
+          >
+            <option value="">Select where you’ll share this</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="youtube">YouTube</option>
+            <option value="other">Other / mixed</option>
+          </select>
+          <p className="text-xs text-gray-500">
+            Some merchants only allow certain platforms. If required, we’ll use
+            this to block risky traffic and keep your account safe.
+          </p>
+        </div>
+
         <button
           type="submit"
           disabled={loading}
@@ -119,15 +143,6 @@ export default function CreateLinkClient() {
             >
               {result.link}
             </a>
-
-            {/* 🟡 Shopee UX note */}
-            {isShopee && (
-              <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
-                Note: Shopee may ask people to log in before they see the full
-                product page. That&apos;s normal for Shopee and does not stop
-                your commissions as long as they buy through your link.
-              </p>
-            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -151,7 +166,6 @@ export default function CreateLinkClient() {
             </button>
           </div>
 
-          {/* tiny inline toast */}
           {copied === "ok" && (
             <div className="text-xs text-emerald-700">Link copied.</div>
           )}
