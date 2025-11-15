@@ -14,9 +14,16 @@ import {
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+// Lazada PH via ACCESSTRADE (ATID short link for your account)
+const LAZADA_PH_ACCESSTRADE_ATID = "https://atid.me/00p2cf002mmu";
+
 // --- GET: simple probe to confirm route exists
 export async function GET() {
-  return NextResponse.json({ ok: true, route: "smartlink", methods: ["GET", "POST"] });
+  return NextResponse.json({
+    ok: true,
+    route: "smartlink",
+    methods: ["GET", "POST"],
+  });
 }
 
 // ---------- helpers / types ----------
@@ -28,7 +35,11 @@ function norm(s: string | null | undefined) {
 }
 
 function validateSource(
-  merchant: { merchantName: string; allowedSources?: unknown; disallowedSources?: unknown },
+  merchant: {
+    merchantName: string;
+    allowedSources?: unknown;
+    disallowedSources?: unknown;
+  },
   source: string
 ): SourceCheckResult {
   const src = norm(source);
@@ -58,17 +69,25 @@ function validateSource(
   const disallowed = toSet((merchant as any).disallowedSources);
 
   if (disallowed.has(src)) {
-    return { ok: false, reason: `${merchant.merchantName}: source "${source}" is disallowed by program rules.` };
+    return {
+      ok: false,
+      reason: `${merchant.merchantName}: source "${source}" is disallowed by program rules.`,
+    };
   }
   if (allowed.size > 0 && !allowed.has(src)) {
-    return { ok: false, reason: `${merchant.merchantName}: source "${source}" is not in the allowed list.` };
+    return {
+      ok: false,
+      reason: `${merchant.merchantName}: source "${source}" is not in the allowed list.`,
+    };
   }
   return { ok: true };
 }
 
 function normalizeUrl(input: string): URL | null {
   try {
-    const u = new URL(/^https?:\/\//i.test(input) ? input.trim() : `https://${input.trim()}`);
+    const u = new URL(
+      /^https?:\/\//i.test(input) ? input.trim() : `https://${input.trim()}`
+    );
     if (!u.hostname.includes(".")) return null;
     return u;
   } catch {
@@ -93,7 +112,10 @@ async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
   const host = hostname.toLowerCase().replace(/^www\./, "");
   const rule = await prisma.merchantRule.findFirst({
     where: {
-      OR: [{ domainPattern: { contains: host } }, { merchantName: { contains: host } }],
+      OR: [
+        { domainPattern: { contains: host } },
+        { merchantName: { contains: host } },
+      ],
       active: true,
     },
   });
@@ -105,7 +127,10 @@ async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
     const tld = parts.slice(-2).join(".");
     const alt = await prisma.merchantRule.findFirst({
       where: {
-        OR: [{ domainPattern: { contains: tld } }, { merchantName: { contains: tld } }],
+        OR: [
+          { domainPattern: { contains: tld } },
+          { merchantName: { contains: tld } },
+        ],
         active: true,
       },
     });
@@ -124,15 +149,17 @@ export async function POST(req: NextRequest) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     userId = (token as any)?.sub || (token as any)?.id;
   }
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!userId)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   // Input
-  const body = (await req.json().catch(() => ({}))) as PostBody;
+  const body = ((await req.json().catch(() => ({}))) || {}) as PostBody;
   const rawUrl = body?.url?.trim();
   const label = body?.label?.trim() || null;
   const source = (body?.source ?? "").trim();
 
-  if (!rawUrl) return NextResponse.json({ error: "Missing url" }, { status: 400 });
+  if (!rawUrl)
+    return NextResponse.json({ error: "Missing url" }, { status: 400 });
   const parsed = normalizeUrl(rawUrl);
   if (!parsed) {
     return NextResponse.json(
@@ -165,7 +192,13 @@ export async function POST(req: NextRequest) {
     const shortUrl = base ? `${base}/l/${created.id}` : `/l/${created.id}`;
 
     return NextResponse.json(
-      { ok: true, link: shortUrl, shortUrl, warning: "No merchant rule matched; link may not earn commissions." },
+      {
+        ok: true,
+        link: shortUrl,
+        shortUrl,
+        warning:
+          "No merchant rule matched; link may not earn commissions.",
+      },
       { status: 200 }
     );
   }
@@ -200,19 +233,30 @@ export async function POST(req: NextRequest) {
   }
 
   // Allow/deny traffic sources if configured
-  const hasAllow = Array.isArray((rule as any).allowedSources) && (rule as any).allowedSources.length > 0;
+  const hasAllow =
+    Array.isArray((rule as any).allowedSources) &&
+    (rule as any).allowedSources.length > 0;
   const denyList = (rule as any).disallowedSources;
   const hasDeny = Array.isArray(denyList) && denyList.length > 0;
 
   if (hasAllow || hasDeny) {
     if (!source) {
       return NextResponse.json(
-        { ok: false, error: "SOURCE_REQUIRED", reason: "This merchant requires a traffic source (tiktok, instagram, facebook, youtube)." },
+        {
+          ok: false,
+          error: "SOURCE_REQUIRED",
+          reason:
+            "This merchant requires a traffic source (tiktok, instagram, facebook, youtube).",
+        },
         { status: 400 }
       );
     }
     const check = validateSource(rule as any, source);
-    if (!check.ok) return NextResponse.json({ ok: false, error: "SOURCE_BLOCKED", reason: check.reason }, { status: 400 });
+    if (!check.ok)
+      return NextResponse.json(
+        { ok: false, error: "SOURCE_BLOCKED", reason: check.reason },
+        { status: 400 }
+      );
   }
 
   // 1) Create the SmartLink first to obtain its ID for subid
@@ -238,16 +282,21 @@ export async function POST(req: NextRequest) {
   const isLazadaHost = /(^|\.)lazada\.com\.ph$/.test(merchantDomain);
   const isZaloraHost = /(^|\.)zalora\.com\.ph$/.test(merchantDomain);
 
+  // FORCE: Lazada PH → AccessTrade ATID link
   if (isShopeeHost || ruleNetwork.includes("shopee")) {
     trackedUrl = await buildShopeeUrl(parsed.toString(), created.id);
+  } else if (isLazadaHost) {
+    // Lazada PH – ACCESSTRADE ID, dynamic product deep link
+    trackedUrl = `${LAZADA_PH_ACCESSTRADE_ATID}?url=${encodeURIComponent(
+      parsed.toString()
+    )}`;
   } else if (
-    isLazadaHost ||
     isZaloraHost ||
     ruleNetwork.includes("involve") ||
     ruleNetwork.includes("lazada") ||
     ruleNetwork.includes("zalora")
   ) {
-    // Zalora PH (via Involve Asia / ACCESSTRADE) also uses the Lazada-style builder
+    // Zalora PH (and any non-PH Lazada/Zalora via Involve Asia) uses existing builder
     trackedUrl = await buildLazadaUrl(parsed.toString(), created.id);
   }
 
@@ -280,7 +329,8 @@ export async function POST(req: NextRequest) {
     },
   };
   if (!isApproved && isPH) {
-    payload.warning = "Merchant is PENDING but PH-enabled; commissions may be limited until full approval.";
+    payload.warning =
+      "Merchant is PENDING but PH-enabled; commissions may be limited until full approval.";
   }
 
   return NextResponse.json(payload, { status: 200 });
