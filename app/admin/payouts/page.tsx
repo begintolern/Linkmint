@@ -1,8 +1,9 @@
+// app/admin/payouts/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import { prisma } from "@/lib/db";
-import { cookies } from "next/headers";
+import { assertAdmin } from "@/lib/utils/adminGuard";
 import ActionsCell from "./ActionsCell";
 
 export default async function AdminPayoutsPage({
@@ -10,24 +11,8 @@ export default async function AdminPayoutsPage({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  const jar = cookies();
-  const adminKey = jar.get("admin_key")?.value || "";
-
-  // Verify admin session or key
-  const adminEmails =
-    process.env.ADMIN_EMAILS?.split(",").map((e) => e.trim().toLowerCase()) || [];
-  const adminEmail = jar.get("email")?.value?.toLowerCase();
-  const isAdmin =
-    (adminEmail && adminEmails.includes(adminEmail)) ||
-    adminKey === process.env.ADMIN_API_KEY;
-
-  if (!isAdmin) {
-    return (
-      <div className="p-10 text-center text-gray-500">
-        Unauthorized – admin access only.
-      </div>
-    );
-  }
+  // Use the same admin guard as the main /admin page
+  await assertAdmin();
 
   const statusFilter =
     typeof searchParams?.status === "string"
