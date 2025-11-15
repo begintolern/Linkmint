@@ -46,6 +46,12 @@ export default function ColoredStats() {
     };
   }, []);
 
+  // Single primary tone for all normal cards, one danger tone for "Failed"
+  const PRIMARY_TONE =
+    "bg-teal-50 border-teal-200 text-teal-900";
+  const DANGER_TONE =
+    "bg-rose-50 border-rose-200 text-rose-800";
+
   const cards = [
     {
       label: "Pending",
@@ -55,7 +61,6 @@ export default function ColoredStats() {
           : loading
           ? "—"
           : "0",
-      tone: "bg-amber-50 border-amber-200 text-amber-800",
     },
     {
       label: "Approved",
@@ -65,7 +70,6 @@ export default function ColoredStats() {
           : loading
           ? "—"
           : "0",
-      tone: "bg-emerald-50 border-emerald-200 text-emerald-800",
     },
     {
       label: "Processing",
@@ -75,19 +79,16 @@ export default function ColoredStats() {
           : loading
           ? "—"
           : "0",
-      tone: "bg-blue-50 border-blue-200 text-blue-800",
     },
     {
       label: "Paid",
       value:
         data?.paid !== undefined ? currency(data.paid) : loading ? "—" : "0",
-      tone: "bg-indigo-50 border-indigo-200 text-indigo-800",
     },
     {
       label: "Failed",
       value:
         data?.failed !== undefined ? currency(data.failed) : loading ? "—" : "0",
-      tone: "bg-rose-50 border-rose-200 text-rose-800",
     },
     {
       label: "Bonus",
@@ -101,26 +102,29 @@ export default function ColoredStats() {
           : loading
           ? "—"
           : "0",
-      tone: "bg-purple-50 border-purple-200 text-purple-800",
     },
   ] as const;
 
   return (
     <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {cards.map((c) => (
-        <div
-          key={c.label}
-          className={`rounded-2xl border p-4 shadow-sm ${c.tone}`}
-        >
-          <div className="text-xs uppercase tracking-wide opacity-70">
-            {c.label}
+      {cards.map((c) => {
+        const tone = c.label === "Failed" ? DANGER_TONE : PRIMARY_TONE;
+
+        return (
+          <div
+            key={c.label}
+            className={`rounded-2xl border p-4 shadow-sm ${tone}`}
+          >
+            <div className="text-xs uppercase tracking-wide opacity-70">
+              {c.label}
+            </div>
+            <div className="mt-1 text-xl font-semibold">{c.value}</div>
+            {error && c.label === "Pending" ? (
+              <div className="mt-1 text-[11px] opacity-60">Couldn’t load.</div>
+            ) : null}
           </div>
-          <div className="mt-1 text-xl font-semibold">{c.value}</div>
-          {error && c.label === "Pending" ? (
-            <div className="mt-1 text-[11px] opacity-60">Couldn’t load.</div>
-          ) : null}
-        </div>
-      ))}
+        );
+      })}
     </section>
   );
 }
