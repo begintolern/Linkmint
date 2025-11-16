@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 /**
  * GET /api/merchants/detect?url=<productUrl>
- * Returns { ok:true, key:"lazada-ph", displayName:"Lazada PH (App)" } when matched
+ * Returns { ok:true, key:"merchant-key", displayName:"Merchant Name" } when matched.
  */
 export async function GET(req: Request) {
   try {
@@ -26,37 +26,40 @@ export async function GET(req: Request) {
       );
     }
 
-    // Lazada PH
+    // Lazada PH via ACCESSTRADE or Involve Asia
     if (host.includes("lazada.com.ph")) {
       return NextResponse.json(
         {
           ok: true,
           key: "lazada-ph",
-          displayName: "Lazada PH (App)",
+          displayName: "Lazada PH",
+          network: "involveasia",
         },
         { status: 200 }
       );
     }
 
-    // Shopee PH
+    // Shopee PH via ACCESSTRADE or IA
     if (host.includes("shopee.ph")) {
       return NextResponse.json(
         {
           ok: true,
           key: "shopee-ph",
           displayName: "Shopee PH",
+          network: "involveasia",
         },
         { status: 200 }
       );
     }
 
-    // Razer PH (via global razer.com, but we’ll treat it as PH for now)
+    // Razer (global razer.com) via Involve Asia
     if (host.includes("razer.com")) {
       return NextResponse.json(
         {
           ok: true,
           key: "razer-ph",
-          displayName: "Razer PH",
+          displayName: "Razer (PH)",
+          network: "involveasia",
         },
         { status: 200 }
       );
