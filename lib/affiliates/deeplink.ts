@@ -118,23 +118,17 @@ export async function createShopeeShortlink(args: {
 }
 
 /**
- * Build a tracked Shopee URL:
- * 1) Shopee Affiliate direct (if env present)
- * 2) ACCESSTRADE (if configured)
- * 3) Involve Asia (if configured)
- * 4) Fallback to tagging the merchant URL
+ * Build a tracked Shopee URL using your Involve Asia link:
+ * 1) Tag the Shopee URL with lm_subid + utm_source=linkmint
+ * 2) Wrap it with https://invl.me/cln2o2c?url=<encoded>
  */
+const SHOPEE_PH_TRACK_BASE = "https://invl.me/cln2o2c";
+
 export async function buildShopeeUrl(productUrl: string, subid: string): Promise<string> {
-  const viaShopee = await createShopeeShortlink({ productUrl, subid });
-  if (viaShopee) return viaShopee;
-
-  const viaAT = await createAccesstradeShortlink({ productUrl, subid });
-  if (viaAT) return viaAT;
-
-  const viaIA = await createInvolveAsiaShortlink({ productUrl, subid });
-  if (viaIA) return viaIA;
-
-  return appendSubid(productUrl, subid);
+  // Add our internal tracking params first
+  const tagged = appendSubid(productUrl, subid);
+  const encoded = encodeURIComponent(tagged);
+  return `${SHOPEE_PH_TRACK_BASE}?url=${encoded}`;
 }
 
 /**
