@@ -1,9 +1,6 @@
 // app/api/merchants/detect/route.ts
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
-
 /**
  * GET /api/merchants/detect?url=<productUrl>
  * Returns { ok:true, key:"lazada-ph", displayName:"Lazada PH (App)" } when matched
@@ -29,7 +26,7 @@ export async function GET(req: Request) {
       );
     }
 
-    // Simple PH detectors (expand later)
+    // Lazada PH
     if (host.includes("lazada.com.ph")) {
       return NextResponse.json(
         {
@@ -41,12 +38,25 @@ export async function GET(req: Request) {
       );
     }
 
+    // Shopee PH
     if (host.includes("shopee.ph")) {
       return NextResponse.json(
         {
           ok: true,
           key: "shopee-ph",
           displayName: "Shopee PH",
+        },
+        { status: 200 }
+      );
+    }
+
+    // Razer PH (via global razer.com, but we’ll treat it as PH for now)
+    if (host.includes("razer.com")) {
+      return NextResponse.json(
+        {
+          ok: true,
+          key: "razer-ph",
+          displayName: "Razer PH",
         },
         { status: 200 }
       );
