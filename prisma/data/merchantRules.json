@@ -10,7 +10,9 @@
     "commissionRate": 0.05,
     "allowedSources": ["Content blogs", "Organic social", "Email (if compliant)"],
     "disallowed": ["No brand keyword bidding", "No sub-affiliate without approval", "No incentivized clicks", "No misleading branding"],
-    "notes": "Covers Expedia brand; Hotels.com/Orbitz/Travelocity may have separate terms in CJ."
+    "notes": "Covers Expedia brand; Hotels.com/Orbitz/Travelocity may have separate terms in CJ.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "IHG Hotels",
@@ -23,7 +25,9 @@
     "commissionRate": 0.03,
     "allowedSources": ["Content blogs", "Organic social", "Email (with approval)"],
     "disallowed": ["No brand keyword bidding", "No domains with IHG marks", "Must use SCH Icons", "No unpublished rates"],
-    "notes": "Includes Holiday Inn, InterContinental, Crowne Plaza; some promos non-commissionable."
+    "notes": "Includes Holiday Inn, InterContinental, Crowne Plaza; some promos non-commissionable.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Canon U.S.A.",
@@ -36,7 +40,9 @@
     "commissionRate": 0.04,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No email (unless pre-approved)", "No brand keyword bidding", "No site look/feel copying", "No unauthorized coupon use"],
-    "notes": "Commission excludes tax/shipping/returns; Net Sales basis."
+    "notes": "Commission excludes tax/shipping/returns; Net Sales basis.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "NordVPN",
@@ -46,10 +52,12 @@
     "cookieWindowDays": 30,
     "payoutDelayDays": 60,
     "commissionType": "PERCENT",
-    "commissionRate": 0.40,
+    "commissionRate": 0.4,
     "allowedSources": ["Content blogs", "Organic social", "Email (brand-safe only)"],
     "disallowed": ["No brand keyword bidding", "No toolbars/adware", "No altered creatives", "No misleading branding"],
-    "notes": "Approved — live. Use CJ template: http://www.jdoqocy.com/click-101525788-13382109."
+    "notes": "Approved — live. Use CJ template link from their dashboard.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Booking.com",
@@ -62,7 +70,9 @@
     "commissionRate": 0.04,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding", "No incentivized clicks"],
-    "notes": "Global accommodation leader; strong brand recognition."
+    "notes": "Global accommodation leader; strong brand recognition.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Trip.com",
@@ -75,7 +85,9 @@
     "commissionRate": 0.03,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding", "No misleading branding"],
-    "notes": "Strong APAC/Europe coverage; complements Expedia/Booking."
+    "notes": "Strong APAC/Europe coverage; complements Expedia/Booking.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Vrbo",
@@ -88,7 +100,9 @@
     "commissionRate": 0.03,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding", "No sub-affiliate without approval"],
-    "notes": "Part of Expedia Group; often separate approval/terms."
+    "notes": "Part of Expedia Group; often separate approval/terms.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Agoda",
@@ -101,7 +115,9 @@
     "commissionRate": 0.04,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding"],
-    "notes": "Strong Asia-Pacific presence; complements Booking.com."
+    "notes": "Strong Asia-Pacific presence; complements Booking.com.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Walmart",
@@ -114,7 +130,9 @@
     "commissionRate": 0.04,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding", "No coupon sites without approval"],
-    "notes": "Short cookie window (3 days); strong user appeal."
+    "notes": "Short cookie window (3 days); strong user appeal.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Target",
@@ -127,7 +145,9 @@
     "commissionRate": 0.04,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding"],
-    "notes": "Strong U.S. brand; good everyday retail coverage."
+    "notes": "Strong U.S. brand; good everyday retail coverage.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Best Buy",
@@ -140,7 +160,9 @@
     "commissionRate": 0.03,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding", "No misleading branding"],
-    "notes": "Electronics focus; shorter cookie; popular with U.S. buyers."
+    "notes": "Electronics focus; shorter cookie; popular with U.S. buyers.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
     "merchantName": "Macy's",
@@ -153,19 +175,69 @@
     "commissionRate": 0.05,
     "allowedSources": ["Content blogs", "Organic social"],
     "disallowed": ["No brand keyword bidding", "No coupon/incentive traffic without approval"],
-    "notes": "Department store; seasonal demand peaks during holidays."
+    "notes": "Department store; seasonal demand peaks during holidays.",
+    "market": "US",
+    "importMethod": "MANUAL"
   },
   {
-  "merchantName": "OEDRO",
-  "network": "CJ",
-  "domainPattern": "oedro.com",
-  "category": "Automotive (Floor Mats, Bumpers, Tonneau Covers, Lighting, Accessories)",
-  "cookieWindowDays": 30,
-  "payoutDelayDays": 60,
-  "commissionType": "PERCENT",
-  "commissionRate": 0.08,
-  "allowedSources": ["Content blogs", "Organic social", "Email (with approval)"],
-  "disallowed": ["No brand keyword bidding", "No misleading branding"],
-  "notes": "5–12% commission range. Weekly special codes. Auto parts focus: Jeep Wrangler, Ford F-series, Dodge Ram, Chevy Silverado."
-}
+    "merchantName": "OEDRO",
+    "network": "CJ",
+    "domainPattern": "oedro.com",
+    "category": "Automotive (Floor Mats, Bumpers, Tonneau Covers, Lighting, Accessories)",
+    "cookieWindowDays": 30,
+    "payoutDelayDays": 60,
+    "commissionType": "PERCENT",
+    "commissionRate": 0.08,
+    "allowedSources": ["Content blogs", "Organic social", "Email (with approval)"],
+    "disallowed": ["No brand keyword bidding", "No misleading branding"],
+    "notes": "5–12% commission range. Weekly special codes. Auto parts focus.",
+    "market": "US",
+    "importMethod": "MANUAL"
+  },
+
+  {
+    "merchantName": "Shopee PH",
+    "network": "Involve Asia",
+    "domainPattern": "shopee.ph",
+    "category": "Marketplace (General Merchandise)",
+    "cookieWindowDays": 30,
+    "payoutDelayDays": 35,
+    "commissionType": "PERCENT",
+    "commissionRate": 0.024,
+    "allowedSources": ["Content blogs", "Organic social", "Personal sharing"],
+    "disallowed": ["No paid search on brand terms", "No misleading coupons", "No spammy messaging"],
+    "notes": "Shopee PH via Involve Asia.",
+    "market": "PH",
+    "importMethod": "MANUAL"
+  },
+  {
+    "merchantName": "Lazada PH",
+    "network": "Accesstrade",
+    "domainPattern": "lazada.com.ph",
+    "category": "Marketplace (General Merchandise)",
+    "cookieWindowDays": 30,
+    "payoutDelayDays": 35,
+    "commissionType": "PERCENT",
+    "commissionRate": 0.048,
+    "allowedSources": ["Content blogs", "Organic social", "Personal sharing"],
+    "disallowed": ["No paid search on brand terms", "No misleading coupons", "No spammy messaging"],
+    "notes": "Lazada PH via Accesstrade.",
+    "market": "PH",
+    "importMethod": "MANUAL"
+  },
+  {
+    "merchantName": "Razer PH",
+    "network": "Direct / Future Affiliate",
+    "domainPattern": "razer.com",
+    "category": "Gaming (Peripherals & Hardware)",
+    "cookieWindowDays": 30,
+    "payoutDelayDays": 60,
+    "commissionType": "PERCENT",
+    "commissionRate": 0.05,
+    "allowedSources": ["Content blogs", "Organic social", "Personal sharing"],
+    "disallowed": ["No misleading claims", "No unofficial discounts"],
+    "notes": "Currently tracking only with lm_subid fallback.",
+    "market": "PH",
+    "importMethod": "MANUAL"
+  }
 ]

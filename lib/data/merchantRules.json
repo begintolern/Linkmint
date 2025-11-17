@@ -18,5 +18,15 @@
     "commissionRate": "Up to 4.8%",
     "status": "active",
     "notes": "Lazada Philippines affiliate link via Accesstrade"
+  },
+  {
+    "merchant": "Razer",
+    "network": "Involve Asia",
+    "baseUrl": "https://invl.me/cln2off",
+    "country": "PH",
+    "payoutType": "CPS",
+    "commissionRate": "Up to 3.5%",
+    "status": "active",
+    "notes": "Razer affiliate link via Involve Asia"
   }
 ]

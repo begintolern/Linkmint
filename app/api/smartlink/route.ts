@@ -121,7 +121,6 @@ async function findRuleByHost(hostname: string): Promise<RuleLite | null> {
   });
   if (rule) return rule as any;
 
-  // fallback to bare domain (strip subdomains)
   const parts = host.split(".");
   if (parts.length > 2) {
     const tld = parts.slice(-2).join(".");
@@ -172,7 +171,7 @@ export async function POST(req: NextRequest) {
   const hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
   const rule = await findRuleByHost(hostname);
 
-  // If no rule, create generic (non-commission) link
+  // If no rule → generic link
   if (!rule) {
     const created = await prisma.smartLink.create({
       data: {
@@ -181,7 +180,7 @@ export async function POST(req: NextRequest) {
         merchantName: hostname,
         merchantDomain: hostname,
         originalUrl: parsed.toString(),
-        shortUrl: appendSubid(parsed.toString(), "generic"), // still add basic tracking
+        shortUrl: appendSubid(parsed.toString(), "generic"),
         label,
       },
     });
@@ -204,7 +203,7 @@ export async function POST(req: NextRequest) {
   }
 
   // PH-first gating + approval
-  const status = String(rule.status ?? "").toLowerCase(); // "approved" | "active" | "pending" | ...
+  const status = String(rule.status ?? "").toLowerCase();
   const market = (rule as any).market ?? null;
   const isApproved = status === "approved" || status === "active";
   const isPH = market === "PH";
@@ -215,7 +214,6 @@ export async function POST(req: NextRequest) {
         ok: false,
         error: "MARKET_BLOCKED",
         reason: `This merchant (${rule.merchantName}) is not enabled for the Philippines.`,
-        merchant: { id: rule.id, name: rule.merchantName, market },
       },
       { status: 400 }
     );
@@ -232,34 +230,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Allow/deny traffic sources if configured
-  const hasAllow =
-    Array.isArray((rule as any).allowedSources) &&
-    (rule as any).allowedSources.length > 0;
-  const denyList = (rule as any).disallowedSources;
-  const hasDeny = Array.isArray(denyList) && denyList.length > 0;
+  // TEMP — DISABLE blocking for traffic source rules
+  // (We only enforce them after launch)
+  // -----------------------------------------------------------------
+  // *** THIS REPLACES THE OLD STRICT SOURCE CHECK ***
+  // -----------------------------------------------------------------
+  // No rejection. We simply skip validation here.
+  // -----------------------------------------------------------------
 
-  if (hasAllow || hasDeny) {
-    if (!source) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "SOURCE_REQUIRED",
-          reason:
-            "This merchant requires a traffic source (tiktok, instagram, facebook, youtube).",
-        },
-        { status: 400 }
-      );
-    }
-    const check = validateSource(rule as any, source);
-    if (!check.ok)
-      return NextResponse.json(
-        { ok: false, error: "SOURCE_BLOCKED", reason: check.reason },
-        { status: 400 }
-      );
-  }
-
-  // 1) Create the SmartLink first to obtain its ID for subid
+  // 1) Create SmartLink first to obtain subid
   const created = await prisma.smartLink.create({
     data: {
       userId,
@@ -267,12 +246,12 @@ export async function POST(req: NextRequest) {
       merchantName: rule.merchantName,
       merchantDomain: rule.domainPattern ?? hostname,
       originalUrl: parsed.toString(),
-      shortUrl: "", // fill after we compute network-wrapped URL
+      shortUrl: "",
       label,
     },
   });
 
-  // 2) Build a tracked URL that preserves the product deep link
+  // 2) Build tracked URL
   const merchantDomain = (rule.domainPattern || hostname).toLowerCase();
   const ruleNetwork = (rule.network || "").toLowerCase();
 
@@ -282,11 +261,9 @@ export async function POST(req: NextRequest) {
   const isLazadaHost = /(^|\.)lazada\.com\.ph$/.test(merchantDomain);
   const isZaloraHost = /(^|\.)zalora\.com\.ph$/.test(merchantDomain);
 
-  // FORCE: Lazada PH → AccessTrade ATID link
   if (isShopeeHost || ruleNetwork.includes("shopee")) {
     trackedUrl = await buildShopeeUrl(parsed.toString(), created.id);
   } else if (isLazadaHost) {
-    // Lazada PH – ACCESSTRADE ID, dynamic product deep link
     trackedUrl = `${LAZADA_PH_ACCESSTRADE_ATID}?url=${encodeURIComponent(
       parsed.toString()
     )}`;
@@ -296,42 +273,37 @@ export async function POST(req: NextRequest) {
     ruleNetwork.includes("lazada") ||
     ruleNetwork.includes("zalora")
   ) {
-    // Zalora PH (and any non-PH Lazada/Zalora via Involve Asia) uses existing builder
     trackedUrl = await buildLazadaUrl(parsed.toString(), created.id);
   }
 
-  // Fallback: just append subid to the product URL
   if (!trackedUrl) {
     trackedUrl = appendSubid(parsed.toString(), created.id);
   }
 
-  // 3) Save the computed tracked URL back onto the record
+  // 3) Save tracked URL
   await prisma.smartLink.update({
     where: { id: created.id },
     data: { shortUrl: trackedUrl },
   });
 
-  // 4) Return the short redirect we control (/l/[id])
+  // 4) Return short redirect URL
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
   const proto = req.headers.get("x-forwarded-proto") ?? "https";
   const base = host ? `${proto}://${host}` : "";
   const shortUrl = base ? `${base}/l/${created.id}` : `/l/${created.id}`;
 
-  const payload: any = {
-    ok: true,
-    link: shortUrl,
-    shortUrl,
-    merchant: {
-      id: rule.id,
-      name: rule.merchantName,
-      status: rule.status ?? "ACTIVE",
-      market,
+  return NextResponse.json(
+    {
+      ok: true,
+      link: shortUrl,
+      shortUrl,
+      merchant: {
+        id: rule.id,
+        name: rule.merchantName,
+        status: rule.status ?? "ACTIVE",
+        market,
+      },
     },
-  };
-  if (!isApproved && isPH) {
-    payload.warning =
-      "Merchant is PENDING but PH-enabled; commissions may be limited until full approval.";
-  }
-
-  return NextResponse.json(payload, { status: 200 });
+    { status: 200 }
+  );
 }
