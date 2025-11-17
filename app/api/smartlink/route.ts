@@ -288,14 +288,21 @@ export async function POST(req: NextRequest) {
   const isZaloraHost = /(^|\.)zalora\.com\.ph$/.test(merchantDomain);
 
   if (isShopeeHost || ruleNetwork.includes("shopee")) {
+    // Shopee-specific builder (works as before)
     trackedUrl = await buildShopeeUrl(parsedOriginal.toString(), created.id);
   } else if (isLazadaHost) {
+    // Lazada via Accesstrade ATID
     trackedUrl = `${LAZADA_PH_ACCESSTRADE_ATID}?url=${encodeURIComponent(
       parsedOriginal.toString()
     )}`;
+  } else if (isZaloraHost) {
+    // Zalora PH (Involve / Lazada-style builder)
+    trackedUrl = await buildLazadaUrl(parsedOriginal.toString(), created.id);
+  } else if (ruleNetwork.includes("involve")) {
+    // Generic Involve Asia deeplink — already tracked on their side.
+    // Just append our subid; DO NOT re-wrap with Shopee IA link.
+    trackedUrl = appendSubid(parsedOriginal.toString(), created.id);
   } else if (
-    isZaloraHost ||
-    ruleNetwork.includes("involve") ||
     ruleNetwork.includes("lazada") ||
     ruleNetwork.includes("zalora")
   ) {
