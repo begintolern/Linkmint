@@ -17,6 +17,9 @@ export const fetchCache = "force-no-store";
 // Lazada PH via ACCESSTRADE (ATID short link for your account)
 const LAZADA_PH_ACCESSTRADE_ATID = "https://atid.me/00p2cf002mmu";
 
+// SHEIN Global via Involve Asia (your miniurl base)
+const SHEIN_IA_BASE = "https://miniurl.app/cln2ru3";
+
 // --- GET: simple probe to confirm route exists
 export async function GET() {
   return NextResponse.json({
@@ -180,7 +183,7 @@ export async function POST(req: NextRequest) {
   const body = ((await req.json().catch(() => ({}))) || {}) as PostBody;
   const rawUrl = body?.url?.trim();
   const label = body?.label?.trim() || null;
-  const source = (body?.source ?? "").trim();
+  const source = (body?.source ?? "").trim(); // currently not enforced
 
   if (!rawUrl)
     return NextResponse.json({ error: "Missing url" }, { status: 400 });
@@ -299,9 +302,22 @@ export async function POST(req: NextRequest) {
     // Zalora PH (Involve / Lazada-style builder)
     trackedUrl = await buildLazadaUrl(parsedOriginal.toString(), created.id);
   } else if (ruleNetwork.includes("involve")) {
-    // Generic Involve Asia deeplink — already tracked on their side.
-    // Just append our subid; DO NOT re-wrap with Shopee IA link.
-    trackedUrl = appendSubid(parsedOriginal.toString(), created.id);
+    // Involve Asia merchants (including SHEIN Global)
+    const isShein =
+      /(^|\.)shein\.com$/.test(merchantDomain) ||
+      merchantDomain.includes("shein.com") ||
+      rule.merchantName.toLowerCase().includes("shein");
+
+    if (isShein) {
+      // Use your SHEIN IA template with the REAL product URL
+      const productUrl = parsedForDetection.toString();
+      trackedUrl = `${SHEIN_IA_BASE}?url=${encodeURIComponent(
+        productUrl
+      )}&sub_id=${created.id}&lm_subid=${created.id}&utm_source=linkmint`;
+    } else {
+      // Fallback for other IA merchants (until we wire templates)
+      trackedUrl = appendSubid(parsedOriginal.toString(), created.id);
+    }
   } else if (
     ruleNetwork.includes("lazada") ||
     ruleNetwork.includes("zalora")
@@ -310,6 +326,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!trackedUrl) {
+    // Last-resort fallback
     trackedUrl = appendSubid(parsedOriginal.toString(), created.id);
   }
 
