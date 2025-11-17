@@ -3,16 +3,22 @@ export const runtime = "nodejs"; // critical: prevent Edge TLS issues
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
+type Status = "PENDING" | "ACTIVE" | "REJECTED";
+
+// ---- GET: list merchant rules ----
 export async function GET() {
   try {
     const session = (await getServerSession(authOptions as any)) as any;
     if (!session?.user?.email) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     // Load recent merchant rules (no `select` to avoid schema mismatch)
@@ -31,74 +37,61 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+// ---- POST: update status (and active flag) ----
+export async function POST(req: NextRequest) {
   try {
+    // you can tighten this later; for now we keep same pattern as GET
     const session = (await getServerSession(authOptions as any)) as any;
     if (!session?.user?.email) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    // Optional: lock this to your admin account only
-    // if (session.user.email !== "epo78741@yahoo.com") {
-    //   return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
-    // }
+    const body = (await req.json().catch(() => null)) as
+      | {
+          id?: string;
+          status?: string;
+        }
+      | null;
 
-    const body = await req.json();
-
-    if (!body || typeof body !== "object") {
+    if (!body?.id || !body?.status) {
       return NextResponse.json(
-        { ok: false, error: "Invalid JSON body" },
+        { ok: false, error: "Invalid payload" },
         { status: 400 }
       );
     }
 
-    if (!body.merchantName || !body.network || !body.domainPattern) {
+    const nextStatus = body.status.toUpperCase() as Status;
+    const valid: Status[] = ["PENDING", "ACTIVE", "REJECTED"];
+    if (!valid.includes(nextStatus)) {
       return NextResponse.json(
-        { ok: false, error: "Missing required fields" },
+        { ok: false, error: "Invalid status value" },
         { status: 400 }
       );
     }
 
-    const rule = await prisma.merchantRule.create({
+    const updated = await prisma.merchantRule.update({
+      where: { id: body.id },
       data: {
-        active: body.active ?? true,
-        merchantName: body.merchantName,
-        network: body.network,
-        domainPattern: body.domainPattern,
-
-        paramKey: body.paramKey ?? null,
-        paramValue: body.paramValue ?? null,
-        linkTemplate: body.linkTemplate ?? null,
-
-        cookieWindowDays: body.cookieWindowDays ?? null,
-        payoutDelayDays: body.payoutDelayDays ?? null,
-
-        commissionType: body.commissionType ?? "PERCENT",
-        commissionRate: body.commissionRate ?? null,
-
-        calc: body.calc ?? null,
-        rate: body.rate ?? null,
-        notes: body.notes ?? null,
-
-        importMethod: body.importMethod ?? "MANUAL",
-        apiBaseUrl: body.apiBaseUrl ?? null,
-        apiAuthType: body.apiAuthType ?? null,
-        apiKeyRef: body.apiKeyRef ?? null,
-        lastImportedAt: null,
-
-        status: body.status ?? "approved",
-        allowedRegions: body.allowedRegions ?? [],
-        inactiveReason: body.inactiveReason ?? null,
-        market: body.market ?? null,
-
-        disallowed: body.disallowed ?? null,
-        allowedSources: body.allowedSources ?? null,
-        allowedCountries: body.allowedCountries ?? [],
-        blockedCountries: body.blockedCountries ?? [],
+        status: nextStatus,
+        active: nextStatus === "ACTIVE",
+        updatedAt: new Date(),
       },
     });
 
-    return NextResponse.json({ ok: true, rule }, { status: 200 });
+    return NextResponse.json(
+      {
+        ok: true,
+        rule: {
+          id: updated.id,
+          status: updated.status,
+          active: updated.active,
+        },
+      },
+      { status: 200 }
+    );
   } catch (e: any) {
     console.error("POST /api/admin/merchant-rules error:", e);
     return NextResponse.json(
