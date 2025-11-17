@@ -1,30 +1,80 @@
 // app/api/merchant-rules/[id]/route.ts
-import { NextRequest, NextResponse } from "next/server";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
+import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth/guards";
 
-export async function DELETE(_req: NextRequest, ctx: { params: { id: string } }) {
+const VALID_STATUSES = ["PENDING", "ACTIVE", "REJECTED"] as const;
+type Status = (typeof VALID_STATUSES)[number];
+
+type RouteParams = {
+  params: {
+    id: string;
+  };
+};
+
+// PATCH /api/merchant-rules/:id  -> update status (+ active flag)
+export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
-    // Hard admin gate (throws 401/403 as needed)
-    await requireAdmin();
-
-    const id = ctx.params?.id;
+    const id = params?.id;
     if (!id) {
-      return NextResponse.json({ ok: false, error: "Missing id" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Missing id in route" },
+        { status: 400 }
+      );
     }
 
-    // Ensure the record exists before delete (optional but clearer errors)
-    const existing = await prisma.merchantRule.findUnique({ where: { id } });
-    if (!existing) {
-      return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
+    const body = (await req.json().catch(() => null)) as
+      | {
+          status?: string;
+        }
+      | null;
+
+    if (!body?.status) {
+      return NextResponse.json(
+        { ok: false, error: "Missing status in body" },
+        { status: 400 }
+      );
     }
 
-    await prisma.merchantRule.delete({ where: { id } });
-    return NextResponse.json({ ok: true, id });
-  } catch (err: any) {
-    // If requireAdmin threw a Response, return it
-    if (err instanceof Response) return err;
-    console.error("merchant-rules/[id] DELETE error:", err);
-    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
+    const nextStatus = body.status.toUpperCase() as Status;
+    if (!VALID_STATUSES.includes(nextStatus)) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid status value" },
+        { status: 400 }
+      );
+    }
+
+    const updated = await prisma.merchantRule.update({
+      where: { id },
+      data: {
+        status: nextStatus,
+        active: nextStatus === "ACTIVE",
+        updatedAt: new Date(),
+      },
+    });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        rule: {
+          id: updated.id,
+          status: updated.status,
+          active: updated.active,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (e: any) {
+    console.error("PATCH /api/merchant-rules/[id] error:", e);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: e?.message || "Server error",
+      },
+      { status: 500 }
+    );
   }
 }
