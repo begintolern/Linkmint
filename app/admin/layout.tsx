@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 function Item({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
   const active = pathname === href;
+
   return (
     <Link
       href={href}
@@ -40,9 +41,14 @@ export default function AdminLayout({
           <Item href="/admin/merchant-rules" label="Merchant Rules" />
           <Item href="/admin/ops" label="Ops & Health" />
           <Item href="/admin/settings" label="Settings" />
-          {/* 🔹 Added: Logs + Users */}
+
+          {/* 🔹 Added: Activity (new) */}
+          <Item href="/admin/activity" label="Activity" />
+
+          {/* 🔹 Existing */}
           <Item href="/admin/logs" label="Logs" />
           <Item href="/admin/users" label="Users" />
+
           {/* 🔹 Existing AI Policy Check link */}
           <Item href="/tools/policy-check" label="Policy Pre-Check (AI)" />
         </nav>
