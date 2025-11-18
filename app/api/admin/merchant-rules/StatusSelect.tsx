@@ -24,7 +24,7 @@ export default function StatusSelect({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/admin/merchant-rules/status", {
+      const res = await fetch("/api/admin/merchant-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: next }),
@@ -33,11 +33,11 @@ export default function StatusSelect({
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data?.ok) {
+        console.error("Status update error:", res.status, data);
         throw new Error(data?.error || "Failed to update status");
       }
     } catch (err) {
       console.error("Status update failed:", err);
-      // revert if error
       setValue(prev);
       alert("Failed to update merchant status. Please try again.");
     } finally {
