@@ -79,8 +79,8 @@ function StatusPill({ status, active }: { status: string | null; active: boolean
 }
 
 export default async function MerchantsBrowsePage() {
-  // Only show merchants that are explicitly enabled by admin
-  const rules: MerchantRule[] = await prisma.merchantRule.findMany({
+  // Step 1: load all ACTIVE merchants
+  const allActive: MerchantRule[] = await prisma.merchantRule.findMany({
     where: {
       active: true,
     },
@@ -102,6 +102,20 @@ export default async function MerchantsBrowsePage() {
     },
   });
 
+  // Step 2: location-based filter (PH-first + Global)
+  const visible = allActive.filter((m) => {
+    const mk = (m.market || "").toUpperCase().trim();
+
+    // No market set → treat as generic, still show
+    if (!mk) return true;
+
+    // PH rollout: show PH + GLOBAL only
+    if (mk === "PH" || mk === "GLOBAL") return true;
+
+    // Hide US-only or other markets from normal users for now
+    return false;
+  });
+
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
       {/* Header */}
@@ -112,9 +126,9 @@ export default async function MerchantsBrowsePage() {
           </h1>
           <p className="text-sm text-gray-600 mt-1">
             These merchants are currently enabled inside{" "}
-            <span className="font-semibold">linkmint.co</span>. You can promote
-            them by visiting their website, choosing a product, and creating a
-            SmartLink from the product page URL.
+            <span className="font-semibold">linkmint.co</span> for your region.
+            Visit a merchant, choose a product, copy the product URL, then
+            create a SmartLink from that URL to start earning.
           </p>
         </div>
 
@@ -127,15 +141,15 @@ export default async function MerchantsBrowsePage() {
       </div>
 
       {/* Empty state */}
-      {!rules.length && (
+      {!visible.length && (
         <div className="rounded-xl border border-dashed bg-white p-4 text-sm text-gray-500">
-          No merchants are enabled yet. Please check back later.
+          No merchants are visible for your region yet. Please check back later.
         </div>
       )}
 
       {/* List */}
       <div className="space-y-3">
-        {rules.map((m) => {
+        {visible.map((m) => {
           const name = m.merchantName ?? "Unnamed merchant";
           const network = m.network ?? "—";
           const market = m.market ?? "—";
@@ -210,8 +224,8 @@ export default async function MerchantsBrowsePage() {
               <div className="border-t pt-2 mt-1 text-xs text-gray-500">
                 To promote this merchant: open their website, choose a product,
                 copy the full product URL, then create a SmartLink in your
-                dashboard. linkmint.co will handle the tracking in the
-                background.
+                dashboard. linkmint.co will handle the tracking behind the
+                scenes.
               </div>
             </div>
           );
