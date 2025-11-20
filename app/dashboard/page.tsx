@@ -10,6 +10,7 @@ import DashboardPageHeader from "@/components/DashboardPageHeader";
 import Link from "next/link";
 import ColoredStats from "./_components/ColoredStats";
 import PayoutNotice from "./_components/PayoutNotice";
+import FirstTimeTutorial from "./_components/FirstTimeTutorial";
 
 type AppUser = {
   id?: string;
@@ -115,6 +116,9 @@ export default async function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* One-time onboarding helper (client-side only, no flow changes) */}
+      <FirstTimeTutorial />
 
       {/* 🇵🇭 PH payout update notice */}
       <PayoutNotice />
