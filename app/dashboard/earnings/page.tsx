@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import EarningsBreakdown from "./_components/EarningsBreakdown";
 
 type Totals = {
   all: number;
@@ -49,6 +50,13 @@ export default function EarningsPage() {
     <main className="p-6 space-y-6">
       <h1 className="text-2xl font-semibold">Earnings Overview</h1>
 
+      {/* PH-friendly breakdown cards (UI only, no logic changes) */}
+      <EarningsBreakdown
+        pending={totals.pending}
+        approved={totals.approved}
+        paid={totals.paid}
+      />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Pending approval" value={totals.pending} />
         <StatCard label="Approved (cleared)" value={totals.approved} />
@@ -57,7 +65,8 @@ export default function EarningsPage() {
       </div>
 
       <p className="text-xs text-slate-500 mt-1">
-        Note: Earnings move from <b>Pending → Approved → Paid</b> after merchant approval.
+        Note: Earnings move from <b>Pending → Approved → Paid</b> after merchant
+        approval.
       </p>
     </main>
   );

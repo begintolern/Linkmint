@@ -11,6 +11,7 @@ import Link from "next/link";
 import ColoredStats from "./_components/ColoredStats";
 import PayoutNotice from "./_components/PayoutNotice";
 import FirstTimeTutorial from "./_components/FirstTimeTutorial";
+import TrustScoreInfo from "./_components/TrustScoreInfo";
 
 type AppUser = {
   id?: string;
@@ -117,8 +118,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* One-time onboarding helper (client-side only, no flow changes) */}
+      {/* First-time onboarding tutorial */}
       <FirstTimeTutorial />
+
+      {/* TrustScore explanation card */}
+      <TrustScoreInfo />
 
       {/* 🇵🇭 PH payout update notice */}
       <PayoutNotice />
