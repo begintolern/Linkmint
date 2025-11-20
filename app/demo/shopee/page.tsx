@@ -1,9 +1,14 @@
 // app/demo/shopee/page.tsx
 export const dynamic = "force-dynamic";
 
+import DemoViewTracker from "./_components/DemoViewTracker";
+
 export default function ShopeeDemoPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
+      {/* Invisible view logger */}
+      <DemoViewTracker />
+
       <header className="text-center">
         <h1 className="text-3xl font-bold">Shopee Merchant Demo (For Review)</h1>
         <p className="mt-3 text-slate-600">
@@ -11,7 +16,8 @@ export default function ShopeeDemoPage() {
           linkmint.co for audit and review purposes.
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          This page is not linked publicly and is only used for affiliate platform verification.
+          This page is not linked publicly and is only used for affiliate platform
+          verification.
         </p>
       </header>
 
