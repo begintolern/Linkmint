@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import sendVerificationEmail from "@/lib/email/sendVerificationEmail";
+import { logSignupRiskSafe } from "@/lib/risk/logSignupRisk";
 
 /** Extract client IP from common proxy headers (Vercel/Railway/NGINX) */
 function getClientIp(req: NextRequest): string | null {
@@ -70,9 +71,10 @@ export async function POST(req: NextRequest) {
     // Timestamps & IP
     const now = new Date();
     const ip = getClientIp(req) ?? "unknown";
+    const userAgent = req.headers.get("user-agent") || null;
 
     // Create user (✅ force NOT verified on creation)
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         name,
         email: normalizedEmail,
@@ -94,6 +96,19 @@ export async function POST(req: NextRequest) {
       },
       select: { id: true, email: true },
     });
+
+    // 🔒 SAFE signup risk logging (cannot break signup)
+    try {
+      await logSignupRiskSafe({
+        userId: user.id,
+        email: user.email,
+        referredById: null, // we can wire real referral here later
+        ip,
+        userAgent,
+      });
+    } catch {
+      // absolutely no-op if logging fails
+    }
 
     // Send verification email (non-fatal if it fails; just inform user)
     try {
