@@ -36,10 +36,20 @@ function LoginForm() {
       setErr("No response from server.");
       return;
     }
+
     if (res.error) {
-      setErr(res.error === "CredentialsSignin" ? "Invalid email or password." : res.error);
+      if (res.error === "CredentialsSignin") {
+        setErr("Invalid email or password.");
+        return;
+      }
+      if (res.error === "EMAIL_NOT_VERIFIED") {
+        setErr("Please verify your email before logging in.");
+        return;
+      }
+      setErr(res.error);
       return;
     }
+
     router.push(res.url ?? next);
   }
 
