@@ -427,6 +427,7 @@ model Waitlist {
   id        String   @id
   email     String   @unique
   source    String?
+  status    String   @default("waiting")
   createdAt DateTime @default(now())
 }
 

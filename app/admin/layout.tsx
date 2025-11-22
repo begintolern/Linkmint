@@ -46,6 +46,7 @@ export default function AdminLayout({
           <Item href="/admin/activity" label="Activity" />
           <Item href="/admin/logs" label="Logs" />
           <Item href="/admin/users" label="Users" />
+          <Item href="/admin/waitlist" label="Waitlist" />
           <Item href="/tools/policy-check" label="Policy Pre-Check (AI)" />
         </nav>
 

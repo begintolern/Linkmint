@@ -5,7 +5,6 @@ export const fetchCache = "force-no-store";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-// very lightweight email check (keeps false positives low)
 function isValidEmail(e: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
@@ -13,46 +12,59 @@ function isValidEmail(e: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
+    console.log("[WAITLIST] raw body:", body);
+
     const emailRaw = String(body?.email ?? "").trim().toLowerCase();
     const source = (body?.source ?? "cap-closed") as string;
 
-    if (!emailRaw || !isValidEmail(emailRaw)) {
+    if (!emailRaw) {
+      console.log("[WAITLIST] missing email");
+      return NextResponse.json(
+        { ok: false, error: "missing_email" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(emailRaw)) {
+      console.log("[WAITLIST] invalid_email:", emailRaw);
       return NextResponse.json(
         { ok: false, error: "invalid_email" },
         { status: 400 }
       );
     }
 
-    const now = new Date();
+    const result = await prisma.waitlist.upsert({
+  where: { email: emailRaw },
+  update: { source },
+  create: {
+    id: crypto.randomUUID(),
+    email: emailRaw,
+    source,
+    // status is handled by the DB default for now
+  } as any,
+});
 
-    // Upsert requires `create` to satisfy all required fields on your model.
-    // We provide an explicit id and safe timestamps for schemas without defaults.
-    await prisma.waitlist.upsert({
-      where: { email: emailRaw },
-      update: { source },
-      create: {
-        id: crypto.randomUUID(), // ✅ fix: provide id explicitly
-        email: emailRaw,
-        source,
-        createdAt: now,          // safe if your model lacks @default(now())
-        updatedAt: now,          // safe if your model lacks @updatedAt
-      } as any,                  // cast to avoid TS friction across schema variants
-    });
+
+    console.log("[WAITLIST] upsert OK:", result.id);
 
     return NextResponse.json(
       { ok: true, message: "added_to_waitlist" },
       { status: 201 }
     );
   } catch (err: any) {
+    console.error("[WAITLIST] POST error:", err);
     return NextResponse.json(
-      { ok: false, error: err?.message ?? "unknown_error" },
-      { status: 400 }
+      {
+        ok: false,
+        error: err?.message ?? "unknown_error",
+        debug: String(err),
+      },
+      { status: 500 }
     );
   }
 }
 
 export async function GET(req: Request) {
-  // optional health check: /api/waitlist?ping=1
   const { searchParams } = new URL(req.url);
   if (searchParams.get("ping")) {
     return NextResponse.json({ ok: true, pong: true });

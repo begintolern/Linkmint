@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { logLoginRiskSafe } from "@/lib/risk/logLoginRisk";
 
 const Schema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }),
@@ -20,12 +21,36 @@ function isAdminEmail(email: string): boolean {
   return list.includes(email.toLowerCase());
 }
 
+/** Extract client IP from headers (Railway/Vercel common proxies) */
+function getClientIp(req: NextRequest): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff) {
+    const first = xff.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const rip = req.headers.get("x-real-ip");
+  return rip || null;
+}
+
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req) ?? "unknown";
+  const userAgent = req.headers.get("user-agent") || null;
+
   try {
     const body = await req.json();
     const parsed = Schema.safeParse(body);
     if (!parsed.success) {
       const msg = parsed.error.issues?.[0]?.message || "Invalid login data.";
+
+      // Log invalid input (no userId)
+      await logLoginRiskSafe({
+        userId: null,
+        email: null,
+        ip,
+        userAgent,
+        outcome: "ERROR",
+      });
+
       return NextResponse.json({ ok: false, message: msg }, { status: 400 });
     }
 
@@ -43,6 +68,15 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user || !user.password) {
+      // Log invalid credentials
+      await logLoginRiskSafe({
+        userId: null,
+        email,
+        ip,
+        userAgent,
+        outcome: "INVALID_CREDENTIALS",
+      });
+
       return NextResponse.json(
         { ok: false, message: "Invalid email or password." },
         { status: 401 }
@@ -51,6 +85,14 @@ export async function POST(req: NextRequest) {
 
     // Require email verification before login
     if (!user.emailVerifiedAt) {
+      await logLoginRiskSafe({
+        userId: user.id,
+        email,
+        ip,
+        userAgent,
+        outcome: "UNVERIFIED",
+      });
+
       return NextResponse.json(
         { ok: false, message: "Please verify your email before logging in." },
         { status: 403 }
@@ -59,6 +101,14 @@ export async function POST(req: NextRequest) {
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
+      await logLoginRiskSafe({
+        userId: user.id,
+        email,
+        ip,
+        userAgent,
+        outcome: "INVALID_CREDENTIALS",
+      });
+
       return NextResponse.json(
         { ok: false, message: "Invalid email or password." },
         { status: 401 }
@@ -89,8 +139,28 @@ export async function POST(req: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
+    // Log successful login
+    await logLoginRiskSafe({
+      userId: user.id,
+      email,
+      ip,
+      userAgent,
+      outcome: "SUCCESS",
+    });
+
     return res;
   } catch {
+    // Log generic error
+    try {
+      await logLoginRiskSafe({
+        userId: null,
+        email: null,
+        ip,
+        userAgent,
+        outcome: "ERROR",
+      });
+    } catch {}
+
     return NextResponse.json(
       { ok: false, message: "Something went wrong. Please try again." },
       { status: 500 }

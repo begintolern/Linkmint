@@ -7,6 +7,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { verifyPin } from "@/lib/pin";
+import { logLoginRiskSafe } from "@/lib/risk/logLoginRisk";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -67,16 +68,73 @@ export const authOptions: any = {
           },
         });
 
-        if (!user || !user.password) return null;
+        if (!user || !user.password) {
+          // Invalid credentials (no user found)
+          try {
+            await logLoginRiskSafe({
+              userId: null,
+              email,
+              ip: null,
+              userAgent: null,
+              outcome: "INVALID_CREDENTIALS",
+            });
+          } catch {}
+          return null;
+        }
 
         const ok = await bcrypt.compare(pw, user.password);
-        if (!ok) return null;
+        if (!ok) {
+          // Invalid credentials (wrong password)
+          try {
+            await logLoginRiskSafe({
+              userId: user.id,
+              email,
+              ip: null,
+              userAgent: null,
+              outcome: "INVALID_CREDENTIALS",
+            });
+          } catch {}
+          return null;
+        }
 
         if (!user.emailVerifiedAt) {
+          // Unverified email
+          try {
+            await logLoginRiskSafe({
+              userId: user.id,
+              email,
+              ip: null,
+              userAgent: null,
+              outcome: "UNVERIFIED",
+            });
+          } catch {}
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
-        if (user.deletedAt) return null;
+        if (user.deletedAt) {
+          // Soft-deleted user
+          try {
+            await logLoginRiskSafe({
+              userId: user.id,
+              email,
+              ip: null,
+              userAgent: null,
+              outcome: "ERROR",
+            });
+          } catch {}
+          return null;
+        }
+
+        // Successful login
+        try {
+          await logLoginRiskSafe({
+            userId: user.id,
+            email,
+            ip: null,
+            userAgent: null,
+            outcome: "SUCCESS",
+          });
+        } catch {}
 
         return {
           id: user.id,
@@ -135,9 +193,10 @@ export const authOptions: any = {
   ],
 
   pages: {
-  signIn: "/login",
-  signOut: "/", // redirect to landing page after logout
-},
+    signIn: "/login",
+    signOut: "/", // redirect to landing page after logout
+  },
+
   callbacks: {
     async signIn({ user }: { user: any }) {
       if (!user?.id) return false;

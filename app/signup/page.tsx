@@ -15,8 +15,6 @@ export default function SignupPage() {
   const [confirm, setConfirm] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
-
-  // Rule acknowledgment (required)
   const [rulesAck, setRulesAck] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -57,6 +55,28 @@ export default function SignupPage() {
 
     try {
       setLoading(true);
+
+      // 🔒 Check 70-user cap before allowing signup
+      try {
+        const capRes = await fetch("/api/system/cap");
+        const capData = await capRes.json();
+
+        if (!capRes.ok || !capData?.ok) {
+          throw new Error("cap_check_failed");
+        }
+
+        if (!capData.canSignup) {
+          setError(
+            "We’re currently at capacity for early users. Please join the waitlist instead on the waitlist page."
+          );
+          return;
+        }
+      } catch {
+        setError(
+          "Unable to verify signup capacity right now. Please try again in a moment or join the waitlist."
+        );
+        return;
+      }
 
       const res = await fetch("/api/auth/signup", {
         method: "POST",
@@ -116,7 +136,20 @@ export default function SignupPage() {
 
         {error && (
           <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
-            {error}
+            {error}{" "}
+            {error.includes("waitlist") && (
+              <>
+                {" "}
+                You can{" "}
+                <Link
+                  href="/waitlist"
+                  className="text-red-700 underline font-medium"
+                >
+                  join the waitlist here
+                </Link>
+                .
+              </>
+            )}
           </div>
         )}
         {success && (
