@@ -100,6 +100,13 @@ const TIKTOK_PRESET_IDS = [
   "peripherals",
 ] as const;
 
+// Curated list of categories that typically carry stronger commission potential
+const HIGH_EARNING_IDS = [
+  "selfcare",
+  "sandals-ph",
+  "peripherals",
+] as const;
+
 type CategoryFilter = "all" | "fashion" | "tech" | "selfcare" | "home";
 type Language = "en" | "tl";
 
@@ -114,6 +121,7 @@ export default function DiscoverClient() {
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
 
   const isEN = language === "en";
+  const highEarningSuggestions = getPreset(HIGH_EARNING_IDS);
 
   // Load recent queries from localStorage on mount
   useEffect(() => {
@@ -293,6 +301,77 @@ export default function DiscoverClient() {
             </Link>
           </div>
         </div>
+
+        {/* HIGH-EARNING PICKS (AI-assisted) */}
+        <section className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/60 bg-amber-500/20 px-3 py-1">
+                <span>💰</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-100">
+                  {isEN
+                    ? "High-earning picks (AI-assisted)"
+                    : "High-earning picks (AI-assisted)"}
+                </span>
+              </div>
+              <p className="mt-2 text-[11px] text-amber-100/80">
+                {isEN
+                  ? "Categories like self-care, everyday fashion, and budget tech often pay better commissions and convert well for PH buyers. These suggestions are AI-assisted — you still choose the exact product and merchant."
+                  : "Categories tulad ng self-care, everyday fashion, at budget tech ay madalas may mas ok na commission at conversion para sa PH buyers. AI-assisted lang ang suggestions na ‘to — ikaw pa rin ang pipili ng exact product at merchant."}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {highEarningSuggestions.map((s) => (
+              <article
+                key={s.id}
+                className="rounded-xl border border-slate-800/70 bg-slate-950/70 p-3"
+              >
+                <p className="text-[11px] font-semibold text-teal-100 uppercase tracking-wide mb-1">
+                  {s.category}
+                </p>
+                <h3 className="text-sm font-semibold text-slate-50">
+                  {s.title}
+                </h3>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {s.merchantName}
+                </p>
+                <p className="mt-2 text-[11px] text-slate-300">
+                  {isEN
+                    ? "Idea hint:"
+                    : "Idea hint:"}{" "}
+                  <span className="italic text-slate-200">
+                    {s.exampleAngle}
+                  </span>
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <p className="mt-3 text-[10px] text-amber-100/70">
+            {isEN ? (
+              <>
+                Note: These are{" "}
+                <span className="font-semibold text-amber-50">
+                  AI-assisted high-earning categories
+                </span>
+                , not guaranteed top payouts. Actual commissions still depend on
+                each merchant&apos;s rates and approved transactions.
+              </>
+            ) : (
+              <>
+                Paalala:{" "}
+                <span className="font-semibold text-amber-50">
+                  AI-assisted high-earning categories
+                </span>{" "}
+                lang ito, hindi garantiya ng pinakamataas na payout. Naka-depende
+                pa rin ang actual commissions sa rates at approved transactions
+                ng bawat merchant.
+              </>
+            )}
+          </p>
+        </section>
 
         {/* Input panel */}
         <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
