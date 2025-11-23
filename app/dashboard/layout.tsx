@@ -36,6 +36,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               >
                 Overview
               </Link>
+
+              {/* NEW: Discover (AI-assisted) */}
+              <Link
+                href="/dashboard/discover"
+                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+              >
+                Discover (AI-assisted)
+              </Link>
+
               <Link
                 href="/dashboard/earnings"
                 className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
@@ -68,12 +77,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="sm:hidden -mx-4 border-t border-gray-200">
             <div className="overflow-x-auto no-scrollbar">
               <div className="flex gap-2 px-4 py-2">
+
                 <Link
                   href="/dashboard"
                   className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
                 >
                   Overview
                 </Link>
+
+                {/* NEW: Discover (AI-assisted) */}
+                <Link
+                  href="/dashboard/discover"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                >
+                  Discover (AI-assisted)
+                </Link>
+
                 <Link
                   href="/dashboard/earnings"
                   className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
