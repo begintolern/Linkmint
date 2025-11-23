@@ -1,15 +1,20 @@
 import Link from "next/link";
+// NOTE: updated import to use relative path instead of "@/..."
+import LandingHowItWorksSection from "../components/LandingHowItWorksSection";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-800">
-      <section className="text-center max-w-2xl px-6">
+    <main className="min-h-screen flex flex-col items-center justify-start bg-white text-gray-800">
+      {/* Hero Section */}
+      <section className="text-center max-w-2xl px-6 mt-20 mb-16">
         <h1 className="text-3xl sm:text-5xl font-bold text-teal-700 mb-6">
           Turn your shares into income — every link can earn.
         </h1>
+
         <p className="text-lg text-gray-600 mb-10">
           Linkmint helps you earn small commissions by sharing smart affiliate
-          links. Transparent, ethical, and built for Filipino creators and everyday users.
+          links. Transparent, ethical, and built for Filipino creators and
+          everyday users.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -31,6 +36,9 @@ export default function HomePage() {
           © {new Date().getFullYear()} linkmint.co — all rights reserved.
         </p>
       </section>
+
+      {/* New: How linkmint.co works section */}
+      <LandingHowItWorksSection />
     </main>
   );
 }

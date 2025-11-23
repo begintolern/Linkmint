@@ -1,185 +1,393 @@
 // app/referrals/page.tsx
-export const dynamic = "force-dynamic";
 
-export default function PublicReferralsPage() {
+import Link from "next/link";
+
+export const metadata = {
+  title: "Referral Program | linkmint.co",
+  description:
+    "Understand how the linkmint.co referral system works, how you earn 70–85% plus a 5% referral override, and when payouts become available.",
+};
+
+export default function ReferralPage() {
   return (
-    <main className="mx-auto max-w-5xl px-6 py-12">
-      {/* Hero */}
-      <header className="text-center">
-        <h1 className="text-3xl font-bold">Linkmint Referral Program</h1>
-        <p className="mt-3 text-slate-600">
-          Invite friends to linkmint.co. When they earn, you earn a bonus on top.
-        </p>
-        <p className="mt-2 text-sm text-slate-500">
-          Every <strong>3 friends</strong> you invite creates a referral batch. For each
-          batch, you earn a <strong>5% bonus</strong> on their{" "}
-          <strong>approved commissions</strong> for <strong>90 days</strong>.
-        </p>
-      </header>
-
-      {/* How it works */}
-      <section className="mt-10 grid gap-6 md:grid-cols-3">
-        <div className="rounded-xl border p-6">
-          <h3 className="text-lg font-semibold">1) Share your referral link</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            Sign up and grab your personal referral link from{" "}
-            <code>Dashboard → Referrals</code>. Share it with friends, family, and
-            community groups.
-          </p>
-        </div>
-        <div className="rounded-xl border p-6">
-          <h3 className="text-lg font-semibold">2) Fill a 3-person batch</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            When <strong>3 new users</strong> join linkmint.co with your link, we create
-            a <strong>referral batch</strong> for you. New signups after that start
-            filling the next batch.
-          </p>
-        </div>
-        <div className="rounded-xl border p-6">
-          <h3 className="text-lg font-semibold">3) Earn 5% for 90 days</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            For each active batch, you earn a <strong>5% bonus</strong> on your
-            invitees&apos; <strong>approved commissions</strong> for{" "}
-            <strong>90 days</strong>. They keep 100% of their own share.
-          </p>
-        </div>
-      </section>
-
-      {/* Batch & split explanation */}
-      <section className="mt-10 grid gap-6 md:grid-cols-2">
-        <div className="rounded-xl border p-6 bg-green-50">
-          <h3 className="text-xl font-semibold text-green-700">
-            Batch-based bonus, not a deduction
-          </h3>
-          <p className="mt-2 text-slate-700">
-            Your 5% referral bonus comes from linkmint.co&apos;s platform share,{" "}
-            <strong>not</strong> from your friends&apos; earnings. They receive their
-            normal commission; your bonus is layered on top.
-          </p>
-          <p className="mt-2 text-sm text-slate-600">
-            Batches are independent. When a 90-day window ends, that batch stops
-            generating bonus for you, but your invitees continue earning normally.
-            You can keep unlocking new batches by inviting more people.
-          </p>
+    <main className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:py-12 lg:py-16">
+        {/* Breadcrumb / mini header */}
+        <div className="mb-6 text-xs font-medium uppercase tracking-wide text-teal-300/80">
+          linkmint.co · Referral Program Guide
         </div>
 
-        {/* Example */}
-        <div className="rounded-xl border p-6">
-          <h3 className="text-lg font-semibold">Example: one full batch</h3>
-          <p className="mt-2 text-sm text-slate-600">
-            You invite <strong>3 friends</strong>: Ana, Mark, and Jessa. They sign up
-            with your referral link and start sharing links.
+        {/* Hero */}
+        <header className="mb-10 space-y-4">
+          <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
+            Referral earnings on{" "}
+            <span className="text-teal-300">linkmint.co</span>
+          </h1>
+          <p className="max-w-2xl text-sm text-slate-300/90 sm:text-base">
+            This page explains, in plain language, how our referral system
+            works: your{" "}
+            <span className="font-semibold text-teal-200">
+              70–85% share
+            </span>{" "}
+            as the person sharing the link, the{" "}
+            <span className="font-semibold text-teal-200">
+              5% referral override
+            </span>{" "}
+            for the person who invited you, and how{" "}
+            <span className="underline decoration-teal-400/60 decoration-dotted">
+              payouts only happen after we get paid by the affiliate partner
+            </span>
+            .
           </p>
-          <p className="mt-2 text-sm text-slate-600">
-            Over the next 90 days, they generate <strong>$200</strong> in{" "}
-            <strong>approved commissions</strong> combined.
+
+          <div className="flex flex-wrap gap-3 text-sm">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center rounded-full border border-teal-400/60 bg-teal-500/10 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-teal-100 hover:bg-teal-500/20"
+            >
+              Go to dashboard
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/60 px-4 py-1.5 text-xs font-medium uppercase tracking-wide text-slate-200 hover:bg-slate-800"
+            >
+              Back to home
+            </Link>
+          </div>
+        </header>
+
+        {/* 1. Core idea */}
+        <section className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold text-slate-50">
+            1. The core idea
+          </h2>
+          <p className="mb-3 text-sm text-slate-300">
+            linkmint.co turns normal product links into{" "}
+            <span className="font-semibold text-teal-200">
+              smart links
+            </span>
+            . When someone clicks your smart link and makes a legit purchase
+            approved by the affiliate partner, there is a commission.
           </p>
-          <ul className="mt-3 list-disc space-y-1 text-sm text-slate-600 pl-5">
-            <li>Your friends receive their full earnings (based on their tier).</li>
-            <li>
-              Linkmint keeps its normal platform margin to cover operations and payouts.
+          <ul className="space-y-2 text-sm text-slate-300">
+            <li className="flex gap-2">
+              <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+              <span>
+                You, the person sharing the link, always get{" "}
+                <span className="font-semibold text-teal-200">the biggest</span>{" "}
+                piece of that commission:{" "}
+                <span className="font-semibold text-teal-200">
+                  70–85% of what linkmint.co receives
+                </span>
+                .
+              </span>
             </li>
-            <li>
-              You receive an extra <strong>5% of $200 = $10</strong> as a referral bonus
-              for that batch.
+            <li className="flex gap-2">
+              <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+              <span>
+                If someone invited you to linkmint.co with a referral link, they
+                can earn a{" "}
+                <span className="font-semibold text-teal-200">
+                  5% override
+                </span>{" "}
+                on your approved commissions during a limited{" "}
+                <span className="font-semibold">bonus window</span>.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+              <span>
+                The remaining percentage stays with{" "}
+                <span className="font-semibold text-slate-100">
+                  linkmint.co
+                </span>{" "}
+                to cover platform costs, float for early payouts, risk, and
+                profit.
+              </span>
             </li>
           </ul>
-          <p className="mt-3 text-xs text-slate-500">
-            Only <strong>approved</strong> commissions inside the 90-day window count
-            toward your referral bonus. Pending, cancelled, or rejected commissions do
-            not qualify.
+        </section>
+
+        {/* 2. Split breakdown */}
+        <section className="mb-10 space-y-5 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-50">
+            2. How the commission split works
+          </h2>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-teal-500/40 bg-slate-900/70 p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-teal-300">
+                You · Link Sharer
+              </h3>
+              <p className="mt-1 text-2xl font-bold text-teal-200">
+                70–85%
+              </p>
+              <p className="mt-2 text-xs text-slate-300">
+                Your share grows with{" "}
+                <span className="font-semibold">TrustScore</span> and good
+                behavior on the platform.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-amber-500/40 bg-slate-900/70 p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-amber-200">
+                Inviter · Referral Override
+              </h3>
+              <p className="mt-1 text-2xl font-bold text-amber-100">5%</p>
+              <p className="mt-2 text-xs text-slate-300">
+                Only if you were invited and only{" "}
+                <span className="font-semibold">
+                  during the active bonus window
+                </span>
+                .
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+                Platform · linkmint.co
+              </h3>
+              <p className="mt-1 text-2xl font-bold text-slate-100">≥15%</p>
+              <p className="mt-2 text-xs text-slate-300">
+                Minimum platform margin. Used for tech costs, float, support,
+                and keeping the business alive.
+              </p>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Note: Exact percentages can change slightly between{" "}
+            <span className="font-medium text-slate-200">
+              different merchants and tiers
+            </span>
+            , but we always keep your share high and the platform margin at
+            least 15%.
           </p>
+        </section>
+
+        {/* 3. Example scenarios */}
+        <section className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold text-slate-50">
+            3. Simple example scenarios
+          </h2>
+          <p className="mb-4 text-sm text-slate-300">
+            Assume linkmint.co receives a{" "}
+            <span className="font-semibold text-teal-200">
+              $10 commission
+            </span>{" "}
+            from a merchant after your link leads to an approved purchase.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+              <h3 className="text-sm font-semibold text-slate-100">
+                A. No inviter (you joined directly)
+              </h3>
+              <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+                <li>• You at 75% tier → you earn $7.50</li>
+                <li>• No inviter override</li>
+                <li>• linkmint.co keeps $2.50</li>
+              </ul>
+            </div>
+
+            <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+              <h3 className="text-sm font-semibold text-slate-100">
+                B. You were invited (override active)
+              </h3>
+              <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+                <li>• You at 75% tier → you earn $7.50</li>
+                <li>• Your inviter gets 5% → $0.50</li>
+                <li>• linkmint.co keeps $2.00</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-4 text-xs text-slate-400">
+            These numbers are just examples to show the logic. Actual earnings
+            depend on merchant commission rates, your TrustScore, and which
+            referral bonuses are active.
+          </p>
+        </section>
+
+        {/* 4. Timing & payouts */}
+        <section className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold text-slate-50">
+            4. When do payouts actually happen?
+          </h2>
+
+          <div className="space-y-3 text-sm text-slate-300">
+            <p>
+              Your dashboard may show{" "}
+              <span className="font-semibold text-teal-200">
+                pending earnings
+              </span>{" "}
+              quickly after a purchase, but{" "}
+              <span className="font-semibold">
+                we can only pay you once the affiliate partner pays linkmint.co
+              </span>
+              .
+            </p>
+            <ul className="space-y-2">
+              <li className="flex gap-2">
+                <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+                <span>
+                  Most networks have a{" "}
+                  <span className="font-semibold">
+                    review + lock period
+                  </span>{" "}
+                  (often 30 days or more) to confirm the purchase is legit and
+                  not refunded.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+                <span>
+                  Only{" "}
+                  <span className="font-semibold">
+                    approved and paid-out commissions
+                  </span>{" "}
+                  move into your payout-eligible balance.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+                <span>
+                  Early payouts (float) are only possible for{" "}
+                  <span className="font-semibold">
+                    trusted users with cleared funds and available platform
+                    float
+                  </span>
+                  . We never pay out money that the platform hasn’t actually
+                  received.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <p className="mt-4 text-xs text-slate-400">
+            For details on payout methods, minimums, and TrustScore rules, see
+            the{" "}
+            <Link
+              href="/trust-center"
+              className="font-medium text-teal-300 underline decoration-teal-500/60 decoration-dotted underline-offset-2 hover:text-teal-200"
+            >
+              Trust Center
+            </Link>{" "}
+            inside your dashboard.
+          </p>
+        </section>
+
+        {/* 5. How to earn referral override as an inviter */}
+        <section className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold text-slate-50">
+            5. How you earn the 5% override as an inviter
+          </h2>
+
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-300">
+            <li>
+              Share your{" "}
+              <span className="font-semibold text-teal-200">
+                personal referral link
+              </span>{" "}
+              from your dashboard.
+            </li>
+            <li>
+              When someone signs up through that link and becomes an{" "}
+              <span className="font-semibold">active user</span>, they are
+              linked to you as their inviter.
+            </li>
+            <li>
+              For a limited period (for example,{" "}
+              <span className="font-semibold">
+                90 days from their first approved commission
+              </span>
+              ), you can earn{" "}
+              <span className="font-semibold text-amber-200">
+                5% override
+              </span>{" "}
+              on their approved commissions.
+            </li>
+            <li>
+              This override does{" "}
+              <span className="font-semibold">not reduce</span> their share
+              below their tier target. It comes out of linkmint.co&apos;s
+              margin.
+            </li>
+          </ol>
+
+          <p className="mt-4 text-xs text-slate-400">
+            Exact referral windows and rules are shown in your dashboard
+            referral cards. If there&apos;s any difference between this page and
+            the in-app text,{" "}
+            <span className="font-semibold">the dashboard rules win</span>.
+          </p>
+        </section>
+
+        {/* FAQ mini */}
+        <section className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold text-slate-50">
+            6. Quick FAQ
+          </h2>
+
+          <div className="space-y-4 text-sm text-slate-300">
+            <div>
+              <p className="font-semibold text-slate-100">
+                Do I always earn at least 70%?
+              </p>
+              <p className="text-sm text-slate-300">
+                Yes. As long as the commission is legit and approved, your base
+                share starts at{" "}
+                <span className="font-semibold text-teal-200">70%</span> and can
+                climb toward{" "}
+                <span className="font-semibold text-teal-200">85%</span> as your
+                TrustScore improves.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-100">
+                Does the 5% override take money away from me?
+              </p>
+              <p className="text-sm text-slate-300">
+                No. The override comes from{" "}
+                <span className="font-semibold">linkmint.co&apos;s share</span>,
+                not your cut. Your tier is your tier.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-semibold text-slate-100">
+                Why is my payout taking so long?
+              </p>
+              <p className="text-sm text-slate-300">
+                Because we have to wait for the{" "}
+                <span className="font-semibold">
+                  affiliate network to confirm and pay out
+                </span>
+                . Your dashboard will always label each commission as{" "}
+                &quot;pending,&quot; &quot;approved,&quot; or &quot;paid&quot; so
+                you know what&apos;s happening.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-5 text-sm text-slate-300">
+          <p className="max-w-md text-xs text-slate-400">
+            Tip: Start by inviting{" "}
+            <span className="font-semibold text-teal-200">3 people</span> you
+            trust. Focus on real purchases, not spam. That&apos;s how you build
+            a strong TrustScore and unlock higher tiers.
+          </p>
+          <Link
+            href="/dashboard/referrals"
+            className="inline-flex items-center rounded-full border border-teal-400/60 bg-teal-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-teal-100 hover:bg-teal-500/20"
+          >
+            Open referral tools
+          </Link>
         </div>
-      </section>
-
-      {/* Badges / TrustScore */}
-      <section className="mt-10 rounded-xl border p-6">
-        <h3 className="text-lg font-semibold">Badges & TrustScore</h3>
-        <p className="mt-2 text-sm text-slate-600">
-          The referral program also helps build your{" "}
-          <strong>TrustScore</strong> on linkmint.co. Clean, organic referrals from real
-          people make it easier for us to approve payouts faster over time.
-        </p>
-        <ul className="mt-3 grid gap-4 text-sm text-slate-700 md:grid-cols-3">
-          <li className="rounded-lg bg-slate-50 p-3">
-            <p className="font-semibold">Inviter</p>
-            <p className="mt-1 text-xs">
-              Unlock this when you successfully invite your first friend who starts
-              earning.
-            </p>
-          </li>
-          <li className="rounded-lg bg-slate-50 p-3">
-            <p className="font-semibold">Active Referrer</p>
-            <p className="mt-1 text-xs">
-              Unlock this when you complete your first 3-person batch with approved
-              commissions.
-            </p>
-          </li>
-          <li className="rounded-lg bg-slate-50 p-3">
-            <p className="font-semibold">Power Referrer</p>
-            <p className="mt-1 text-xs">
-              Unlock this by completing multiple batches while keeping a clean history
-              (no fraud, no fake signups, no abuse).
-            </p>
-          </li>
-        </ul>
-        <p className="mt-3 text-xs text-slate-500">
-          Exact badge rules may evolve as the platform grows, but the core idea stays
-          the same: invite good users, help the ecosystem grow, and you earn more.
-        </p>
-      </section>
-
-      {/* CTAs */}
-      <section className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-        <a
-          href="/signup"
-          className="inline-flex items-center justify-center rounded-md bg-slate-900 px-5 py-3 text-white"
-        >
-          Sign up to get your referral link
-        </a>
-        <a
-          href="/login?next=/dashboard/referrals"
-          className="inline-flex items-center justify-center rounded-md border px-5 py-3 text-slate-700"
-        >
-          Log in & view referral dashboard
-        </a>
-      </section>
-
-      {/* FAQ */}
-      <section className="mt-12">
-        <h3 className="text-lg font-semibold">FAQ</h3>
-        <div className="mt-4 space-y-4 text-sm text-slate-700">
-          <div>
-            <p className="font-medium">Do my friends lose anything because of my 5%?</p>
-            <p>
-              No. Your 5% bonus comes from linkmint.co&apos;s platform share, not from
-              your invitees. They keep their full eligible commission.
-            </p>
-          </div>
-          <div>
-            <p className="font-medium">How long does each referral batch last?</p>
-            <p>
-              Each batch has a <strong>90-day</strong> bonus window starting from the day
-              the 3rd invitee in that batch signs up. After 90 days, that batch stops
-              generating bonus for you, but you can unlock new batches with new invitees.
-            </p>
-          </div>
-          <div>
-            <p className="font-medium">Is there a limit to how many batches I can have?</p>
-            <p>
-              There&apos;s no fixed limit, but all referral activity is monitored for
-              fraud. Focus on genuine users who will actually share and shop.
-            </p>
-          </div>
-          <div>
-            <p className="font-medium">Where do I find my referral link?</p>
-            <p>
-              After you sign in, go to <code>Dashboard → Referrals</code> to copy your
-              personal link and see your active and past batches.
-            </p>
-          </div>
-        </div>
-      </section>
+      </div>
     </main>
   );
 }

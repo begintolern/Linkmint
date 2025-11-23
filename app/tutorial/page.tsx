@@ -36,6 +36,7 @@ import {
   Receipt,
   CheckCircle2,
 } from "lucide-react";
+import ReferralBonusFlowCard from "../dashboard/_components/ReferralBonusFlowCard";
 
 type StepId =
   | "welcome"
@@ -255,6 +256,22 @@ export default function TutorialPage() {
           </p>
         </aside>
       </div>
+
+      {/* Referral bonus section under tutorial */}
+      <section className="mx-auto max-w-6xl px-4 pb-10">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 md:p-6">
+          <h2 className="text-lg md:text-xl font-semibold mb-2">
+            Referral bonus: how your 5% override really works
+          </h2>
+          <p className="text-sm text-slate-300 mb-4">
+            When you invite friends to linkmint.co, you can unlock a 90-day window where you earn{" "}
+            <b>5% extra</b> on the approved commissions they generate. They keep their full 70–85%,
+            and your 5% comes from Linkmint’s margin — with a minimum platform share always protected
+            so the system stays healthy.
+          </p>
+          <ReferralBonusFlowCard />
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="border-t border-slate-800/70">
