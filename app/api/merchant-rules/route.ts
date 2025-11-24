@@ -175,3 +175,53 @@ export async function GET(req: Request) {
     );
   }
 }
+
+/**
+ * POST /api/merchant-rules
+ * Create a new merchant rule.
+ */
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+
+    const merchantName = String(body.merchantName ?? "").trim();
+    if (!merchantName) {
+      return NextResponse.json(
+        { ok: false, error: "MISSING_NAME" },
+        { status: 400 }
+      );
+    }
+
+    const data = {
+      merchantName,
+      active: true,
+      market: "PH",
+
+      network: body.network ?? null,
+      domainPattern: body.domainPattern ?? null,
+
+      // match existing DB field names
+      allowedSources: asStringArray(body.allowedSources),
+      disallowed: asStringArray(body.disallowedSources),
+
+      commissionType: body.commissionType ?? "PERCENT",
+      commissionRate: asNumber(body.commissionRate),
+
+      cookieWindowDays: asNumber(body.cookieWindowDays),
+      payoutDelayDays: asNumber(body.payoutDelayDays),
+
+      notes: body.notes ?? null,
+    };
+
+    // cast as any to avoid TS complaining about JSON vs string[] details
+    const created = await prisma.merchantRule.create({ data: data as any });
+
+    return NextResponse.json({ ok: true, rule: created }, { status: 200 });
+  } catch (err: any) {
+    console.error("[merchant-rules][POST] error:", err);
+    return NextResponse.json(
+      { ok: false, error: "POST_ERROR", message: err?.message ?? "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
