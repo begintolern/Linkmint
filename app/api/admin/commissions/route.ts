@@ -42,7 +42,20 @@ export async function GET(req: Request) {
     const dateTo = pick(searchParams.get("dateTo"));
 
     const where: any = {};
-    if (status) where.status = status;
+
+    // status: allow single or comma-separated (e.g. "PENDING,APPROVED")
+    if (status) {
+      const parts = status
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (parts.length === 1) {
+        where.status = parts[0];
+      } else if (parts.length > 1) {
+        where.status = { in: parts };
+      }
+    }
+
     if (type) where.type = type;
     if (paid === "paid") where.paidOut = true;
     if (paid === "unpaid") where.paidOut = false;
@@ -65,7 +78,7 @@ export async function GET(req: Request) {
       ...(cursor && { cursor: { id: String(cursor) } }),
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { id: true, email: true, name: true, referredById: true } }, // ⬅️ include referrer link
+        user: { select: { id: true, email: true, name: true, referredById: true } },
       },
     });
 
@@ -91,12 +104,11 @@ export async function GET(req: Request) {
     const data = hasNext ? filtered.slice(0, -1) : filtered;
     const nextCursor = hasNext ? String(filtered[filtered.length - 1].id) : null;
 
-    // add share breakdowns (referrer share only if referredById present)
     const mapped = data.map((it: any) => {
       const amountNum = Number(it.amount);
       const hasReferrer = !!it.user?.referredById;
 
-      const userShare = round2(amountNum * 0.70);
+      const userShare = round2(amountNum * 0.7);
       const referrerShare = hasReferrer ? round2(amountNum * 0.05) : 0;
       const platformShare = round2(amountNum - userShare - referrerShare);
 
@@ -137,7 +149,7 @@ export async function GET(req: Request) {
     console.error("Error in /api/admin/commissions", e);
     return NextResponse.json(
       { success: false, error: e?.message ?? "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
