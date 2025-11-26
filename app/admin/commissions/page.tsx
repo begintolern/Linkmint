@@ -49,7 +49,7 @@ export default function AdminCommissionsPage() {
       url.searchParams.set("limit", "50");
       if (next) url.searchParams.set("cursor", next);
 
-      // ✅ Simplified filter logic
+      // ✅ Filter logic, including unpaid (pending + approved)
       if (filters.status !== "ALL") {
         if (filters.status === "unpaid") {
           url.searchParams.set("status", "PENDING,APPROVED");
@@ -110,18 +110,18 @@ export default function AdminCommissionsPage() {
   }, [items]);
 
   return (
-    <main className="mx-auto max-w-7xl p-6 space-y-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Admin · Commissions</h1>
+    <main className="mx-auto w-full max-w-7xl px-3 py-4 md:p-6 space-y-6">
+      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-xl md:text-2xl font-bold">Admin · Commissions</h1>
         <button
           onClick={() => load(null, true)}
-          className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 hover:bg-zinc-50"
+          className="text-sm rounded-lg px-3 py-2 ring-1 ring-zinc-300 hover:bg-zinc-50 self-start md:self-auto"
         >
           Refresh
         </button>
       </header>
 
-      {/* ✅ Filters */}
+      {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <select
           value={filters.status}
@@ -151,7 +151,7 @@ export default function AdminCommissionsPage() {
           value={filters.q}
           onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           placeholder="Search email or ID"
-          className="rounded-md border px-2 py-1 text-sm w-56"
+          className="rounded-md border px-2 py-1 text-sm w-44 md:w-56"
         />
       </div>
 
@@ -185,23 +185,37 @@ export default function AdminCommissionsPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-2xl ring-1 ring-zinc-200">
-        <table className="min-w-full text-sm">
+      {/* Table – mobile-friendly */}
+      <div className="w-full overflow-x-auto rounded-2xl ring-1 ring-zinc-200">
+        <table className="min-w-full text-xs md:text-sm">
           <thead className="bg-zinc-50">
             <tr className="text-left">
-              <th className="px-4 py-3">Created</th>
-              <th className="px-4 py-3">User</th>
-              <th className="px-4 py-3">Amount</th>
-              <th className="px-4 py-3">User Share</th>
-              <th className="px-4 py-3">Referrer</th>
-              <th className="px-4 py-3">Platform</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Paid</th>
-              <th className="px-4 py-3">Source</th>
-              <th className="px-4 py-3">Description</th>
-              <th className="px-4 py-3">ID</th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap">Created</th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap">User</th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap">Amount</th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap hidden md:table-cell">
+                User Share
+              </th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap hidden lg:table-cell">
+                Referrer
+              </th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap hidden lg:table-cell">
+                Platform
+              </th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap hidden md:table-cell">
+                Type
+              </th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap">Status</th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap">Paid</th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap hidden lg:table-cell">
+                Source
+              </th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap hidden lg:table-cell">
+                Description
+              </th>
+              <th className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap hidden md:table-cell">
+                ID
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -214,29 +228,50 @@ export default function AdminCommissionsPage() {
             ) : (
               items.map((it) => (
                 <tr key={it.id} className="border-t border-zinc-200">
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 md:px-4 md:py-3 whitespace-nowrap align-top">
                     {new Date(it.createdAt).toLocaleString()}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{it.user?.email ?? "—"}</div>
-                    <div className="text-xs text-zinc-500">{it.user?.name ?? "—"}</div>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top">
+                    <div className="font-medium truncate max-w-[18ch] md:max-w-none">
+                      {it.user?.email ?? "—"}
+                    </div>
+                    <div className="text-[11px] md:text-xs text-zinc-500 truncate max-w-[18ch] md:max-w-none">
+                      {it.user?.name ?? "—"}
+                    </div>
                   </td>
-                  <td className="px-4 py-3">${it.amount.toFixed(2)}</td>
-                  <td className="px-4 py-3">${it.userShare.toFixed(2)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top">
+                    ${it.amount.toFixed(2)}
+                  </td>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top hidden md:table-cell">
+                    ${it.userShare.toFixed(2)}
+                  </td>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top hidden lg:table-cell">
                     {it.hasReferrer ? `$${it.referrerShare.toFixed(2)}` : "—"}
                   </td>
-                  <td className="px-4 py-3">${it.platformShare.toFixed(2)}</td>
-                  <td className="px-4 py-3">{it.type}</td>
-                  <td className="px-4 py-3">
-                    <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs">{it.status}</span>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top hidden lg:table-cell">
+                    ${it.platformShare.toFixed(2)}
                   </td>
-                  <td className="px-4 py-3">{it.paidOut ? "Yes" : "No"}</td>
-                  <td className="px-4 py-3">{it.source ?? "—"}</td>
-                  <td className="px-4 py-3 max-w-[22ch] truncate" title={it.description ?? ""}>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top hidden md:table-cell">
+                    {it.type}
+                  </td>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top">
+                    <span className="inline-block rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] md:text-xs">
+                      {it.status}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top">
+                    {it.paidOut ? "Yes" : "No"}
+                  </td>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top hidden lg:table-cell">
+                    {it.source ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 md:px-4 md:py-3 align-top hidden lg:table-cell max-w-[22ch] truncate" title={it.description ?? ""}>
                     {it.description ?? "—"}
                   </td>
-                  <td className="px-4 py-3 text-xs max-w-[30ch] truncate" title={it.id}>
+                  <td
+                    className="px-3 py-2 md:px-4 md:py-3 align-top hidden md:table-cell text-[11px] md:text-xs max-w-[30ch] truncate"
+                    title={it.id}
+                  >
                     {it.id}
                   </td>
                 </tr>
