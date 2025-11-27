@@ -14,6 +14,14 @@ export default async function AdminPayoutsPage({
   // Use the same admin guard as the main /admin page
   await assertAdmin();
 
+  // 🔹 Read current float balance from SystemSetting (default 5000 if missing)
+  const floatSetting = await prisma.systemSetting.findUnique({
+    where: { key: "FLOAT_BALANCE" },
+  });
+  const floatBalance = floatSetting?.value
+    ? parseFloat(floatSetting.value)
+    : 5000;
+
   const statusFilter =
     typeof searchParams?.status === "string"
       ? searchParams.status.toUpperCase()
@@ -40,10 +48,30 @@ export default async function AdminPayoutsPage({
   });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Payout Requests</h1>
+    <div className="p-6 space-y-4">
+      <h1 className="text-2xl font-semibold">Payout Requests</h1>
 
-      <div className="flex gap-3 mb-4 text-sm">
+      {/* 🔹 Float balance summary (read-only for now) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm">
+        <div>
+          <div className="text-xs uppercase tracking-wide text-gray-500">
+            Early payout float (PHP)
+          </div>
+          <div className="text-xl font-semibold text-gray-900">
+            ₱
+            {floatBalance.toLocaleString(undefined, {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 2,
+            })}
+          </div>
+        </div>
+        <p className="max-w-md text-xs text-gray-500">
+          Used as a guard for early payouts. Increase this when you add float
+          from cleared affiliate funds; decrease it when you consume float.
+        </p>
+      </div>
+
+      <div className="flex gap-3 mb-2 text-sm">
         {["ALL", "PENDING", "PROCESSING", "PAID", "FAILED"].map((s) => (
           <a
             key={s}
