@@ -35,7 +35,7 @@ export default function AdminLayout({
           Admin
         </div>
 
-        <nav className="px-3 pb-3 md:pb-0 md:space-y-1 flex-1 md:flex-none flex gap-2 overflow-x-auto md:block">
+        <nav className="px-3 pb-3 md:pb-0 md:space-y-1 flex-1 md:flex-none flex gap-2 overflow-x-auto md:block md:static sticky top-0 z-40 bg-teal-900">
           <Item href="/admin" label="Overview" />
           <Item href="/admin/commissions" label="Commissions" />
           <Item href="/admin/payouts" label="Payouts" />
@@ -62,7 +62,9 @@ export default function AdminLayout({
       </aside>
 
       {/* Mobile logout bar */}
-      <div className="md:hidden border-t border-teal-800 bg-teal-900 px-4 py-2">
+      {/* Mobile header (sticky) */}
+<div className="md:hidden border-t border-teal-800 bg-teal-900 px-4 py-2 sticky top-0 z-50">
+
         <Link
           href="/logout"
           className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 text-center"
