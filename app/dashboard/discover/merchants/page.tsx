@@ -9,7 +9,7 @@ type Merchant = {
   id: string;
   name: string;
   region: string;
-  status: MerchantStatus; // base/fallback status
+  status: MerchantStatus; // will be "live" for approved rules
   payoutSpeed: "fast" | "normal" | "slow" | "varies";
   typicalCommission: string;
   categoryFocus: string;
@@ -21,6 +21,7 @@ type Merchant = {
    * Used to match this card to a real rule in Admin.
    */
   ruleMerchantName?: string;
+  homepageUrl?: string | null;
 };
 
 type RuleStatus = "ACTIVE" | "PENDING" | "REJECTED";
@@ -31,9 +32,12 @@ type RuleRow = {
   active: boolean;
   commissionType: string | null;
   commissionRate: unknown;
+  domainPattern: string | null;
 };
 
-const MERCHANTS: Merchant[] = [
+// Static metadata used to enrich known merchants.
+// The actual list of cards now comes from approved rules in the DB.
+const MERCHANT_META: Merchant[] = [
   {
     id: "charles-keith-ph",
     name: "Charles & Keith PH (via affiliate network)",
@@ -207,8 +211,15 @@ function statusBadgeClass(status: MerchantStatus): string {
   }
 }
 
+function homepageFromDomain(domainPattern: string | null): string | null {
+  if (!domainPattern) return null;
+  const trimmed = domainPattern.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+}
+
 export default async function MerchantsPage() {
-  // Pull real merchant rules from admin config
+  // Pull merchant rules from admin config
   const rules: RuleRow[] = await prisma.merchantRule.findMany({
     select: {
       merchantName: true,
@@ -216,58 +227,60 @@ export default async function MerchantsPage() {
       active: true,
       commissionType: true,
       commissionRate: true,
+      domainPattern: true,
     },
   });
 
-  const ruleMap = new Map<
-    string,
-    {
-      status: RuleStatus;
-      active: boolean;
-      commissionType: string | null;
-      commissionRate: unknown;
-    }
-  >();
-
-  for (const r of rules) {
-    const key = normalizeKey(r.merchantName);
+  // Build metadata lookup by normalized merchant name
+  const metaMap = new Map<string, Merchant>();
+  for (const m of MERCHANT_META) {
+    const key = normalizeKey(m.ruleMerchantName ?? m.name);
     if (!key) continue;
-    ruleMap.set(key, {
-      status: normalizeRuleStatus(r.status),
-      active: r.active,
-      commissionType: r.commissionType,
-      commissionRate: r.commissionRate,
-    });
+    metaMap.set(key, m);
   }
 
-  // Merge static merchant copy with dynamic status/commission from DB
-  const enhancedMerchants = MERCHANTS.map((m) => {
-    const key = normalizeKey(m.ruleMerchantName ?? m.name);
-    const rule = key ? ruleMap.get(key) : undefined;
+  // Filter to "approved" merchants (active + status ACTIVE)
+  const approvedRules = rules.filter((r) => {
+    const s = normalizeRuleStatus(r.status);
+    return r.active && s === "ACTIVE";
+  });
 
-    let effectiveStatus: MerchantStatus = m.status;
-    let effectiveCommission = m.typicalCommission;
+  // Merge rules + metadata into final display list
+  const enhancedMerchants: Merchant[] = approvedRules.map((r, index) => {
+    const key = normalizeKey(r.merchantName);
+    const meta = key ? metaMap.get(key) : undefined;
 
-    if (rule) {
-      if (rule.active && rule.status === "ACTIVE") {
-        effectiveStatus = "live";
-      } else if (rule.status === "PENDING") {
-        effectiveStatus = "pending";
-      } else {
-        effectiveStatus = "coming-soon";
-      }
-
-      const rateStr = asPlainString(rule.commissionRate);
-      if (rule.commissionType || (rateStr && rateStr !== "—")) {
-        const typePart = rule.commissionType ? `${rule.commissionType} ` : "";
-        effectiveCommission = `${typePart}@ ${rateStr}`.trim();
-      }
+    // Commission string from rule
+    const rateStr = asPlainString(r.commissionRate);
+    let effectiveCommission = meta?.typicalCommission ?? "Commission details vary by category and campaign.";
+    if (r.commissionType || (rateStr && rateStr !== "—")) {
+      const typePart = r.commissionType ? `${r.commissionType} ` : "";
+      effectiveCommission = `${typePart}@ ${rateStr}`.trim();
     }
 
     return {
-      ...m,
-      status: effectiveStatus,
+      id: meta?.id ?? (key || `merchant-${index}`),
+      name: meta?.name ?? (r.merchantName ?? "Unnamed merchant"),
+      region:
+        meta?.region ??
+        "Region will depend on the affiliate program and your approval status.",
+      status: "live",
+      payoutSpeed: meta?.payoutSpeed ?? "varies",
       typicalCommission: effectiveCommission,
+      categoryFocus:
+        meta?.categoryFocus ??
+        "General products. Check your affiliate program for exact category focus and exclusions.",
+      allowedTrafficNotes:
+        meta?.allowedTrafficNotes ??
+        "Always follow your affiliate program’s traffic rules (e.g. no spam, no brand bidding, no misleading ads).",
+      notes:
+        meta?.notes ??
+        "This merchant is approved in your configuration. Use smart links that stay within policy and platform rules.",
+      disclaimer:
+        meta?.disclaimer ??
+        "Details shown are general. Always check your affiliate dashboard for exact rules, rates, and regional availability.",
+      ruleMerchantName: r.merchantName ?? undefined,
+      homepageUrl: homepageFromDomain(r.domainPattern),
     };
   });
 
@@ -279,10 +292,10 @@ export default async function MerchantsPage() {
             Browse merchants
           </h1>
           <p className="mt-1 text-xs text-slate-400 sm:text-sm">
-            This is a high-level overview of merchants and merchant categories
-            linkmint.co is designed to work with. Always follow the rules of
-            each affiliate program and merchant. Final availability depends on
-            approval and network status in your affiliate accounts.
+            These are merchants that are currently approved and active in your
+            Linkmint configuration. Always follow the rules of each affiliate
+            program and merchant. Final availability depends on approval and
+            network status in your affiliate accounts.
           </p>
           <p className="mt-2 text-[11px] text-slate-500">
             Tip: Start with merchants that match your{" "}
@@ -304,7 +317,18 @@ export default async function MerchantsPage() {
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <h2 className="text-sm font-semibold text-slate-50">
-                    {m.name}
+                    {m.homepageUrl ? (
+                      <a
+                        href={m.homepageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                      >
+                        {m.name}
+                      </a>
+                    ) : (
+                      m.name
+                    )}
                   </h2>
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(
@@ -354,12 +378,24 @@ export default async function MerchantsPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
+                {m.homepageUrl && (
+                  <a
+                    href={m.homepageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
+                  >
+                    Visit merchant site
+                  </a>
+                )}
+
                 <Link
-                  href="/dashboard/links"
+                  href="/dashboard/create-link"
                   className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-[11px] font-semibold text-slate-950 hover:bg-teal-400"
                 >
                   Create smart link with this merchant
                 </Link>
+
                 <Link
                   href="/tutorial"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
