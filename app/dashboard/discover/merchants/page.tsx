@@ -159,6 +159,61 @@ const MERCHANT_META: Merchant[] = [
       "Amazon has strict program rules. This merchant is shown as a planned/target integration. Only use Amazon links where you are personally approved and allowed.",
     ruleMerchantName: "Amazon",
   },
+  {
+  id: "adidas-ph",
+  name: "Adidas PH (via affiliate networks)",
+  region: "Philippines · Sportswear & Lifestyle",
+  status: "live",
+  payoutSpeed: "normal",
+  typicalCommission:
+    "Fashion/sportswear range (varies by campaign; typically low-mid %)",
+  categoryFocus:
+    "Running shoes, lifestyle sneakers, training gear, athleisure apparel",
+  allowedTrafficNotes:
+    "Organic social traffic (TikTok, IG, FB) and content-based shares allowed. Avoid brand bidding, paid search, misleading promos, and unapproved paid ads.",
+  notes:
+    "Strong for casual fashion, sportswear hauls, and lifestyle content. Works extremely well with PH audiences during payday and seasonal sale cycles.",
+  disclaimer:
+    "Final commission rates and rules depend on the affiliate network setup. Deep linking may be restricted for this merchant.",
+  ruleMerchantName: "Adidas PH - CPS",
+},
+{
+  id: "hm-ph",
+  name: "H&M PH (via affiliate networks)",
+  region: "Philippines · Fashion & Lifestyle",
+  status: "live",
+  payoutSpeed: "normal",
+  typicalCommission:
+    "Fashion range (low-mid % depending on product category and campaign)",
+  categoryFocus:
+    "Casualwear, essentials, basics, modern street style, women’s/men’s apparel",
+  allowedTrafficNotes:
+    "Organic TikTok, Instagram, Facebook, and content shares typically allowed. Avoid brand bidding, unapproved coupons, or misleading discount claims.",
+  notes:
+    "A strong everyday brand for PH audiences, great for payday hauls, TikTok OOTDs, and minimalist or capsule wardrobe content.",
+  disclaimer:
+    "Commission may vary by category and promotional period. Product-level deep linking may not be supported.",
+  ruleMerchantName: "H&M - CPS",
+},
+{
+  id: "lululemon-apac",
+  name: "Lululemon (APAC) (via affiliate networks)",
+  region: "APAC · Fitness & Athleisure",
+  status: "live",
+  payoutSpeed: "normal",
+  typicalCommission:
+    "Athleisure & premium activewear (varies by campaign; generally mid %)",
+  categoryFocus:
+    "Yoga wear, sports bras, leggings, men’s training wear, premium active lifestyle",
+  allowedTrafficNotes:
+    "Organic social content typically allowed (TikTok, IG, FB). Paid ads and brand bidding restricted. Avoid misleading claims and coupon misuse.",
+  notes:
+    "High-value brand for health/fitness creators. Works well with morning routine content, gym lifestyle, and minimalist premium fashion.",
+  disclaimer:
+    "This merchant may not support direct deep linking. Tracking uses official affiliate campaign URLs.",
+  ruleMerchantName: "Lululemon (APAC)",
+},
+
 ];
 
 function normalizeRuleStatus(raw: unknown): RuleStatus {
