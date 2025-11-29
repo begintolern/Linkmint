@@ -32,14 +32,14 @@ type RuleRow = {
 const MERCHANTS: Merchant[] = [
   {
     id: "charles-keith-ph",
-    name: "Charles & Keith PH (via affiliate network)",
+    name: "Charles & Keith PH",
     region: "Philippines · Fashion · Footwear & bags",
     status: "live",
     payoutSpeed: "slow",
-    typicalCommission: "Fashion range (varies by campaign and network)",
+    typicalCommission: "Fashion CPS range (varies by campaign and network)",
     categoryFocus: "Women’s footwear, bags, and accessories",
     allowedTrafficNotes:
-      "Organic TikTok, IG Reels, FB content. Avoid coupon sites, brand bidding, and spam.",
+      "Organic TikTok, IG Reels, Facebook content. Avoid coupon sites, brand bidding, and spam.",
     notes:
       "Great for sandals, handbags, and clean-girl styles. Pairs well with payday OOTD content.",
     disclaimer:
@@ -47,32 +47,33 @@ const MERCHANTS: Merchant[] = [
     ruleMerchantName: "Charles & Keith PH",
   },
   {
-    id: "razer-involve-asia",
-    name: "Razer (via affiliate networks such as Involve Asia)",
+    id: "razer-cps",
+    name: "Razer (CPS)",
     region: "Philippines + regional · Gaming & peripherals",
     status: "live",
     payoutSpeed: "normal",
-    typicalCommission: "Tech peripherals range (mid to small %)",
-    categoryFocus: "Gaming mice, keyboards, headsets",
+    typicalCommission: "Tech peripherals CPS (mid to small % per sale).",
+    categoryFocus: "Gaming mice, keyboards, headsets, and accessories",
     allowedTrafficNotes:
-      "Organic gaming content, desk setups, YouTube reviews. Avoid brand bidding.",
+      "Organic gaming content, setup tours, and YouTube reviews. Avoid brand bidding or impersonating official channels.",
     notes:
-      "Strong for student gamers and casual players. Performs well with desk setup content.",
+      "Strong for student gamers and casual players. Works well with desk setup and gameplay content.",
     disclaimer:
       "Always verify merchant rules inside your affiliate network.",
-    ruleMerchantName: "Razer",
+    ruleMerchantName: "Razer (CPS)",
   },
   {
     id: "shopee-ph",
-    name: "Shopee PH (via affiliate networks)",
+    name: "Shopee PH",
     region: "Philippines · Marketplace",
     status: "live",
     payoutSpeed: "varies",
-    typicalCommission: "Varies by seller/category",
+    typicalCommission:
+      "Small per order but scalable with volume; varies by seller and category.",
     categoryFocus:
-      "Everyday items, home goods, gadgets, fashion, TikTok finds.",
+      "Everyday items, home goods, gadgets, fashion, and “TikTok made me buy it” finds.",
     allowedTrafficNotes:
-      "Organic TikTok, FB groups, Messenger, IG Reels. Rules depend on the affiliate program.",
+      "Organic TikTok, Facebook groups, Messenger, IG Reels. Rules depend on the affiliate program.",
     notes:
       "Great for budol finds and payday hauls. Extremely familiar to PH audiences.",
     disclaimer: "Final rules depend on your affiliate program setup.",
@@ -80,99 +81,241 @@ const MERCHANTS: Merchant[] = [
   },
   {
     id: "lazada-ph",
-    name: "Lazada PH (via affiliate networks)",
+    name: "Lazada PH",
     region: "Philippines · Marketplace",
     status: "live",
     payoutSpeed: "varies",
-    typicalCommission: "Similar to Shopee",
-    categoryFocus: "Home, electronics, fashion, flagship stores",
+    typicalCommission:
+      "Similar to Shopee: small–mid per order depending on category.",
+    categoryFocus: "Home, electronics, fashion, flagship stores.",
     allowedTrafficNotes:
-      "Content-driven traffic via TikTok, FB, IG. Avoid spam, coupon misuse.",
+      "Content-driven traffic via TikTok, Facebook, Instagram. Avoid spam and coupon misuse.",
     notes:
-      "Great for official brands and bigger-ticket items. Good for comparison content.",
+      "Great for official brands and bigger-ticket items. Good for comparison-style content (e.g., Shopee vs Lazada).",
     disclaimer:
       "Commission depends on your affiliate approval and network rules.",
     ruleMerchantName: "Lazada PH",
   },
   {
     id: "zalora-ph",
-    name: "Zalora PH (via affiliate networks)",
+    name: "Zalora PH",
     region: "Philippines · Fashion marketplace",
     status: "live",
     payoutSpeed: "normal",
-    typicalCommission: "Mid-level % on eligible items",
-    categoryFocus: "Fashion, footwear, accessories",
+    typicalCommission: "Mid-level % on eligible fashion items.",
+    categoryFocus: "Fashion, footwear, and accessories",
     allowedTrafficNotes:
-      "Organic IG/TikTok content, OOTDs, style posts. Avoid coupon abuse.",
+      "Organic IG/TikTok content, OOTDs, and style posts. Avoid coupon abuse and spammy reposting.",
     notes:
-      "Great for payday outfits and fashion-focused creators.",
+      "Great for payday outfits and fashion-focused creators in PH.",
     disclaimer:
       "Commission varies by campaign and category.",
     ruleMerchantName: "Zalora PH",
   },
 
   //
-  // ⭐ NEW — SEPHORA PH
+  // Sephora PH - CPS
   //
   {
     id: "sephora-ph",
-    name: "Sephora PH (via affiliate network)",
+    name: "Sephora PH - CPS",
     region: "Philippines · Beauty & Skincare",
-    status: "pending",
+    status: "live",
     payoutSpeed: "varies",
-    typicalCommission: "Beauty & skincare range (IA CPS)",
-    categoryFocus: "Makeup, skincare, fragrance, beauty tools",
+    typicalCommission: "Beauty & skincare CPS via Involve Asia.",
+    categoryFocus: "Makeup, skincare, fragrance, and beauty tools",
     allowedTrafficNotes:
-      "Organic TikTok GRWM, IG Reels, hauls, reviews. No coupon or cashback traffic.",
+      "Organic TikTok GRWM, IG Reels, YouTube hauls and reviews. No coupon or cashback traffic.",
     notes:
-      "Great for GRWM, skincare routines, and haul content. Performs best with authentic creator videos.",
+      "Great for GRWM, skincare routines, and honest haul content. Performs best with authentic creator videos.",
     disclaimer:
       "Final rules and commissions depend on your Involve Asia setup.",
     ruleMerchantName: "Sephora PH - CPS",
   },
 
   //
-  // ⭐ NEW — ALIEXPRESS GLOBAL
+  // AliExpress Global
   //
   {
     id: "aliexpress-global",
-    name: "AliExpress (Global)",
+    name: "AliExpress Global",
     region: "Global · Marketplace",
-    status: "pending",
-    payoutSpeed: "varies",
-    typicalCommission:
-      "CPS range (varies heavily by category and product)",
-    categoryFocus:
-      "Low-cost gadgets, home goods, fashion accessories, trending items",
-    allowedTrafficNotes:
-      "Organic content only—TikTok unboxing, IG Reels, YouTube reviews. No coupon sites, cashback, or brand bidding.",
-    notes:
-      "Strong for viral gadgets, budget finds, and international items. Best with unboxing and review content.",
-    disclaimer:
-      "Commission, availability, and rules depend on your Involve Asia approval.",
-    ruleMerchantName: "AliExpress Global",
-  },
-
-  //
-  // Generic IA card (unchanged)
-  //
-  {
-    id: "involve-asia-generic",
-    name: "Involve Asia partner merchants (general)",
-    region: "Regional · PH, SEA, and beyond",
     status: "live",
     payoutSpeed: "varies",
     typicalCommission:
-      "Ranges from low to strong depending on category/merchant",
+      "CPS range (varies heavily by category and product) via Involve Asia.",
     categoryFocus:
-      "Marketplaces, fashion, tech, travel, finance",
+      "Low-cost gadgets, home goods, fashion accessories, and trending items.",
     allowedTrafficNotes:
-      "Varies by merchant. Always follow merchant-specific rules.",
+      "Organic content only — unboxings, reviews, and ‘TikTok made me buy it’ content. No coupon sites, cashback, or brand bidding.",
     notes:
-      "Involve Asia offers access to thousands of merchants. Linkmint ensures compliant traffic routing.",
+      "Strong for viral gadgets, budget finds, and international items. Best with unboxing and review-style content.",
     disclaimer:
-      "Each merchant has its own rules. Always rely on official terms.",
-    ruleMerchantName: "Involve Asia",
+      "Commission, availability, and rules depend on your AliExpress approval in Involve Asia.",
+    ruleMerchantName: "AliExpress (Global)",
+  },
+
+  //
+  // ASOS (Asia) - CPS
+  //
+  {
+    id: "asos-asia",
+    name: "ASOS (Asia) - CPS",
+    region: "Asia · Fashion",
+    status: "live",
+    payoutSpeed: "normal",
+    typicalCommission: "Fashion CPS % via Involve Asia.",
+    categoryFocus: "Clothing, shoes, and accessories for men and women.",
+    allowedTrafficNotes:
+      "Organic fashion content (TikTok, IG, YouTube). No coupon/cashback traffic or brand bidding.",
+    notes:
+      "Good for fashion hauls and ‘ASOS finds’ content, especially for PH users who like international styles.",
+    disclaimer:
+      "Commission and rules depend on your ASOS (Asia) - CPS approval in Involve Asia.",
+    ruleMerchantName: "ASOS (Asia) - CPS",
+  },
+
+  //
+  // Havaianas PH
+  //
+  {
+    id: "havaianas-ph",
+    name: "Havaianas PH",
+    region: "Philippines · Footwear",
+    status: "live",
+    payoutSpeed: "normal",
+    typicalCommission: "CPS % on eligible sandals via Involve Asia.",
+    categoryFocus: "Flip-flops, sandals, and casual footwear.",
+    allowedTrafficNotes:
+      "Organic lifestyle content, OOTDs, and beach/travel posts. No coupon/cashback or arbitrage traffic.",
+    notes:
+      "Great for summer, beach, and casual outfit content. Very familiar brand for PH buyers.",
+    disclaimer:
+      "Commission and availability depend on your Havaianas PH approval in Involve Asia.",
+    ruleMerchantName: "Havaianas PH",
+  },
+
+  //
+  // EcoFlow PH - CPS
+  //
+  {
+    id: "ecoflow-ph",
+    name: "EcoFlow PH - CPS",
+    region: "Philippines · Tech & Power",
+    status: "live",
+    payoutSpeed: "normal",
+    typicalCommission:
+      "Higher-ticket CPS on power stations and accessories.",
+    categoryFocus: "Portable power stations, solar panels, and backup power.",
+    allowedTrafficNotes:
+      "Organic YouTube reviews, TikTok explainers, and Facebook posts. Avoid coupon/cashback or misleading claims.",
+    notes:
+      "Best for tech, preparedness, and travel creators where backup power is relevant.",
+    disclaimer:
+      "Commission depends on your EcoFlow PH - CPS approval in Involve Asia.",
+    ruleMerchantName: "EcoFlow PH - CPS",
+  },
+
+  //
+  // Juicestore
+  //
+  {
+    id: "juicestore-ph",
+    name: "Juicestore",
+    region: "Philippines · Fashion & streetwear",
+    status: "live",
+    payoutSpeed: "normal",
+    typicalCommission: "CPS % on streetwear items via Involve Asia.",
+    categoryFocus: "Streetwear, sneakers, and limited drops.",
+    allowedTrafficNotes:
+      "Organic fashion and streetwear content. No coupon sites or cashback traffic.",
+    notes:
+      "Good fit for sneakerheads and streetwear creators in PH.",
+    disclaimer:
+      "Commission depends on your Juicestore approval in Involve Asia.",
+    ruleMerchantName: "Juice Store",
+  },
+
+  //
+  // Love Bonito (PH)
+  //
+  {
+    id: "love-bonito-ph",
+    name: "Love Bonito (PH)",
+    region: "Philippines · Women’s fashion",
+    status: "live",
+    payoutSpeed: "normal",
+    typicalCommission: "Fashion CPS % via Involve Asia.",
+    categoryFocus: "Women’s fashion with Asian-fit cuts and styles.",
+    allowedTrafficNotes:
+      "Organic IG/TikTok fashion content, try-ons, and styling videos.",
+    notes:
+      "Strong for women’s fashion creators targeting PH and wider SEA audiences.",
+    disclaimer:
+      "Commission depends on your Love Bonito (PH) approval in Involve Asia.",
+    ruleMerchantName: "Love Bonito (PH)",
+  },
+
+  //
+  // SHEIN Global
+  //
+  {
+    id: "shein-global",
+    name: "SHEIN Global",
+    region: "Global · Fast fashion",
+    status: "live",
+    payoutSpeed: "varies",
+    typicalCommission: "CPS % via Involve Asia (varies by category).",
+    categoryFocus: "Fast fashion, accessories, and home items.",
+    allowedTrafficNotes:
+      "Organic TikTok, IG, and YouTube fashion content. No coupon/cashback or paid ads using brand terms.",
+    notes:
+      "Very strong for hauls, outfit challenges, and budget fashion content.",
+    disclaimer:
+      "Commission depends on your SHEIN Global CPS approval in Involve Asia.",
+    ruleMerchantName: "Shein Global - CPS",
+  },
+
+  //
+  // Traveloka PH - CPS
+  //
+  {
+    id: "traveloka-ph",
+    name: "Traveloka PH - CPS",
+    region: "Philippines · Travel",
+    status: "live",
+    payoutSpeed: "slow",
+    typicalCommission:
+      "Travel CPS % on flights, hotels, and experiences via Involve Asia.",
+    categoryFocus: "Flights, hotels, and travel deals for PH users.",
+    allowedTrafficNotes:
+      "Organic travel content, vlogs, and itinerary videos. No coupon/cashback or incentive traffic.",
+    notes:
+      "Best for travel creators highlighting PH and regional trips, promos, and planning tips.",
+    disclaimer:
+      "Commission depends on your Traveloka PH - CPS approval in Involve Asia.",
+    ruleMerchantName: "Traveloka PH - CPS",
+  },
+
+  //
+  // Zataru PH (Accesstrade)
+  //
+  {
+    id: "zataru-ph",
+    name: "Zataru PH",
+    region: "Philippines · E-commerce (Accesstrade)",
+    status: "live",
+    payoutSpeed: "varies",
+    typicalCommission:
+      "CPS % via Accesstrade; depends on category and campaign.",
+    categoryFocus: "PH e-commerce catalog (per Accesstrade listing).",
+    allowedTrafficNotes:
+      "Organic content only; respect Accesstrade’s listed rules on traffic sources.",
+    notes:
+      "Use for PH-targeted content where Zataru’s catalog matches your niche.",
+    disclaimer:
+      "Commission depends on your Zataru PH approval in Accesstrade.",
+    ruleMerchantName: "Zataru PH",
   },
 ];
 
@@ -205,7 +348,7 @@ function statusLabel(status: MerchantStatus): string {
     case "pending":
       return "Pending / under review";
     case "coming-soon":
-      return "Plcoming soon";
+      return "Planned / coming soon";
     default:
       return "";
   }
