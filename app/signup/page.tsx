@@ -87,7 +87,7 @@ export default function SignupPage() {
           password,
           ageConfirmed: true,
           tosAccepted: true,
-          rulesAccepted: true, // signal only; no backend change required
+          rulesAccepted: true,
         }),
       });
 
@@ -126,12 +126,13 @@ export default function SignupPage() {
           .
         </p>
 
-        {/* Payout methods notice — GCash + PayPal (neutral wording) */}
+        {/* UPDATED PAYOUT NOTICE ⭐ */}
         <div className="mb-4 rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
           💳 Payouts are currently available via{" "}
-          <span className="font-semibold">GCash (PHP)</span> and{" "}
-          <span className="font-semibold">PayPal (USD)</span>. Other payout methods
-          (e.g., Maya/PayMaya, bank transfer) are not supported yet.
+          <span className="font-semibold">PayPal (USD)</span> only.
+          <br />
+          Additional local options (e.g., GCash, Maya, bank transfer) will be
+          introduced later as we expand.
         </div>
 
         {error && (
@@ -152,6 +153,7 @@ export default function SignupPage() {
             )}
           </div>
         )}
+
         {success && (
           <div className="mb-4 rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-700">
             {success}
@@ -265,6 +267,7 @@ export default function SignupPage() {
               <li>Respect allowed platforms, geo restrictions, and cookie windows.</li>
               <li>Some purchases may be disqualified (reason shown in your dashboard).</li>
             </ul>
+
             <label className="flex gap-2 items-start text-sm select-none">
               <input
                 type="checkbox"
