@@ -143,6 +143,23 @@ const MERCHANT_META: Merchant[] = [
     ruleMerchantName: "Involve Asia",
   },
   {
+  id: "sephora-ph",
+  name: "Sephora PH (via affiliate network)",
+  region: "Philippines · Beauty & Skincare",
+  status: "pending", // until approved in IA
+  payoutSpeed: "varies",
+  typicalCommission: "Beauty & skincare range (IA CPS, varies by product)",
+  categoryFocus: "Makeup, skincare, fragrances, beauty tools",
+  allowedTrafficNotes:
+    "Organic content only—TikTok GRWM, IG Reels, product reviews, hauls. Avoid coupon sites, cashback, brand bidding, or impersonation.",
+  notes:
+    "Great for GRWM, skincare routines, and haul-style content. Works best with authentic creator posts and honest recommendations.",
+  disclaimer:
+    "Final commission, payout timing, and rules depend on the affiliate program setup inside your Involve Asia account.",
+  ruleMerchantName: "Sephora PH"
+},
+
+  {
     id: "amazon-global",
     name: "Amazon (global marketplaces, where approved)",
     region: "Global markets · US, EU, etc.",
@@ -159,6 +176,7 @@ const MERCHANT_META: Merchant[] = [
       "Amazon has strict program rules. This merchant is shown as a planned/target integration. Only use Amazon links where you are personally approved and allowed.",
     ruleMerchantName: "Amazon",
   },
+  
 ];
 
 function normalizeRuleStatus(raw: unknown): RuleStatus {
