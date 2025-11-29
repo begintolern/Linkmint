@@ -9,19 +9,14 @@ type Merchant = {
   id: string;
   name: string;
   region: string;
-  status: MerchantStatus; // will be "live" for approved rules
+  status: MerchantStatus;
   payoutSpeed: "fast" | "normal" | "slow" | "varies";
   typicalCommission: string;
   categoryFocus: string;
   allowedTrafficNotes: string;
   notes: string;
   disclaimer?: string;
-  /**
-   * Optional: merchantName as stored in prisma.merchantRule.merchantName
-   * Used to match this card to a real rule in Admin.
-   */
   ruleMerchantName?: string;
-  homepageUrl?: string | null;
 };
 
 type RuleStatus = "ACTIVE" | "PENDING" | "REJECTED";
@@ -32,12 +27,9 @@ type RuleRow = {
   active: boolean;
   commissionType: string | null;
   commissionRate: unknown;
-  domainPattern: string | null;
 };
 
-// Static metadata used to enrich known merchants.
-// The actual list of cards now comes from approved rules in the DB.
-const MERCHANT_META: Merchant[] = [
+const MERCHANTS: Merchant[] = [
   {
     id: "charles-keith-ph",
     name: "Charles & Keith PH (via affiliate network)",
@@ -47,11 +39,11 @@ const MERCHANT_META: Merchant[] = [
     typicalCommission: "Fashion range (varies by campaign and network)",
     categoryFocus: "Women’s footwear, bags, and accessories",
     allowedTrafficNotes:
-      "Content-based traffic (social posts, organic TikTok, Facebook, IG). Always avoid brand bidding and coupon abuse.",
+      "Organic TikTok, IG Reels, FB content. Avoid coupon sites, brand bidding, and spam.",
     notes:
-      "Great for everyday sandals, work bags, and neutral “clean girl” looks. Works well with payday and outfit-style content.",
+      "Great for sandals, handbags, and clean-girl styles. Pairs well with payday OOTD content.",
     disclaimer:
-      "Actual commission rates and rules depend on the affiliate network and final approved setup. Always confirm inside your affiliate account.",
+      "Commission depends on your affiliate network rules and approval.",
     ruleMerchantName: "Charles & Keith PH",
   },
   {
@@ -60,70 +52,110 @@ const MERCHANT_META: Merchant[] = [
     region: "Philippines + regional · Gaming & peripherals",
     status: "live",
     payoutSpeed: "normal",
-    typicalCommission:
-      "Tech peripherals range (lower percent, higher ticket price)",
-    categoryFocus: "Gaming mice, keyboards, headsets, and accessories",
+    typicalCommission: "Tech peripherals range (mid to small %)",
+    categoryFocus: "Gaming mice, keyboards, headsets",
     allowedTrafficNotes:
-      "Organic content, review-style posts, setup tours, and gaming clips usually allowed. Avoid misleading “official” branding.",
+      "Organic gaming content, desk setups, YouTube reviews. Avoid brand bidding.",
     notes:
-      "Strong for student gamers and weekend players who want better gear without going full e-sports level. Angle works best when you show real desk setups.",
+      "Strong for student gamers and casual players. Performs well with desk setup content.",
     disclaimer:
-      "Always check the exact Razer merchant entry in your affiliate network for final rules, regions, and rates.",
+      "Always verify merchant rules inside your affiliate network.",
     ruleMerchantName: "Razer",
   },
   {
     id: "shopee-ph",
-    name: "Shopee PH (via approved affiliate programs / networks)",
+    name: "Shopee PH (via affiliate networks)",
     region: "Philippines · Marketplace",
     status: "live",
     payoutSpeed: "varies",
-    typicalCommission:
-      "Varies heavily by seller, category, and campaign (often small but high volume)",
+    typicalCommission: "Varies by seller/category",
     categoryFocus:
-      "Everyday items, home goods, gadgets, fashion, and “TikTok made me buy it” products (including stores like Watsons via Shopee Mall).",
+      "Everyday items, home goods, gadgets, fashion, TikTok finds.",
     allowedTrafficNotes:
-      "Strong fit for PH users via TikTok, Facebook, Messenger, and group chats. Exact allowed traffic depends on the affiliate program terms.",
+      "Organic TikTok, FB groups, Messenger, IG Reels. Rules depend on the affiliate program.",
     notes:
-      "Perfect for “budol” style content, Shopee finds, and payday hauls. Budget-friendly and familiar for Filipino buyers.",
-    disclaimer:
-      "Rules and payout details are handled by the connected affiliate program (for example, Involve Asia). Always follow Shopee’s and the network’s latest terms.",
+      "Great for budol finds and payday hauls. Extremely familiar to PH audiences.",
+    disclaimer: "Final rules depend on your affiliate program setup.",
     ruleMerchantName: "Shopee PH",
   },
   {
     id: "lazada-ph",
-    name: "Lazada PH (via approved affiliate programs / networks)",
+    name: "Lazada PH (via affiliate networks)",
     region: "Philippines · Marketplace",
     status: "live",
     payoutSpeed: "varies",
-    typicalCommission:
-      "Similar to Shopee: small to mid-level per order, but scalable with volume",
-    categoryFocus:
-      "Home, electronics, fashion, and official flagship stores (including brands like Watsons Official Store when available).",
+    typicalCommission: "Similar to Shopee",
+    categoryFocus: "Home, electronics, fashion, flagship stores",
     allowedTrafficNotes:
-      "Commonly used with content-based traffic and social sharing. Rules vary by affiliate program and campaign.",
+      "Content-driven traffic via TikTok, FB, IG. Avoid spam, coupon misuse.",
     notes:
-      "Good for bigger-ticket items and branded products. Pairs well with comparison-style content (before/after, upgrade stories).",
+      "Great for official brands and bigger-ticket items. Good for comparison content.",
     disclaimer:
-      "Final rules and payout structure depend on the affiliate setup you’re using to generate links (e.g. Involve Asia).",
+      "Commission depends on your affiliate approval and network rules.",
     ruleMerchantName: "Lazada PH",
   },
   {
     id: "zalora-ph",
-    name: "Zalora PH (via approved affiliate programs / networks)",
+    name: "Zalora PH (via affiliate networks)",
     region: "Philippines · Fashion marketplace",
     status: "live",
     payoutSpeed: "normal",
-    typicalCommission: "Fashion range (often mid-level % on eligible items)",
-    categoryFocus:
-      "Fashion, footwear, and accessories with a focus on brand-conscious PH buyers.",
+    typicalCommission: "Mid-level % on eligible items",
+    categoryFocus: "Fashion, footwear, accessories",
     allowedTrafficNotes:
-      "Content and social-driven traffic (IG, TikTok, Facebook) usually a good fit. Avoid spammy posting and coupon abuse.",
+      "Organic IG/TikTok content, OOTDs, style posts. Avoid coupon abuse.",
     notes:
-      "Works well for OOTD content, payday outfits, and “office to weekend” looks. Strong fit for fashion-focused creators.",
+      "Great for payday outfits and fashion-focused creators.",
     disclaimer:
-      "Rates and rules depend on the specific affiliate program connection. Always verify the latest details in your affiliate dashboard.",
+      "Commission varies by campaign and category.",
     ruleMerchantName: "Zalora PH",
   },
+
+  //
+  // ⭐ NEW — SEPHORA PH
+  //
+  {
+    id: "sephora-ph",
+    name: "Sephora PH (via affiliate network)",
+    region: "Philippines · Beauty & Skincare",
+    status: "pending",
+    payoutSpeed: "varies",
+    typicalCommission: "Beauty & skincare range (IA CPS)",
+    categoryFocus: "Makeup, skincare, fragrance, beauty tools",
+    allowedTrafficNotes:
+      "Organic TikTok GRWM, IG Reels, hauls, reviews. No coupon or cashback traffic.",
+    notes:
+      "Great for GRWM, skincare routines, and haul content. Performs best with authentic creator videos.",
+    disclaimer:
+      "Final rules and commissions depend on your Involve Asia setup.",
+    ruleMerchantName: "Sephora PH",
+  },
+
+  //
+  // ⭐ NEW — ALIEXPRESS GLOBAL
+  //
+  {
+    id: "aliexpress-global",
+    name: "AliExpress (Global)",
+    region: "Global · Marketplace",
+    status: "pending",
+    payoutSpeed: "varies",
+    typicalCommission:
+      "CPS range (varies heavily by category and product)",
+    categoryFocus:
+      "Low-cost gadgets, home goods, fashion accessories, trending items",
+    allowedTrafficNotes:
+      "Organic content only—TikTok unboxing, IG Reels, YouTube reviews. No coupon sites, cashback, or brand bidding.",
+    notes:
+      "Strong for viral gadgets, budget finds, and international items. Best with unboxing and review content.",
+    disclaimer:
+      "Commission, availability, and rules depend on your Involve Asia approval.",
+    ruleMerchantName: "AliExpress Global",
+  },
+
+  //
+  // Generic IA card (unchanged)
+  //
   {
     id: "involve-asia-generic",
     name: "Involve Asia partner merchants (general)",
@@ -131,58 +163,21 @@ const MERCHANT_META: Merchant[] = [
     status: "live",
     payoutSpeed: "varies",
     typicalCommission:
-      "Ranges from very small (low-ticket items) to stronger rates for finance, travel, and higher-value categories",
+      "Ranges from low to strong depending on category/merchant",
     categoryFocus:
-      "Wide coverage: marketplaces, fashion, tech, finance, travel, and more",
+      "Marketplaces, fashion, tech, travel, finance",
     allowedTrafficNotes:
-      "Rules are merchant-specific. Some allow TikTok and social; others are stricter. Always read each merchant’s terms carefully.",
+      "Varies by merchant. Always follow merchant-specific rules.",
     notes:
-      "Involve Asia acts as a hub for many different merchants. Once you’re approved for a merchant inside IA, Linkmint can work with those links as long as you stay compliant.",
+      "Involve Asia offers access to thousands of merchants. Linkmint ensures compliant traffic routing.",
     disclaimer:
-      "Each merchant inside Involve Asia has its own rules. Linkmint encourages compliant traffic only and does not override official terms.",
+      "Each merchant has its own rules. Always rely on official terms.",
     ruleMerchantName: "Involve Asia",
   },
-  {
-  id: "sephora-ph",
-  name: "Sephora PH (via affiliate network)",
-  region: "Philippines · Beauty & Skincare",
-  status: "pending", // until approved in IA
-  payoutSpeed: "varies",
-  typicalCommission: "Beauty & skincare range (IA CPS, varies by product)",
-  categoryFocus: "Makeup, skincare, fragrances, beauty tools",
-  allowedTrafficNotes:
-    "Organic content only—TikTok GRWM, IG Reels, product reviews, hauls. Avoid coupon sites, cashback, brand bidding, or impersonation.",
-  notes:
-    "Great for GRWM, skincare routines, and haul-style content. Works best with authentic creator posts and honest recommendations.",
-  disclaimer:
-    "Final commission, payout timing, and rules depend on the affiliate program setup inside your Involve Asia account.",
-  ruleMerchantName: "Sephora PH"
-},
-
-  {
-    id: "amazon-global",
-    name: "Amazon (global marketplaces, where approved)",
-    region: "Global markets · US, EU, etc.",
-    status: "pending",
-    payoutSpeed: "slow",
-    typicalCommission: "Varies by category (many small, long-tail payouts)",
-    categoryFocus:
-      "Almost everything · good for niche items and global finds, especially for OFW or international audiences.",
-    allowedTrafficNotes:
-      "Content-based traffic usually allowed; strict about spam, iframe tricks, and unapproved paid ads.",
-    notes:
-      "Useful when promoting items that are hard to find locally or when targeting OFWs and global audiences. Best for very specific product recommendations.",
-    disclaimer:
-      "Amazon has strict program rules. This merchant is shown as a planned/target integration. Only use Amazon links where you are personally approved and allowed.",
-    ruleMerchantName: "Amazon",
-  },
-  
 ];
 
 function normalizeRuleStatus(raw: unknown): RuleStatus {
-  if (raw === "ACTIVE" || raw === "PENDING" || raw === "REJECTED") {
-    return raw;
-  }
+  if (raw === "ACTIVE" || raw === "PENDING" || raw === "REJECTED") return raw;
   return "PENDING";
 }
 
@@ -194,7 +189,7 @@ function asPlainString(x: unknown): string {
   if (x == null) return "—";
   try {
     if (typeof x === "object" && x !== null && "toString" in x) {
-      // @ts-ignore - handle Prisma Decimal etc.
+      // @ts-ignore
       return (x as any).toString();
     }
     return String(x);
@@ -210,7 +205,7 @@ function statusLabel(status: MerchantStatus): string {
     case "pending":
       return "Pending / under review";
     case "coming-soon":
-      return "Planned / coming soon";
+      return "Plcoming soon";
     default:
       return "";
   }
@@ -229,15 +224,7 @@ function statusBadgeClass(status: MerchantStatus): string {
   }
 }
 
-function homepageFromDomain(domainPattern: string | null): string | null {
-  if (!domainPattern) return null;
-  const trimmed = domainPattern.trim();
-  if (!trimmed) return null;
-  return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
-}
-
 export default async function MerchantsPage() {
-  // Pull merchant rules from admin config
   const rules: RuleRow[] = await prisma.merchantRule.findMany({
     select: {
       merchantName: true,
@@ -245,112 +232,87 @@ export default async function MerchantsPage() {
       active: true,
       commissionType: true,
       commissionRate: true,
-      domainPattern: true,
     },
   });
 
-  // Build metadata lookup by normalized merchant name
-  const metaMap = new Map<string, Merchant>();
-  for (const m of MERCHANT_META) {
-    const key = normalizeKey(m.ruleMerchantName ?? m.name);
+  const ruleMap = new Map<
+    string,
+    {
+      status: RuleStatus;
+      active: boolean;
+      commissionType: string | null;
+      commissionRate: unknown;
+    }
+  >();
+
+  for (const r of rules) {
+    const key = normalizeKey(r.merchantName);
     if (!key) continue;
-    metaMap.set(key, m);
+    ruleMap.set(key, {
+      status: normalizeRuleStatus(r.status),
+      active: r.active,
+      commissionType: r.commissionType,
+      commissionRate: r.commissionRate,
+    });
   }
 
-  // Filter to "approved" merchants (active + status ACTIVE)
-  const approvedRules = rules.filter((r) => {
-    const s = normalizeRuleStatus(r.status);
-    return r.active && s === "ACTIVE";
-  });
+  const enhancedMerchants = MERCHANTS.map((m) => {
+    const key = normalizeKey(m.ruleMerchantName ?? m.name);
+    const rule = key ? ruleMap.get(key) : undefined;
 
-  // Merge rules + metadata into final display list
-  const enhancedMerchants: Merchant[] = approvedRules.map((r, index) => {
-    const key = normalizeKey(r.merchantName);
-    const meta = key ? metaMap.get(key) : undefined;
+    let effectiveStatus: MerchantStatus = m.status;
+    let effectiveCommission = m.typicalCommission;
 
-    // Commission string from rule
-    const rateStr = asPlainString(r.commissionRate);
-    let effectiveCommission = meta?.typicalCommission ?? "Commission details vary by category and campaign.";
-    if (r.commissionType || (rateStr && rateStr !== "—")) {
-      const typePart = r.commissionType ? `${r.commissionType} ` : "";
-      effectiveCommission = `${typePart}@ ${rateStr}`.trim();
+    if (rule) {
+      if (rule.active && rule.status === "ACTIVE") {
+        effectiveStatus = "live";
+      } else if (rule.status === "PENDING") {
+        effectiveStatus = "pending";
+      } else {
+        effectiveStatus = "coming-soon";
+      }
+
+      const rateStr = asPlainString(rule.commissionRate);
+      if (rule.commissionType || (rateStr && rateStr !== "—")) {
+        const typePart = rule.commissionType ? `${rule.commissionType} ` : "";
+        effectiveCommission = `${typePart}@ ${rateStr}`.trim();
+      }
     }
 
     return {
-      id: meta?.id ?? (key || `merchant-${index}`),
-      name: meta?.name ?? (r.merchantName ?? "Unnamed merchant"),
-      region:
-        meta?.region ??
-        "Region will depend on the affiliate program and your approval status.",
-      status: "live",
-      payoutSpeed: meta?.payoutSpeed ?? "varies",
+      ...m,
+      status: effectiveStatus,
       typicalCommission: effectiveCommission,
-      categoryFocus:
-        meta?.categoryFocus ??
-        "General products. Check your affiliate program for exact category focus and exclusions.",
-      allowedTrafficNotes:
-        meta?.allowedTrafficNotes ??
-        "Always follow your affiliate program’s traffic rules (e.g. no spam, no brand bidding, no misleading ads).",
-      notes:
-        meta?.notes ??
-        "This merchant is approved in your configuration. Use smart links that stay within policy and platform rules.",
-      disclaimer:
-        meta?.disclaimer ??
-        "Details shown are general. Always check your affiliate dashboard for exact rules, rates, and regional availability.",
-      ruleMerchantName: r.merchantName ?? undefined,
-      homepageUrl: homepageFromDomain(r.domainPattern),
     };
   });
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
-      <div className="mx-auto max-w-5xl px-4 py-6 sm:py-8 lg:py-10">
-        <header className="mb-5 sm:mb-6">
-          <h1 className="text-xl font-semibold text-slate-50 sm:text-2xl">
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <header className="mb-6">
+          <h1 className="text-xl font-semibold text-slate-50">
             Browse merchants
           </h1>
-          <p className="mt-1 text-xs text-slate-400 sm:text-sm">
-            These are merchants that are currently approved and active in your
-            Linkmint configuration. Always follow the rules of each affiliate
-            program and merchant. Final availability depends on approval and
-            network status in your affiliate accounts.
-          </p>
-          <p className="mt-2 text-[11px] text-slate-500">
-            Tip: Start with merchants that match your{" "}
-            <span className="font-semibold text-slate-200">
-              content style, audience, and budget
-            </span>
-            . Then use Discover ideas and the smart link creator to build links
-            that feel natural for you and your viewers.
+          <p className="mt-1 text-xs text-slate-400">
+            linkmint.co works with top PH and global merchants via affiliate
+            networks. Always follow official program rules.
           </p>
         </header>
 
-        {/* Grid of merchant cards */}
         <div className="grid gap-4 sm:grid-cols-2">
           {enhancedMerchants.map((m) => (
             <article
               key={m.id}
-              className="flex h-full flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+              className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/60 p-4"
             >
               <div>
-                <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="mb-2 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-slate-50">
-                    {m.homepageUrl ? (
-                      <a
-                        href={m.homepageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:underline"
-                      >
-                        {m.name}
-                      </a>
-                    ) : (
-                      m.name
-                    )}
+                    {m.name}
                   </h2>
                   <span
                     className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(
-                      m.status,
+                      m.status
                     )}`}
                   >
                     {statusLabel(m.status)}
@@ -396,24 +358,12 @@ export default async function MerchantsPage() {
               </div>
 
               <div className="mt-4 flex flex-wrap gap-2">
-                {m.homepageUrl && (
-                  <a
-                    href={m.homepageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
-                  >
-                    Visit merchant site
-                  </a>
-                )}
-
                 <Link
-                  href="/dashboard/create-link"
+                  href="/dashboard/links"
                   className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-[11px] font-semibold text-slate-950 hover:bg-teal-400"
                 >
                   Create smart link with this merchant
                 </Link>
-
                 <Link
                   href="/tutorial"
                   className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
@@ -424,16 +374,6 @@ export default async function MerchantsPage() {
             </article>
           ))}
         </div>
-
-        <p className="mt-5 text-[10px] text-slate-500">
-          All information above is{" "}
-          <span className="font-semibold text-slate-300">
-            general and AI-assisted
-          </span>{" "}
-          and does not override any official affiliate program terms. Always
-          rely on the official merchant or network documentation for final
-          rules, rates, and regional availability.
-        </p>
       </div>
     </div>
   );
