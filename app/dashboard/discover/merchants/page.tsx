@@ -128,7 +128,7 @@ const MERCHANTS: Merchant[] = [
       "Great for GRWM, skincare routines, and haul content. Performs best with authentic creator videos.",
     disclaimer:
       "Final rules and commissions depend on your Involve Asia setup.",
-    ruleMerchantName: "Sephora PH",
+    ruleMerchantName: "Sephora PH - CPS",
   },
 
   //
