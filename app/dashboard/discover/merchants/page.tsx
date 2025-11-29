@@ -44,6 +44,7 @@ const MERCHANT_HOMEPAGES: Record<string, string> = {
   "love-bonito-ph": "https://www.lovebonito.com",
   "traveloka-ph": "https://www.traveloka.com/en-ph",
   "zataru-ph": "https://zataru.com",
+  "bernardelli-global": "https://www.bernardellistores.com/en",
 };
 
 const MERCHANTS: Merchant[] = [
@@ -131,8 +132,7 @@ const MERCHANTS: Merchant[] = [
     categoryFocus: "Streetwear, sneakers, and limited drops.",
     allowedTrafficNotes:
       "Organic fashion and streetwear content. No coupon sites or cashback traffic.",
-    notes:
-      "Good fit for sneakerheads and streetwear creators in PH.",
+    notes: "Good fit for sneakerheads and streetwear creators in PH.",
     disclaimer:
       "Commission depends on your Juicestore approval in Involve Asia.",
     ruleMerchantName: "Juice Store",
@@ -173,6 +173,26 @@ const MERCHANTS: Merchant[] = [
     disclaimer:
       "Commission depends on your Love Bonito (PH) - CPS approval in Involve Asia.",
     ruleMerchantName: "Love Bonito (PH) - CPS",
+  },
+
+  // Bernardelli Store Global - CPS
+  {
+    id: "bernardelli-global",
+    name: "Bernardelli Store Global (via affiliate network)",
+    region: "Global · Fashion · Bags & accessories",
+    status: "live",
+    payoutSpeed: "normal",
+    typicalCommission:
+      "Fashion CPS range (varies by product and campaign via Involve Asia).",
+    categoryFocus:
+      "Designer and premium fashion, bags, and accessories.",
+    allowedTrafficNotes:
+      "Organic content on TikTok, Instagram, Facebook, YouTube, blogs, and Messenger. No coupon, cashback, brand bidding, or spam traffic.",
+    notes:
+      "Good fit for fashion-conscious audiences who like premium pieces and curated styles. Works well with haul videos, styling tips, and outfit storytelling content.",
+    disclaimer:
+      "Exact commission and eligibility depend on your Involve Asia setup and the merchant’s latest rules.",
+    ruleMerchantName: "Bernardelli Store Global - CPS",
   },
 
   // Sephora PH - CPS
