@@ -29,10 +29,28 @@ type RuleRow = {
   commissionRate: unknown;
 };
 
+// Hardcoded homepages per merchant card ID
+const MERCHANT_HOMEPAGES: Record<string, string> = {
+  "charles-keith-ph": "https://www.charleskeith.com/ph",
+  "asos-asia": "https://www.asos.com",
+  "shopee-ph": "https://shopee.ph",
+  "lazada-ph": "https://www.lazada.com.ph",
+  "zalora-ph": "https://www.zalora.com.ph",
+  "sephora-ph": "https://www.sephora.ph",
+  "aliexpress-global": "https://best.aliexpress.com",
+  "ecoflow-ph": "https://www.ecoflow.com/ph",
+  "havaianas-ph": "https://havaianas.ph",
+  "juicestore-ph": "https://juicestore.com",
+  "love-bonito-ph": "https://www.lovebonito.com",
+  "traveloka-ph": "https://www.traveloka.com/en-ph",
+  "zataru-ph": "https://zataru.com",
+};
+
 const MERCHANTS: Merchant[] = [
+  // Charles & Keith PH
   {
     id: "charles-keith-ph",
-    name: "Charles & Keith PH",
+    name: "Charles & Keith PH (via affiliate network)",
     region: "Philippines · Fashion · Footwear & bags",
     status: "live",
     payoutSpeed: "slow",
@@ -46,118 +64,8 @@ const MERCHANTS: Merchant[] = [
       "Commission depends on your affiliate network rules and approval.",
     ruleMerchantName: "Charles & Keith PH",
   },
-  {
-    id: "razer-cps",
-    name: "Razer (CPS)",
-    region: "Philippines + regional · Gaming & peripherals",
-    status: "live",
-    payoutSpeed: "normal",
-    typicalCommission: "Tech peripherals CPS (mid to small % per sale).",
-    categoryFocus: "Gaming mice, keyboards, headsets, and accessories",
-    allowedTrafficNotes:
-      "Organic gaming content, setup tours, and YouTube reviews. Avoid brand bidding or impersonating official channels.",
-    notes:
-      "Strong for student gamers and casual players. Works well with desk setup and gameplay content.",
-    disclaimer:
-      "Always verify merchant rules inside your affiliate network.",
-    ruleMerchantName: "Razer (CPS)",
-  },
-  {
-    id: "shopee-ph",
-    name: "Shopee PH",
-    region: "Philippines · Marketplace",
-    status: "live",
-    payoutSpeed: "varies",
-    typicalCommission:
-      "Small per order but scalable with volume; varies by seller and category.",
-    categoryFocus:
-      "Everyday items, home goods, gadgets, fashion, and “TikTok made me buy it” finds.",
-    allowedTrafficNotes:
-      "Organic TikTok, Facebook groups, Messenger, IG Reels. Rules depend on the affiliate program.",
-    notes:
-      "Great for budol finds and payday hauls. Extremely familiar to PH audiences.",
-    disclaimer: "Final rules depend on your affiliate program setup.",
-    ruleMerchantName: "Shopee PH",
-  },
-  {
-    id: "lazada-ph",
-    name: "Lazada PH",
-    region: "Philippines · Marketplace",
-    status: "live",
-    payoutSpeed: "varies",
-    typicalCommission:
-      "Similar to Shopee: small–mid per order depending on category.",
-    categoryFocus: "Home, electronics, fashion, flagship stores.",
-    allowedTrafficNotes:
-      "Content-driven traffic via TikTok, Facebook, Instagram. Avoid spam and coupon misuse.",
-    notes:
-      "Great for official brands and bigger-ticket items. Good for comparison-style content (e.g., Shopee vs Lazada).",
-    disclaimer:
-      "Commission depends on your affiliate approval and network rules.",
-    ruleMerchantName: "Lazada PH",
-  },
-  {
-    id: "zalora-ph",
-    name: "Zalora PH",
-    region: "Philippines · Fashion marketplace",
-    status: "live",
-    payoutSpeed: "normal",
-    typicalCommission: "Mid-level % on eligible fashion items.",
-    categoryFocus: "Fashion, footwear, and accessories",
-    allowedTrafficNotes:
-      "Organic IG/TikTok content, OOTDs, and style posts. Avoid coupon abuse and spammy reposting.",
-    notes:
-      "Great for payday outfits and fashion-focused creators in PH.",
-    disclaimer:
-      "Commission varies by campaign and category.",
-    ruleMerchantName: "Zalora PH",
-  },
 
-  //
-  // Sephora PH - CPS
-  //
-  {
-    id: "sephora-ph",
-    name: "Sephora PH - CPS",
-    region: "Philippines · Beauty & Skincare",
-    status: "live",
-    payoutSpeed: "varies",
-    typicalCommission: "Beauty & skincare CPS via Involve Asia.",
-    categoryFocus: "Makeup, skincare, fragrance, and beauty tools",
-    allowedTrafficNotes:
-      "Organic TikTok GRWM, IG Reels, YouTube hauls and reviews. No coupon or cashback traffic.",
-    notes:
-      "Great for GRWM, skincare routines, and honest haul content. Performs best with authentic creator videos.",
-    disclaimer:
-      "Final rules and commissions depend on your Involve Asia setup.",
-    ruleMerchantName: "Sephora PH - CPS",
-  },
-
-  //
-  // AliExpress Global
-  //
-  {
-    id: "aliexpress-global",
-    name: "AliExpress Global",
-    region: "Global · Marketplace",
-    status: "live",
-    payoutSpeed: "varies",
-    typicalCommission:
-      "CPS range (varies heavily by category and product) via Involve Asia.",
-    categoryFocus:
-      "Low-cost gadgets, home goods, fashion accessories, and trending items.",
-    allowedTrafficNotes:
-      "Organic content only — unboxings, reviews, and ‘TikTok made me buy it’ content. No coupon sites, cashback, or brand bidding.",
-    notes:
-      "Strong for viral gadgets, budget finds, and international items. Best with unboxing and review-style content.",
-    disclaimer:
-      "Commission, availability, and rules depend on your AliExpress approval in Involve Asia.",
-    ruleMerchantName: "AliExpress (Global)",
-  },
-
-  //
   // ASOS (Asia) - CPS
-  //
   {
     id: "asos-asia",
     name: "ASOS (Asia) - CPS",
@@ -175,12 +83,10 @@ const MERCHANTS: Merchant[] = [
     ruleMerchantName: "ASOS (Asia) - CPS",
   },
 
-  //
-  // Havaianas PH
-  //
+  // Havaianas PH - CPS
   {
     id: "havaianas-ph",
-    name: "Havaianas PH",
+    name: "Havaianas PH - CPS",
     region: "Philippines · Footwear",
     status: "live",
     payoutSpeed: "normal",
@@ -192,12 +98,10 @@ const MERCHANTS: Merchant[] = [
       "Great for summer, beach, and casual outfit content. Very familiar brand for PH buyers.",
     disclaimer:
       "Commission and availability depend on your Havaianas PH approval in Involve Asia.",
-    ruleMerchantName: "Havaianas PH",
+    ruleMerchantName: "Havaianas PH - CPS",
   },
 
-  //
   // EcoFlow PH - CPS
-  //
   {
     id: "ecoflow-ph",
     name: "EcoFlow PH - CPS",
@@ -216,12 +120,10 @@ const MERCHANTS: Merchant[] = [
     ruleMerchantName: "EcoFlow PH - CPS",
   },
 
-  //
   // Juicestore
-  //
   {
     id: "juicestore-ph",
-    name: "Juicestore",
+    name: "Juicestore (via Involve Asia)",
     region: "Philippines · Fashion & streetwear",
     status: "live",
     payoutSpeed: "normal",
@@ -236,12 +138,29 @@ const MERCHANTS: Merchant[] = [
     ruleMerchantName: "Juice Store",
   },
 
-  //
-  // Love Bonito (PH)
-  //
+  // Lazada PH (Accesstrade)
+  {
+    id: "lazada-ph",
+    name: "Lazada PH (via Accesstrade / other affiliate networks)",
+    region: "Philippines · Marketplace",
+    status: "live",
+    payoutSpeed: "varies",
+    typicalCommission:
+      "Similar to Shopee: small–mid per order depending on category.",
+    categoryFocus: "Home, electronics, fashion, flagship stores.",
+    allowedTrafficNotes:
+      "Content-driven traffic via TikTok, Facebook, Instagram. Avoid spam and coupon misuse.",
+    notes:
+      "Great for official brands and bigger-ticket items. Good for comparison-style content (e.g., Shopee vs Lazada).",
+    disclaimer:
+      "Commission depends on your affiliate approval and network rules.",
+    ruleMerchantName: "Lazada PH",
+  },
+
+  // Love Bonito (PH) - CPS
   {
     id: "love-bonito-ph",
-    name: "Love Bonito (PH)",
+    name: "Love Bonito (PH) - CPS",
     region: "Philippines · Women’s fashion",
     status: "live",
     payoutSpeed: "normal",
@@ -252,16 +171,52 @@ const MERCHANTS: Merchant[] = [
     notes:
       "Strong for women’s fashion creators targeting PH and wider SEA audiences.",
     disclaimer:
-      "Commission depends on your Love Bonito (PH) approval in Involve Asia.",
-    ruleMerchantName: "Love Bonito (PH)",
+      "Commission depends on your Love Bonito (PH) - CPS approval in Involve Asia.",
+    ruleMerchantName: "Love Bonito (PH) - CPS",
   },
 
-  //
-  // SHEIN Global
-  //
+  // Sephora PH - CPS
+  {
+    id: "sephora-ph",
+    name: "Sephora PH - CPS",
+    region: "Philippines · Beauty & Skincare",
+    status: "live",
+    payoutSpeed: "varies",
+    typicalCommission: "Beauty & skincare CPS via Involve Asia.",
+    categoryFocus: "Makeup, skincare, fragrance, and beauty tools",
+    allowedTrafficNotes:
+      "Organic TikTok GRWM, IG Reels, YouTube hauls and reviews. No coupon or cashback traffic.",
+    notes:
+      "Great for GRWM, skincare routines, and honest haul content. Performs best with authentic creator videos.",
+    disclaimer:
+      "Final rules and commissions depend on your Involve Asia setup.",
+    ruleMerchantName: "Sephora PH - CPS",
+  },
+
+  // AliExpress (Global) - CPS
+  {
+    id: "aliexpress-global",
+    name: "AliExpress (Global) - CPS",
+    region: "Global · Marketplace",
+    status: "live",
+    payoutSpeed: "varies",
+    typicalCommission:
+      "CPS range (varies heavily by category and product) via Involve Asia.",
+    categoryFocus:
+      "Low-cost gadgets, home goods, fashion accessories, and trending items.",
+    allowedTrafficNotes:
+      "Organic content only — unboxings, reviews, and ‘TikTok made me buy it’ content. No coupon sites, cashback, or brand bidding.",
+    notes:
+      "Strong for viral gadgets, budget finds, and international items. Best with unboxing and review-style content.",
+    disclaimer:
+      "Commission, availability, and rules depend on your AliExpress approval in Involve Asia.",
+    ruleMerchantName: "AliExpress (Global) - CPS",
+  },
+
+  // Shein Global - CPS
   {
     id: "shein-global",
-    name: "SHEIN Global",
+    name: "SHEIN Global - CPS",
     region: "Global · Fast fashion",
     status: "live",
     payoutSpeed: "varies",
@@ -276,9 +231,26 @@ const MERCHANTS: Merchant[] = [
     ruleMerchantName: "Shein Global - CPS",
   },
 
-  //
+  // Shopee PH - CPS
+  {
+    id: "shopee-ph",
+    name: "Shopee PH - CPS",
+    region: "Philippines · Marketplace",
+    status: "live",
+    payoutSpeed: "varies",
+    typicalCommission:
+      "Varies by seller/category; small per order but scalable with volume.",
+    categoryFocus:
+      "Everyday items, home goods, gadgets, fashion, and ‘TikTok made me buy it’ finds.",
+    allowedTrafficNotes:
+      "Organic TikTok, Facebook groups, Messenger, IG Reels. Rules depend on the affiliate program.",
+    notes:
+      "Great for budol finds and payday hauls. Extremely familiar to PH audiences.",
+    disclaimer: "Final rules depend on your affiliate program setup.",
+    ruleMerchantName: "Shopee PH - CPS",
+  },
+
   // Traveloka PH - CPS
-  //
   {
     id: "traveloka-ph",
     name: "Traveloka PH - CPS",
@@ -297,13 +269,29 @@ const MERCHANTS: Merchant[] = [
     ruleMerchantName: "Traveloka PH - CPS",
   },
 
-  //
+  // Zalora PH
+  {
+    id: "zalora-ph",
+    name: "Zalora PH (via affiliate networks)",
+    region: "Philippines · Fashion marketplace",
+    status: "live",
+    payoutSpeed: "normal",
+    typicalCommission: "Mid-level % on eligible fashion items.",
+    categoryFocus: "Fashion, footwear, and accessories",
+    allowedTrafficNotes:
+      "Organic IG/TikTok content, OOTDs, and style posts. Avoid coupon abuse and spammy reposting.",
+    notes:
+      "Great for payday outfits and fashion-focused creators in PH.",
+    disclaimer:
+      "Commission varies by campaign and category.",
+    ruleMerchantName: "Zalora PH",
+  },
+
   // Zataru PH (Accesstrade)
-  //
   {
     id: "zataru-ph",
-    name: "Zataru PH",
-    region: "Philippines · E-commerce (Accesstrade)",
+    name: "Zataru PH (via Accesstrade)",
+    region: "Philippines · E-commerce",
     status: "live",
     payoutSpeed: "varies",
     typicalCommission:
@@ -440,83 +428,119 @@ export default async function MerchantsPage() {
             linkmint.co works with top PH and global merchants via affiliate
             networks. Always follow official program rules.
           </p>
+          <p className="mt-2 text-[11px] text-slate-500">
+            Tip: Pick the merchants that match your{" "}
+            <span className="font-semibold text-slate-200">
+              content style and audience
+            </span>
+            , then browse their site, copy a product link, and create a smart
+            link using the creator.
+          </p>
         </header>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {enhancedMerchants.map((m) => (
-            <article
-              key={m.id}
-              className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/60 p-4"
-            >
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-slate-50">
-                    {m.name}
-                  </h2>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(
-                      m.status
-                    )}`}
+          {enhancedMerchants.map((m) => {
+            const homepage = MERCHANT_HOMEPAGES[m.id];
+
+            return (
+              <article
+                key={m.id}
+                className="flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+              >
+                <div>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <h2 className="text-sm font-semibold text-slate-50">
+                      {m.name}
+                    </h2>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${statusBadgeClass(
+                        m.status
+                      )}`}
+                    >
+                      {statusLabel(m.status)}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400">{m.region}</p>
+
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-slate-300 sm:grid-cols-2">
+                    <div>
+                      <p className="font-semibold text-slate-200">
+                        Payout feel
+                      </p>
+                      <p className="mt-0.5">
+                        {payoutSpeedLabel(m.payoutSpeed)} (typical)
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-200">
+                        Typical commission
+                      </p>
+                      <p className="mt-0.5">{m.typicalCommission}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-200">
+                        Category focus
+                      </p>
+                      <p className="mt-0.5">{m.categoryFocus}</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-200">
+                        Traffic notes
+                      </p>
+                      <p className="mt-0.5">{m.allowedTrafficNotes}</p>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-[11px] text-slate-300">{m.notes}</p>
+
+                  {m.disclaimer && (
+                    <p className="mt-2 text-[10px] text-slate-500">
+                      {m.disclaimer}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    href="/dashboard/create-link"
+                    className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-[11px] font-semibold text-slate-950 hover:bg-teal-400"
                   >
-                    {statusLabel(m.status)}
-                  </span>
+                    Create smart link with this merchant
+                  </Link>
+
+                  {homepage && (
+                    <a
+                      href={homepage}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
+                    >
+                      Visit merchant site
+                    </a>
+                  )}
+
+                  <Link
+                    href="/tutorial"
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
+                  >
+                    Learn how to promote safely
+                  </Link>
                 </div>
-
-                <p className="text-[11px] text-slate-400">{m.region}</p>
-
-                <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-slate-300 sm:grid-cols-2">
-                  <div>
-                    <p className="font-semibold text-slate-200">Payout feel</p>
-                    <p className="mt-0.5">
-                      {payoutSpeedLabel(m.payoutSpeed)} (typical)
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-200">
-                      Typical commission
-                    </p>
-                    <p className="mt-0.5">{m.typicalCommission}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-200">
-                      Category focus
-                    </p>
-                    <p className="mt-0.5">{m.categoryFocus}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-200">
-                      Traffic notes
-                    </p>
-                    <p className="mt-0.5">{m.allowedTrafficNotes}</p>
-                  </div>
-                </div>
-
-                <p className="mt-3 text-[11px] text-slate-300">{m.notes}</p>
-
-                {m.disclaimer && (
-                  <p className="mt-2 text-[10px] text-slate-500">
-                    {m.disclaimer}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link
-                  href="/dashboard/links"
-                  className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-[11px] font-semibold text-slate-950 hover:bg-teal-400"
-                >
-                  Create smart link with this merchant
-                </Link>
-                <Link
-                  href="/tutorial"
-                  className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
-                >
-                  Learn how to promote safely
-                </Link>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
+
+        <p className="mt-5 text-[10px] text-slate-500">
+          All information above is{" "}
+          <span className="font-semibold text-slate-300">
+            general and AI-assisted
+          </span>{" "}
+          and does not override any official affiliate program terms. Always
+          rely on the official merchant or network documentation for final
+          rules, rates, and regional availability.
+        </p>
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+// app/dashboard/merchants/page.tsx
+
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
@@ -42,7 +44,13 @@ function deriveHomepage(m: MerchantRule): string | null {
   return `https://${raw.replace(/^\./, "")}`;
 }
 
-function StatusPill({ status, active }: { status: string | null; active: boolean }) {
+function StatusPill({
+  status,
+  active,
+}: {
+  status: string | null;
+  active: boolean;
+}) {
   const s = (status || "").toUpperCase();
   const base =
     "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium";
@@ -124,7 +132,7 @@ export default async function MerchantsBrowsePage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             Browse Merchants
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="mt-1 text-sm text-gray-600">
             These merchants are currently enabled inside{" "}
             <span className="font-semibold">linkmint.co</span> for your region.
             Visit a merchant, choose a product, copy the product URL, then
@@ -134,7 +142,7 @@ export default async function MerchantsBrowsePage() {
 
         <Link
           href="/dashboard"
-          className="text-sm text-teal-700 hover:text-teal-900 font-medium"
+          className="text-sm font-medium text-teal-700 hover:text-teal-900"
         >
           ← Back to Dashboard
         </Link>
@@ -161,22 +169,22 @@ export default async function MerchantsBrowsePage() {
           return (
             <div
               key={m.id}
-              className="rounded-2xl border bg-white p-4 shadow-sm flex flex-col gap-3"
+              className="flex flex-col gap-3 rounded-2xl border bg-white p-4 shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="text-base font-semibold truncate">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="truncate text-base font-semibold">
                       {name}
                     </h2>
 
                     <StatusPill status={m.status} active={m.active} />
 
-                    <span className="text-xs rounded-full bg-gray-100 px-2 py-0.5 text-gray-700 border border-gray-200">
+                    <span className="rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
                       Network: {network}
                     </span>
 
-                    <span className="text-xs rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 border border-indigo-200">
+                    <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
                       Market: {market}
                     </span>
                   </div>
@@ -188,7 +196,7 @@ export default async function MerchantsBrowsePage() {
                         href={homepage}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-mono text-xs text-teal-700 hover:text-teal-900 break-all"
+                        className="break-all font-mono text-xs text-teal-700 hover:text-teal-900"
                       >
                         {homepage}
                       </a>
@@ -221,7 +229,7 @@ export default async function MerchantsBrowsePage() {
                 )}
               </div>
 
-              <div className="border-t pt-2 mt-1 text-xs text-gray-500">
+              <div className="mt-1 border-t pt-2 text-xs text-gray-500">
                 To promote this merchant: open their website, choose a product,
                 copy the full product URL, then create a SmartLink in your
                 dashboard. linkmint.co will handle the tracking behind the
