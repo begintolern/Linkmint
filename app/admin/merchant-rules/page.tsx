@@ -49,11 +49,26 @@ function StatusBadge({ status }: { status: Status }) {
       : status === "PENDING"
       ? "bg-yellow-50 text-yellow-700 border-yellow-300"
       : "bg-red-50 text-red-700 border-red-300";
-  return <span className={`text-xs px-2 py-1 rounded-full border ${theme}`}>{status}</span>;
+  return (
+    <span className={`text-xs px-2 py-1 rounded-full border ${theme}`}>
+      {status}
+    </span>
+  );
 }
 
-export default async function MerchantRulesPage() {
+type PageProps = {
+  searchParams?: {
+    show?: string;
+  };
+};
+
+export default async function MerchantRulesPage({ searchParams }: PageProps) {
+  const showParam = searchParams?.show ?? "all";
+  const activeOnly = showParam === "active";
+
+  // 🔎 IMPORTANT: "active only" = enabled AND status ACTIVE (approved)
   const rules: Rule[] = await prisma.merchantRule.findMany({
+    where: activeOnly ? { active: true, status: "ACTIVE" } : {},
     orderBy: { merchantName: "asc" },
     select: {
       id: true,
@@ -70,14 +85,51 @@ export default async function MerchantRulesPage() {
 
   return (
     <main className="mx-auto max-w-5xl p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Merchant Rules</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Merchant Rules</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Manage how linkmint.co treats each merchant (status, domain, and
+            commission rules).
+          </p>
+        </div>
         <Link href="/admin" className="text-sm text-blue-600 hover:underline">
           ← Back to Admin
         </Link>
       </div>
 
-      {!rules.length && <div className="text-sm opacity-70">No rules found.</div>}
+      {/* Filter controls */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-gray-600">Filter:</span>
+        <Link
+          href="/admin/merchant-rules"
+          className={`text-xs px-3 py-1 rounded-full border ${
+            !activeOnly
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          }`}
+        >
+          All rules
+        </Link>
+        <Link
+          href="/admin/merchant-rules?show=active"
+          className={`text-xs px-3 py-1 rounded-full border ${
+            activeOnly
+              ? "bg-blue-600 text-white border-blue-600"
+              : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          }`}
+        >
+          Active & approved only
+        </Link>
+        <span className="ml-auto text-xs text-gray-500">
+          Showing <strong>{rules.length}</strong>{" "}
+          {activeOnly ? "active + approved" : "total"} merchant rules
+        </span>
+      </div>
+
+      {!rules.length && (
+        <div className="text-sm opacity-70">No rules found.</div>
+      )}
 
       {/* Add new */}
       <div className="rounded-2xl border bg-white p-4 shadow-sm">
@@ -106,7 +158,9 @@ export default async function MerchantRulesPage() {
                   <div className="flex items-center gap-3 flex-wrap">
                     <div className="text-lg font-semibold truncate">
                       {merchantName}{" "}
-                      <span className="text-sm text-gray-400">({networkStr})</span>
+                      <span className="text-sm text-gray-400">
+                        ({networkStr})
+                      </span>
                     </div>
 
                     {/* Read-only badge */}
@@ -138,7 +192,11 @@ export default async function MerchantRulesPage() {
                     </span>
                   </div>
 
-                  {notesStr ? <div className="text-sm text-gray-500 mt-1">{notesStr}</div> : null}
+                  {notesStr ? (
+                    <div className="text-sm text-gray-500 mt-1">
+                      {notesStr}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">

@@ -10,6 +10,7 @@ type Merchant = {
   market: string | null;
   allowedRegions?: string[] | null;
   updatedAt?: string | null;
+  active?: boolean; // ⬅️ used for "Show active only" filter
 };
 
 type Props = {
@@ -25,6 +26,7 @@ export default function MerchantsClient({
 }: Props) {
   const [region, setRegion] = useState<string>(initialRegion);
   const [showAll, setShowAll] = useState<boolean>(initialAll && isAdmin);
+  const [showOnlyActive, setShowOnlyActive] = useState<boolean>(false); // ⬅️ new
   const [items, setItems] = useState<Merchant[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
@@ -70,7 +72,9 @@ export default function MerchantsClient({
 
   async function handleDelete(id: string) {
     if (!isAdmin) return;
-    const go = window.confirm("Delete this merchant rule? This cannot be undone.");
+    const go = window.confirm(
+      "Delete this merchant rule? This cannot be undone."
+    );
     if (!go) return;
 
     setDeletingId(id);
@@ -92,6 +96,13 @@ export default function MerchantsClient({
       setDeletingId(null);
     }
   }
+
+  // Apply "active only" filter for admin
+  const visibleItems = useMemo(() => {
+    if (!isAdmin || !showOnlyActive) return items;
+    // Treat undefined as active-safe so we don't accidentally hide older rows
+    return items.filter((m) => m.active !== false);
+  }, [items, isAdmin, showOnlyActive]);
 
   return (
     <div className="space-y-4">
@@ -122,6 +133,15 @@ export default function MerchantsClient({
               />
               View all regions (admin)
             </label>
+
+            <label className="ml-4 text-sm flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={showOnlyActive}
+                onChange={(e) => setShowOnlyActive(e.target.checked)}
+              />
+              Show active only
+            </label>
           </>
         )}
 
@@ -135,7 +155,7 @@ export default function MerchantsClient({
       </div>
 
       <div className="text-sm text-gray-600">
-        Showing <span className="font-medium">{items.length}</span> of{" "}
+        Showing <span className="font-medium">{visibleItems.length}</span> of{" "}
         <span className="font-medium">{total}</span>
       </div>
 
@@ -152,15 +172,15 @@ export default function MerchantsClient({
             </tr>
           </thead>
           <tbody>
-            {items.map((m) => (
+            {visibleItems.map((m) => (
               <tr key={m.id} className="border-t">
                 <td className="p-2">{m.merchantName ?? "—"}</td>
                 <td className="p-2">{m.network ?? "—"}</td>
                 <td className="p-2">{m.market ?? "—"}</td>
                 <td className="p-2">
-                  {(m.allowedRegions && m.allowedRegions.length > 0
+                  {m.allowedRegions && m.allowedRegions.length > 0
                     ? m.allowedRegions.join(", ")
-                    : "—")}
+                    : "—"}
                 </td>
                 <td className="p-2">
                   {m.updatedAt
@@ -181,7 +201,7 @@ export default function MerchantsClient({
                 )}
               </tr>
             ))}
-            {items.length === 0 && (
+            {visibleItems.length === 0 && (
               <tr>
                 <td className="p-4 text-gray-500" colSpan={isAdmin ? 6 : 5}>
                   No merchants found.
