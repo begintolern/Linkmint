@@ -10,6 +10,7 @@ import {
   buildLazadaUrl,
   appendSubid,
 } from "@/lib/affiliates/deeplink";
+import { buildInvolveAsiaUrl } from "@/lib/affiliates/involveAsia";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -302,21 +303,23 @@ export async function POST(req: NextRequest) {
     // Zalora PH (Involve / Lazada-style builder)
     trackedUrl = await buildLazadaUrl(parsedOriginal.toString(), created.id);
   } else if (ruleNetwork.includes("involve")) {
-    // Involve Asia merchants (including SHEIN Global)
+    // Involve Asia merchants (including SHEIN + Havaianas via helper)
+
     const isShein =
       /(^|\.)shein\.com$/.test(merchantDomain) ||
       merchantDomain.includes("shein.com") ||
       rule.merchantName.toLowerCase().includes("shein");
 
+    const productUrl = parsedForDetection.toString();
+
     if (isShein) {
-      // Use your SHEIN IA template with the REAL product URL
-      const productUrl = parsedForDetection.toString();
+      // Existing SHEIN template
       trackedUrl = `${SHEIN_IA_BASE}?url=${encodeURIComponent(
         productUrl
       )}&sub_id=${created.id}&lm_subid=${created.id}&utm_source=linkmint`;
     } else {
-      // Fallback for other IA merchants (until we wire templates)
-      trackedUrl = appendSubid(parsedOriginal.toString(), created.id);
+      // Generic IA builder – now handles Havaianas properly
+      trackedUrl = buildInvolveAsiaUrl(productUrl, created.id);
     }
   } else if (
     ruleNetwork.includes("lazada") ||
