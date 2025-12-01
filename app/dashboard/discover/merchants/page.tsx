@@ -44,6 +44,7 @@ const MERCHANT_HOMEPAGES: Record<string, string> = {
   "love-bonito-ph": "https://www.lovebonito.com",
   "traveloka-ph": "https://www.traveloka.com/en-ph",
   "zataru-ph": "https://zataru.com",
+  "shein-global": "https://ph.shein.com",
 };
 
 const MERCHANTS: Merchant[] = [
