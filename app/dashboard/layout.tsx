@@ -63,12 +63,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               >
                 Referrals
               </Link>
+
+              {/* ⭐ NEW: TRUST CENTER LINK */}
+              <Link
+                href="/trust-center"
+                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+              >
+                Trust Center
+              </Link>
+
               <Link
                 href="/dashboard/settings"
                 className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
               >
                 Settings
               </Link>
+
               <LogoutButton />
             </nav>
           </div>
@@ -99,24 +109,36 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 >
                   Earnings
                 </Link>
+
                 <Link
                   href="/dashboard/links"
                   className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
                 >
                   Links
                 </Link>
+
                 <Link
                   href="/dashboard/referrals"
                   className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
                 >
                   Referrals
                 </Link>
+
+                {/* ⭐ NEW: TRUST CENTER LINK */}
+                <Link
+                  href="/trust-center"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                >
+                  Trust Center
+                </Link>
+
                 <Link
                   href="/dashboard/settings"
                   className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
                 >
                   Settings
                 </Link>
+
               </div>
             </div>
           </div>

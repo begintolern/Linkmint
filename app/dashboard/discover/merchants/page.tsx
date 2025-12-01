@@ -44,7 +44,6 @@ const MERCHANT_HOMEPAGES: Record<string, string> = {
   "love-bonito-ph": "https://www.lovebonito.com",
   "traveloka-ph": "https://www.traveloka.com/en-ph",
   "zataru-ph": "https://zataru.com",
-  "bernardelli-global": "https://www.bernardellistores.com/en",
 };
 
 const MERCHANTS: Merchant[] = [
@@ -175,26 +174,6 @@ const MERCHANTS: Merchant[] = [
     ruleMerchantName: "Love Bonito (PH) - CPS",
   },
 
-  // Bernardelli Store Global - CPS
-  {
-    id: "bernardelli-global",
-    name: "Bernardelli Store Global (via affiliate network)",
-    region: "Global · Fashion · Bags & accessories",
-    status: "live",
-    payoutSpeed: "normal",
-    typicalCommission:
-      "Fashion CPS range (varies by product and campaign via Involve Asia).",
-    categoryFocus:
-      "Designer and premium fashion, bags, and accessories.",
-    allowedTrafficNotes:
-      "Organic content on TikTok, Instagram, Facebook, YouTube, blogs, and Messenger. No coupon, cashback, brand bidding, or spam traffic.",
-    notes:
-      "Good fit for fashion-conscious audiences who like premium pieces and curated styles. Works well with haul videos, styling tips, and outfit storytelling content.",
-    disclaimer:
-      "Exact commission and eligibility depend on your Involve Asia setup and the merchant’s latest rules.",
-    ruleMerchantName: "Bernardelli Store Global - CPS",
-  },
-
   // Sephora PH - CPS
   {
     id: "sephora-ph",
@@ -302,8 +281,7 @@ const MERCHANTS: Merchant[] = [
       "Organic IG/TikTok content, OOTDs, and style posts. Avoid coupon abuse and spammy reposting.",
     notes:
       "Great for payday outfits and fashion-focused creators in PH.",
-    disclaimer:
-      "Commission varies by campaign and category.",
+    disclaimer: "Commission varies by campaign and category.",
     ruleMerchantName: "Zalora PH",
   },
 
@@ -557,9 +535,10 @@ export default async function MerchantsPage() {
           <span className="font-semibold text-slate-300">
             general and AI-assisted
           </span>{" "}
-          and does not override any official affiliate program terms. Always
-          rely on the official merchant or network documentation for final
-          rules, rates, and regional availability.
+          and does not override any official affiliate program terms. Early
+          commissions can look small at first — rates and available merchants
+          improve over time as your linkmint.co account grows and earns more
+          approved purchases.
         </p>
       </div>
     </div>

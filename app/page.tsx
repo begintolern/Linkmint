@@ -116,8 +116,29 @@ export default function HomePage() {
 
       {/* FOOTER */}
       <footer className="mt-auto border-t border-gray-100 px-6 py-6">
-        <div className="mx-auto max-w-4xl text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} linkmint.co — all rights reserved.
+        <div className="mx-auto max-w-4xl text-center text-xs text-gray-500 space-y-3">
+
+          {/* Added Trust Center link */}
+          <div className="flex justify-center gap-4 text-[11px]">
+            <Link
+              href="/trust-center"
+              className="text-teal-700 hover:text-teal-900 hover:underline"
+            >
+              Trust Center
+            </Link>
+
+            <Link
+              href="/tutorial"
+              className="text-teal-700 hover:text-teal-900 hover:underline"
+            >
+              How it works
+            </Link>
+          </div>
+
+          <div className="text-gray-400">
+            © {new Date().getFullYear()} linkmint.co — all rights reserved.
+          </div>
+
         </div>
       </footer>
     </main>

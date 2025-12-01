@@ -159,10 +159,61 @@ export default function TrustCenterPage() {
           </p>
         </section>
 
-        {/* 4. Early payouts & float */}
+        {/* 4. Early earnings (why some commissions start small) */}
         <section className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/50 p-5 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold text-slate-50">
-            4. Early payouts (float) and strict limits
+            4. Early earnings: why some commissions start small
+          </h2>
+          <p className="mb-3 text-sm text-slate-300">
+            At the beginning, your commissions might look{" "}
+            <span className="font-semibold text-teal-200">very small</span> — a
+            few pesos or cents even on decent cart values. That&apos;s not a
+            bug, and it&apos;s not linkmint.co taking your share.
+          </p>
+          <ul className="space-y-2 text-sm text-slate-300">
+            <li className="flex gap-2">
+              <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+              <span>
+                Different merchants and regions pay{" "}
+                <span className="font-semibold">very different base rates</span>{" "}
+                — some PH marketplaces pay low-per-order commissions but scale
+                through volume.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+              <span>
+                linkmint.co passes your{" "}
+                <span className="font-semibold">full user share</span> of whatever
+                the merchant actually pays out — we don&apos;t secretly cut your
+                rate on top of that.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="mt-1 inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full bg-teal-400" />
+              <span>
+                Earnings usually feel better when you{" "}
+                <span className="font-semibold">
+                  mix higher-value items, stronger-paying merchants, and repeat
+                  buyers
+                </span>{" "}
+                instead of only low-ticket, low-rate orders.
+              </span>
+            </li>
+          </ul>
+          <p className="mt-4 text-xs text-slate-400">
+            As linkmint.co grows, we aim to shift more traffic toward{" "}
+            <span className="font-semibold">
+              better-paying merchants and markets
+            </span>{" "}
+            while still keeping PH users and everyday shoppers in the game.
+          </p>
+        </section>
+
+        {/* 5. Early payouts & float */}
+        <section className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/50 p-5 sm:p-6">
+          <h2 className="mb-3 text-lg font-semibold text-slate-50">
+            5. Early payouts (float) and strict limits
           </h2>
           <p className="mb-3 text-sm text-slate-300">
             In some cases, linkmint.co may offer{" "}
@@ -208,10 +259,10 @@ export default function TrustCenterPage() {
           </p>
         </section>
 
-        {/* 5. User, platform, merchant balance */}
+        {/* 6. User, platform, merchant balance */}
         <section className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/50 p-5 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold text-slate-50">
-            5. Balancing users, platform, and merchants
+            6. Balancing users, platform, and merchants
           </h2>
           <p className="mb-3 text-sm text-slate-300">
             linkmint.co is built to be{" "}
@@ -257,7 +308,7 @@ export default function TrustCenterPage() {
         {/* Links to other explainer pages */}
         <section className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6">
           <h2 className="mb-3 text-lg font-semibold text-slate-50">
-            6. Related pages
+            7. Related pages
           </h2>
           <p className="mb-3 text-sm text-slate-300">
             If you want more detail on specific parts of the system, these pages
