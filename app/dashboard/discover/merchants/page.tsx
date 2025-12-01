@@ -390,7 +390,7 @@ export default async function MerchantsPage() {
     const rule = key ? ruleMap.get(key) : undefined;
 
     let effectiveStatus: MerchantStatus = m.status;
-    let effectiveCommission = m.typicalCommission;
+    let effectiveCommission: string = m.typicalCommission;
 
     if (rule) {
       if (rule.active && rule.status === "ACTIVE") {
@@ -524,6 +524,13 @@ export default async function MerchantsPage() {
                   >
                     Learn how to promote safely
                   </Link>
+
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
+                  >
+                    Generate angles
+                  </button>
                 </div>
               </article>
             );

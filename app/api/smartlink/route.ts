@@ -11,6 +11,7 @@ import {
   appendSubid,
 } from "@/lib/affiliates/deeplink";
 import { buildInvolveAsiaUrl } from "@/lib/affiliates/involveAsia";
+import { cleanLazadaUrl } from "@/lib/urls/cleanLazadaUrl";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -268,6 +269,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Merchant domain + helpers
+  const merchantDomain = (rule.domainPattern || hostname).toLowerCase();
+  const ruleNetwork = (rule.network || "").toLowerCase();
+
+  const isShopeeHost = /(^|\.)shopee\.ph$/.test(merchantDomain);
+  const isLazadaHost = /(^|\.)lazada\.com\.ph$/.test(merchantDomain);
+  const isZaloraHost = /(^|\.)zalora\.com\.ph$/.test(merchantDomain);
+
+  // Base product URL we will use for tracking
+  let productUrl = parsedForDetection.toString();
+
+  // Lazada: auto-clean PDP URL (strip pvid, sessionid, etc.)
+  if (isLazadaHost) {
+    productUrl = cleanLazadaUrl(productUrl);
+  }
+
   // 1) Create SmartLink first to obtain subid
   const created = await prisma.smartLink.create({
     data: {
@@ -275,62 +292,50 @@ export async function POST(req: NextRequest) {
       merchantRuleId: (rule as any).id,
       merchantName: rule.merchantName,
       merchantDomain: rule.domainPattern ?? hostname,
-      originalUrl: parsedOriginal.toString(),
+      originalUrl: productUrl,
       shortUrl: "",
       label,
     },
   });
 
   // 2) Build tracked URL
-  const merchantDomain = (rule.domainPattern || hostname).toLowerCase();
-  const ruleNetwork = (rule.network || "").toLowerCase();
-
   let trackedUrl: string | null = null;
 
-  const isShopeeHost = /(^|\.)shopee\.ph$/.test(merchantDomain);
-  const isLazadaHost = /(^|\.)lazada\.com\.ph$/.test(merchantDomain);
-  const isZaloraHost = /(^|\.)zalora\.com\.ph$/.test(merchantDomain);
-
   if (isShopeeHost || ruleNetwork.includes("shopee")) {
-    // Shopee-specific builder (works as before)
-    trackedUrl = await buildShopeeUrl(parsedOriginal.toString(), created.id);
+    // Shopee-specific builder
+    trackedUrl = await buildShopeeUrl(productUrl, created.id);
   } else if (isLazadaHost) {
     // Lazada via Accesstrade ATID
     trackedUrl = `${LAZADA_PH_ACCESSTRADE_ATID}?url=${encodeURIComponent(
-      parsedOriginal.toString()
+      productUrl
     )}`;
   } else if (isZaloraHost) {
     // Zalora PH (Involve / Lazada-style builder)
-    trackedUrl = await buildLazadaUrl(parsedOriginal.toString(), created.id);
+    trackedUrl = await buildLazadaUrl(productUrl, created.id);
   } else if (ruleNetwork.includes("involve")) {
     // Involve Asia merchants (including SHEIN + Havaianas via helper)
-
     const isShein =
       /(^|\.)shein\.com$/.test(merchantDomain) ||
       merchantDomain.includes("shein.com") ||
       rule.merchantName.toLowerCase().includes("shein");
 
-    const productUrl = parsedForDetection.toString();
-
     if (isShein) {
-      // Existing SHEIN template
       trackedUrl = `${SHEIN_IA_BASE}?url=${encodeURIComponent(
         productUrl
       )}&sub_id=${created.id}&lm_subid=${created.id}&utm_source=linkmint`;
     } else {
-      // Generic IA builder – now handles Havaianas properly
       trackedUrl = buildInvolveAsiaUrl(productUrl, created.id);
     }
   } else if (
     ruleNetwork.includes("lazada") ||
     ruleNetwork.includes("zalora")
   ) {
-    trackedUrl = await buildLazadaUrl(parsedOriginal.toString(), created.id);
+    trackedUrl = await buildLazadaUrl(productUrl, created.id);
   }
 
   if (!trackedUrl) {
     // Last-resort fallback
-    trackedUrl = appendSubid(parsedOriginal.toString(), created.id);
+    trackedUrl = appendSubid(productUrl, created.id);
   }
 
   // 3) Save tracked URL
