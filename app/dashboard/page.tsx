@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import LinksCard from "./_components/LinksCard";
+import MerchantImpactCard from "./_components/MerchantImpactCard";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
@@ -148,6 +149,11 @@ export default async function DashboardPage() {
             </Link>
           ))}
         </div>
+      </section>
+
+      {/* Merchant impact */}
+      <section aria-label="merchant-impact" className="pt-1">
+        <MerchantImpactCard />
       </section>
 
       {/* Recent Links Card (kept at the bottom; fully responsive) */}
