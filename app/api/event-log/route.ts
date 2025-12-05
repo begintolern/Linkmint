@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
     // Try to persist if EventLog model exists; otherwise no-op
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
       const anyPrisma = prisma as any;
       if (anyPrisma?.eventLog?.create) {
         await anyPrisma.eventLog.create({
