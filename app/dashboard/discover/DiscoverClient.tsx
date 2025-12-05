@@ -279,7 +279,7 @@ export default function DiscoverClient() {
 
           <div className="flex flex-col items-end gap-2">
             {/* Language toggle */}
-            <div className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 p-0.5 text-[11px]">
+            <div className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setLanguage("en")}
@@ -315,13 +315,13 @@ export default function DiscoverClient() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/60 bg-amber-500/20 px-3 py-1">
                 <span>💰</span>
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-100">
+                <span className="text-xs font-semibold uppercase tracking-wide text-amber-100">
                   {isEN
                     ? "High-earning picks (AI-assisted)"
                     : "High-earning picks (AI-assisted)"}
                 </span>
               </div>
-              <p className="mt-2 text-[11px] text-amber-100/80">
+              <p className="mt-2 text-xs text-amber-100/80">
                 {isEN
                   ? "Categories like self-care, everyday fashion, and budget tech often pay better commissions and convert well for PH buyers. These suggestions are AI-assisted — you still choose the exact product and merchant."
                   : "Categories tulad ng self-care, everyday fashion, at budget tech ay madalas may mas ok na commission at conversion para sa PH buyers. AI-assisted lang ang suggestions na ‘to — ikaw pa rin ang pipili ng exact product at merchant."}
@@ -335,7 +335,7 @@ export default function DiscoverClient() {
                 key={s.id}
                 className="rounded-xl border border-slate-800/70 bg-slate-950/70 p-3"
               >
-                <p className="text-[11px] font-semibold text-teal-100 uppercase tracking-wide mb-1">
+                <p className="text-xs font-semibold text-teal-100 uppercase tracking-wide mb-1">
                   {s.category}
                 </p>
                 {s.ofwSafe && (
@@ -348,10 +348,10 @@ export default function DiscoverClient() {
                 <h3 className="text-sm font-semibold text-slate-50">
                   {s.title}
                 </h3>
-                <p className="mt-1 text-[11px] text-slate-400">
+                <p className="mt-1 text-xs text-slate-400">
                   {s.merchantName}
                 </p>
-                <p className="mt-2 text-[11px] text-slate-300">
+                <p className="mt-2 text-xs text-slate-300">
                   {isEN ? "Idea hint:" : "Idea hint:"}{" "}
                   <span className="italic text-slate-200">
                     {s.exampleAngle}
@@ -437,13 +437,13 @@ export default function DiscoverClient() {
                   "ph payday hot picks for Filipino buyers during sweldo",
                 )
               }
-              className="inline-flex items-center gap-2 rounded-full border border-amber-400 bg-amber-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-amber-100 hover:bg-amber-500/20"
+              className="inline-flex items-center gap-2 rounded-full border border-amber-400 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-amber-100 hover:bg-amber-500/20"
             >
               <span>🔥</span>
               <span>
                 {isEN ? "PH Payday Hot Picks" : "PH Payday Hot Picks (sweldo)"}
               </span>
-              <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[9px] font-medium">
+              <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-sm font-medium">
                 {isEN ? "AI-assisted" : "AI-assisted"}
               </span>
             </button>
@@ -456,7 +456,7 @@ export default function DiscoverClient() {
                   "tiktok-ready ideas for Filipino creators and short-form content",
                 )
               }
-              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400 bg-fuchsia-500/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-fuchsia-100 hover:bg-fuchsia-500/20"
+              className="inline-flex items-center gap-2 rounded-full border border-fuchsia-400 bg-fuchsia-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-fuchsia-100 hover:bg-fuchsia-500/20"
             >
               <span>🎵</span>
               <span>
@@ -464,7 +464,7 @@ export default function DiscoverClient() {
                   ? "TikTok-Ready Ideas"
                   : "TikTok-ready na product ideas"}
               </span>
-              <span className="rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-[9px] font-medium">
+              <span className="rounded-full bg-fuchsia-500/20 px-2 py-0.5 text-sm font-medium">
                 {isEN ? "AI-assisted" : "AI-assisted"}
               </span>
             </button>
@@ -475,7 +475,7 @@ export default function DiscoverClient() {
                 onClick={() =>
                   handleQuickPrompt("trending everyday fashion items for PH")
                 }
-                className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-teal-100"
+                className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-teal-100"
               >
                 {isEN
                   ? "Payday-friendly PH fashion"
@@ -486,7 +486,7 @@ export default function DiscoverClient() {
                 onClick={() =>
                   handleQuickPrompt("budget tech items students can afford")
                 }
-                className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-teal-100"
+                className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-teal-100"
               >
                 {isEN ? "Student tech / gaming" : "Student tech / gaming"}
               </button>
@@ -495,7 +495,7 @@ export default function DiscoverClient() {
                 onClick={() =>
                   handleQuickPrompt("small home upgrades for renters")
                 }
-                className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-teal-100"
+                className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-teal-100"
               >
                 {isEN ? "Small home upgrades" : "Maliit na home upgrades"}
               </button>
@@ -505,7 +505,7 @@ export default function DiscoverClient() {
           {/* Recent searches */}
           {recentQueries.length > 0 && (
             <div className="mt-4 space-y-1">
-              <p className="text-[11px] text-slate-500">
+              <p className="text-xs text-slate-500">
                 {isEN
                   ? "Recent searches (tap to reuse):"
                   : "Mga huling hinanap (tap para ulitin):"}
@@ -516,7 +516,7 @@ export default function DiscoverClient() {
                     key={text}
                     type="button"
                     onClick={() => handleRecentClick(text)}
-                    className="max-w-full truncate rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-teal-100"
+                    className="max-w-full truncate rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-teal-100"
                     title={text}
                   >
                     {text}
@@ -526,7 +526,7 @@ export default function DiscoverClient() {
             </div>
           )}
 
-          <p className="mt-3 text-[11px] text-slate-500">
+          <p className="mt-3 text-xs text-slate-500">
             {isEN ? (
               <>
                 Note: Suggestions are{" "}
@@ -557,7 +557,7 @@ export default function DiscoverClient() {
                 {isEN ? "Suggested ideas" : "Mga suggested na idea"}
               </h2>
               {hasSearched && (
-                <span className="text-[11px] text-slate-500">
+                <span className="text-xs text-slate-500">
                   {isThinking
                     ? isEN
                       ? "Refining suggestions…"
@@ -574,7 +574,7 @@ export default function DiscoverClient() {
             </div>
 
             {/* Category filter chips */}
-            <div className="flex flex-wrap gap-2 text-[11px]">
+            <div className="flex flex-wrap gap-2 text-xs">
               <CategoryChip
                 label={isEN ? "All" : "Lahat"}
                 active={activeCategory === "all"}
@@ -643,7 +643,7 @@ export default function DiscoverClient() {
                     <p className="mt-1 text-xs text-teal-200">
                       {s.merchantName}
                     </p>
-                    <p className="mt-1 text-[11px] text-slate-400">
+                    <p className="mt-1 text-xs text-slate-400">
                       {s.category}
                       {s.regionHint ? ` · ${s.regionHint}` : null}
                     </p>
@@ -657,7 +657,7 @@ export default function DiscoverClient() {
                     <p className="mt-3 text-xs text-slate-300">
                       {s.explanation}
                     </p>
-                    <p className="mt-3 text-[11px] italic text-slate-400">
+                    <p className="mt-3 text-xs italic text-slate-400">
                       {isEN ? "Suggested angle:" : "Suggested na anggulo:"}{" "}
                       <span className="not-italic text-slate-300">
                         {s.exampleAngle}
@@ -672,7 +672,7 @@ export default function DiscoverClient() {
 
                     {showAngles && angles.length > 0 && (
                       <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/80 p-3">
-                        <p className="mb-1 text-[11px] font-semibold text-slate-200">
+                        <p className="mb-1 text-xs font-semibold text-slate-200">
                           {isEN
                             ? "Sample angles you can use:"
                             : "Sample angles na pwede mong gamitin:"}
@@ -681,7 +681,7 @@ export default function DiscoverClient() {
                           {angles.map((angle, idx) => (
                             <li
                               key={idx}
-                              className="text-[11px] text-slate-300 leading-snug"
+                              className="text-xs text-slate-300 leading-snug"
                             >
                               • {angle}
                             </li>
@@ -697,7 +697,7 @@ export default function DiscoverClient() {
                       onClick={() =>
                         setOpenAnglesId(openAnglesId === s.id ? null : s.id)
                       }
-                      className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-teal-100"
+                      className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-teal-100"
                     >
                       <span>💡</span>
                       <span className="ml-1">
@@ -713,7 +713,7 @@ export default function DiscoverClient() {
 
                     <Link
                       href="/dashboard/links"
-                      className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-[11px] font-semibold text-slate-950 hover:bg-teal-400"
+                      className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400"
                     >
                       {isEN
                         ? "Create smart link with this idea"
@@ -721,7 +721,7 @@ export default function DiscoverClient() {
                     </Link>
                     <Link
                       href="/tutorial"
-                      className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
+                      className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-slate-50"
                     >
                       {isEN
                         ? "See how to promote it"
@@ -751,7 +751,7 @@ function CategoryChip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3 py-1 border text-[11px] ${
+      className={`rounded-full px-3 py-1 border text-xs ${
         active
           ? "border-teal-500 bg-teal-500/20 text-teal-100"
           : "border-slate-700 bg-slate-950 text-slate-200 hover:border-teal-500 hover:text-teal-100"

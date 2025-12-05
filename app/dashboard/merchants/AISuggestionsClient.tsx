@@ -47,7 +47,7 @@ export default function AISuggestionsClient() {
     <section className="rounded-2xl border bg-white p-4 sm:p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-base font-medium sm:text-lg">✨ AI Suggestions (beta)</h2>
-        <span className="rounded-full border px-2 py-0.5 text-[11px] text-gray-700">Preview</span>
+        <span className="rounded-full border px-2 py-0.5 text-xs text-gray-700">Preview</span>
       </div>
 
       {loading ? (
@@ -111,7 +111,7 @@ export default function AISuggestionsClient() {
         </div>
       )}
 
-      <p className="mt-3 text-[11px] text-gray-500">
+      <p className="mt-3 text-xs text-gray-500">
         This beta uses heuristic signals for now; we’ll swap in the full AI engine later.
       </p>
     </section>

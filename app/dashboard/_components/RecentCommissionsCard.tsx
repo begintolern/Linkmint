@@ -72,7 +72,7 @@ export default function RecentCommissionsCard() {
           <h2 className="text-sm font-semibold text-slate-50">
             Recent commissions
           </h2>
-          <p className="mt-0.5 text-[11px] text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-400">
             Latest earnings from your affiliate activity.
           </p>
         </div>
@@ -88,15 +88,15 @@ export default function RecentCommissionsCard() {
       </header>
 
       {loading && (
-        <p className="text-[11px] text-slate-400">Loading commissions…</p>
+        <p className="text-xs text-slate-400">Loading commissions…</p>
       )}
 
       {!loading && error && (
-        <p className="text-[11px] text-rose-400">{error}</p>
+        <p className="text-xs text-rose-400">{error}</p>
       )}
 
       {!loading && !error && (!data || data.length === 0) && (
-        <p className="text-[11px] text-slate-400">
+        <p className="text-xs text-slate-400">
           No commissions yet. Your first approved purchase will appear here.
         </p>
       )}
@@ -107,7 +107,7 @@ export default function RecentCommissionsCard() {
             {data!.slice(0, 6).map((item) => (
               <li
                 key={item.id}
-                className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-[11px]"
+                className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs"
               >
                 <div className="flex flex-col">
                   <span className="font-medium text-slate-100">

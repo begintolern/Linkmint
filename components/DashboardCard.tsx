@@ -19,7 +19,7 @@ export default function DashboardCard({ href, title, subtitle, badge }: Props) {
           TOOLS
         </div>
         {badge ? (
-          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-medium text-indigo-700">
+          <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
             {badge}
           </span>
         ) : null}

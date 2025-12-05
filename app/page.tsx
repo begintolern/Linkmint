@@ -38,7 +38,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-4xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1">
             <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-teal-700">
+            <span className="text-xs font-semibold uppercase tracking-wide text-teal-700">
               AI-assisted product ideas
             </span>
           </div>
@@ -105,7 +105,7 @@ export default function HomePage() {
             >
               Explore AI-assisted ideas →
             </Link>
-            <p className="text-[11px] text-gray-500">
+            <p className="text-xs text-gray-500">
               AI-assisted suggestions only. You stay in control of what to
               share and when to promote — and payouts still depend on cleared
               affiliate commissions.
@@ -119,7 +119,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-4xl text-center text-xs text-gray-500 space-y-3">
 
           {/* Added Trust Center link */}
-          <div className="flex justify-center gap-4 text-[11px]">
+          <div className="flex justify-center gap-4 text-xs">
             <Link
               href="/trust-center"
               className="text-teal-700 hover:text-teal-900 hover:underline"

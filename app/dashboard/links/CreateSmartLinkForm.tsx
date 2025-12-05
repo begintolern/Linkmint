@@ -248,7 +248,7 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
         <div className={`rounded-2xl border p-3 ${sevBadge}`}>
           <div className="flex items-center justify-between">
             <div className="text-sm font-semibold">Policy Pre-Check: {policy.severity}</div>
-            <div className="text-[11px]">
+            <div className="text-xs">
               Engine: {policy.usedLLM ? "LLM + heuristics" : "Heuristics"}
             </div>
           </div>
@@ -325,7 +325,7 @@ export default function CreateSmartLinkForm({ defaultSource = "" }: Props) {
           ))}
         </div>
 
-        <p className="mt-3 text-[11px] text-gray-500">
+        <p className="mt-3 text-xs text-gray-500">
           Tips: Avoid gift cards & coupon stacking. Purchases must happen after your Smart Link click.
         </p>
       </section>

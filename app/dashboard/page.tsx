@@ -1,8 +1,10 @@
+// app/dashboard/page.tsx
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 import LinksCard from "./_components/LinksCard";
 import MerchantImpactCard from "./_components/MerchantImpactCard";
+import RecentCommissionsCard from "./_components/RecentCommissionsCard";
 import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { redirect } from "next/navigation";
@@ -133,6 +135,11 @@ export default async function DashboardPage() {
         <ColoredStats />
       </section>
 
+      {/* Merchant impact bar (per-merchant totals) */}
+      <section aria-label="merchant-impact">
+        <MerchantImpactCard />
+      </section>
+
       {/* Action tiles — mobile stacks, tablet 2-up, desktop 3-up */}
       <section aria-label="actions">
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -151,13 +158,12 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Merchant impact */}
-      <section aria-label="merchant-impact" className="pt-1">
-        <MerchantImpactCard />
-      </section>
-
-      {/* Recent Links Card (kept at the bottom; fully responsive) */}
-      <section aria-label="recent-links" className="pt-1">
+      {/* Recent commissions + recent links row, directly under Referrals/Settings */}
+      <section
+        aria-label="recent-activity"
+        className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
+      >
+        <RecentCommissionsCard />
         <LinksCard />
       </section>
     </main>

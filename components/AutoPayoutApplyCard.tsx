@@ -76,7 +76,7 @@ export default function AutoPayoutApplyCard() {
     <div className="rounded-xl border bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">Auto-Payout Apply (manual)</h3>
-        <div className="text-[11px] text-gray-600">Lock: {lockInfo}</div>
+        <div className="text-xs text-gray-600">Lock: {lockInfo}</div>
       </div>
       <p className="mt-1 text-xs text-gray-600">
         Runs the auto-payout engine once. Safe while DISBURSE is OFF (DRY RUN).

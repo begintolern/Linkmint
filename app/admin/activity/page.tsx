@@ -89,7 +89,7 @@ export default async function AdminActivityPage() {
                       <div className="max-w-[260px] truncate text-xs text-blue-700">
                         {link.shortUrl || "—"}
                       </div>
-                      <div className="max-w-[260px] truncate text-[11px] text-gray-500">
+                      <div className="max-w-[260px] truncate text-xs text-gray-500">
                         {link.originalUrl}
                       </div>
                     </td>

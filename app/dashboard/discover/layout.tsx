@@ -24,13 +24,13 @@ export default function DiscoverLayout({
       {/* Top tab bar (sits above the page content) */}
       <div className="border-b border-slate-800 bg-slate-950 px-4 pt-4 sm:px-6 sm:pt-5">
         <div className="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-teal-200">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-teal-200">
             <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
             <span>Discover</span>
           </div>
           <Link
             href="/dashboard"
-            className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-[11px] font-medium text-slate-200 hover:bg-slate-800"
+            className="inline-flex items-center rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800"
           >
             ← Back to overview
           </Link>

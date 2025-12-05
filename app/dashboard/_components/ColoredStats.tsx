@@ -120,7 +120,7 @@ export default function ColoredStats() {
             </div>
             <div className="mt-1 text-xl font-semibold">{c.value}</div>
             {error && c.label === "Pending" ? (
-              <div className="mt-1 text-[11px] opacity-60">Couldn’t load.</div>
+              <div className="mt-1 text-xs opacity-60">Couldn’t load.</div>
             ) : null}
           </div>
         );

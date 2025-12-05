@@ -85,7 +85,7 @@ export default function HealthStatusCard() {
 function Stat({ label, value, loading }: { label: string; value: string; loading: boolean }) {
   return (
     <div className="rounded-lg border p-2">
-      <div className="text-[11px] uppercase tracking-wide text-gray-500">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
       <div className="mt-0.5 font-medium">{loading ? "…" : value}</div>
     </div>
   );

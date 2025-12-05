@@ -105,7 +105,7 @@ export default function RecentLinks({ limit = 10 }: { limit?: number }) {
                 </span>
               </div>
               {dest && (
-                <div className="mt-0.5 text-[11px] sm:text-xs text-slate-500 truncate">
+                <div className="mt-0.5 text-xs sm:text-xs text-slate-500 truncate">
                   {dest}
                 </div>
               )}
@@ -113,7 +113,7 @@ export default function RecentLinks({ limit = 10 }: { limit?: number }) {
             <div className="flex-shrink-0">
               <a
                 href={smartPath}
-                className="text-[11px] sm:text-xs text-emerald-700 hover:text-emerald-800 hover:underline break-all"
+                className="text-xs sm:text-xs text-emerald-700 hover:text-emerald-800 hover:underline break-all"
                 title={smartLabel}
               >
                 {smartLabel}

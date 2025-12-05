@@ -1,16 +1,11 @@
 // app/api/admin/involve-asia/sync/route.ts
 /**
- * Involve Asia Sync v2
+ * Involve Asia Sync v2 (debug)
  *
- * - Admin-only route
+ * - Admin-only / secret-only route
  * - Accepts IA transactions as JSON
  * - Matches sub_id -> SmartLink -> user
- * - Creates payout records for matched rows (pending/approved)
- *
- * NOTE:
- * - This is a first-pass importer.
- * - It may create duplicates if you send the same IA row multiple times.
- *   For now, only run once per new batch while we refine.
+ * - Creates commission records for matched rows
  */
 
 export const dynamic = "force-dynamic";
@@ -21,7 +16,7 @@ import { getServerSession } from "next-auth/next";
 import type { Session } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { CommissionType, CommissionStatus } from "@prisma/client";
 
 const ADMIN_USER_ID = "cmfbyhwog0000qi42l55ut0wi";
 
@@ -101,11 +96,21 @@ function normalizeIaRow(row: IaRawRow): NormalizedIaRow | null {
 }
 
 export async function POST(req: NextRequest) {
-  // Auth guard
-  const rawSession = (await getServerSession(authOptions)) as Session | null;
-  const userId = (rawSession?.user as any)?.id as string | undefined;
+  // ---- AUTH GUARD: admin session OR shared secret ----
+  const secretHeader =
+    req.headers.get("x-ia-secret") || req.headers.get("X-IA-Secret");
+  const expectedSecret = process.env.INVOLVE_ASIA_WEBHOOK_SECRET;
 
-  if (!userId || userId !== ADMIN_USER_ID) {
+  const rawSession = (await getServerSession(authOptions)) as Session | null;
+  const sessionUserId = (rawSession?.user as any)?.id as string | undefined;
+
+  const hasValidSession = !!sessionUserId && sessionUserId === ADMIN_USER_ID;
+  const hasValidSecret =
+    !!secretHeader &&
+    !!expectedSecret &&
+    secretHeader.trim() === expectedSecret.trim();
+
+  if (!hasValidSession && !hasValidSecret) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized" },
       { status: 401 }
@@ -182,63 +187,75 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // --- Create payout records for matched rows ---
-  const imported: Array<{
-    payoutId: string;
-    userId: string;
-    smartLinkId: string | null;
-    amount: number;
-    payoutStatus: string;
-    iaStatus: string;
-    iaOrderId: string | null;
-    iaSubId: string;
-  }> = [];
+  const imported: any[] = [];
+  const skipped: any[] = [];
+  const errors: any[] = [];
 
   for (const r of results) {
-    if (!r.userId) continue;
-    if (!r.ia.amount || r.ia.amount <= 0) continue;
+    if (!r.userId) {
+      skipped.push({
+        subId: r.ia.subId,
+        reason: "No userId / smartLink match",
+      });
+      continue;
+    }
+
+    if (!r.ia.amount || r.ia.amount <= 0) {
+      skipped.push({
+        subId: r.ia.subId,
+        reason: `Non-positive amount: ${r.ia.amount}`,
+      });
+      continue;
+    }
 
     const iaStatus = r.ia.status;
     const upper = iaStatus.toUpperCase();
 
-    // Map IA status → payout.status
-    let payoutStatus: "pending" | "approved";
+    let commissionStatus: CommissionStatus;
     if (
       upper === "APPROVED" ||
       upper === "CONFIRMED" ||
       upper === "SUCCESS" ||
       upper === "VALID"
     ) {
-      payoutStatus = "approved";
+      commissionStatus = CommissionStatus.APPROVED;
     } else {
-      // default: treat everything else as pending (waiting on merchant/network)
-      payoutStatus = "pending";
+      commissionStatus = CommissionStatus.PENDING;
     }
 
+    const description = r.ia.orderId
+      ? `${r.ia.merchantName ?? "Merchant"} · Order ${r.ia.orderId}`
+      : `${r.ia.merchantName ?? "Merchant"} purchase`;
+
     try {
-      const payout = await prisma.payout.create({
+      const commission = await prisma.commission.create({
         data: {
           userId: r.userId,
-          amount: new Prisma.Decimal(r.ia.amount),
-          status: payoutStatus,
-          // If your schema has more fields (like smartLinkId, currency, source),
-          // we can wire them in later once we see the model.
-        } as any,
+          amount: r.ia.amount,
+          status: commissionStatus,
+          source: r.ia.network || "Involve Asia",
+          description,
+          type: CommissionType.referral_purchase,
+        },
       });
 
       imported.push({
-        payoutId: payout.id,
+        commissionId: commission.id,
         userId: r.userId,
         smartLinkId: r.smartLinkId,
         amount: r.ia.amount,
-        payoutStatus,
+        commissionStatus,
         iaStatus,
         iaOrderId: r.ia.orderId,
         iaSubId: r.ia.subId,
       });
-    } catch (err) {
-      // If a single row fails, skip it but keep going
-      // You can inspect server logs for the detailed error.
+    } catch (err: any) {
+      console.error("IA sync create commission failed:", err);
+      errors.push({
+        subId: r.ia.subId,
+        reason: "Prisma error creating commission",
+        message: String(err?.message || err),
+      });
       continue;
     }
   }
@@ -250,8 +267,9 @@ export async function POST(req: NextRequest) {
       totalRows: normalized.length,
       invalidRows: invalid.length,
       importedCount: imported.length,
-      results,
       imported,
+      skipped,
+      errors,
     },
     { status: 200 }
   );

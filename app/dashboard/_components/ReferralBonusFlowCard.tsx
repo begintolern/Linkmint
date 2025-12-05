@@ -77,7 +77,7 @@ export default function ReferralBonusFlowCard() {
                   {step.title}
                 </h3>
                 {step.tag && (
-                  <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700 border border-teal-100">
+                  <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700 border border-teal-100">
                     {step.tag}
                   </span>
                 )}

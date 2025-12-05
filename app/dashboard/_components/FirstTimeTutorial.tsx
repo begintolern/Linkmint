@@ -88,7 +88,7 @@ export default function FirstTimeTutorial() {
         </div>
       </div>
 
-      <p className="mt-4 text-[11px] text-slate-400">
+      <p className="mt-4 text-xs text-slate-400">
         Tip: Focus on honest recommendations and real buyers. This keeps your
         TrustScore healthy and helps you unlock faster payouts over time.
       </p>

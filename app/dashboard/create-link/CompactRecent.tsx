@@ -137,12 +137,12 @@ export default function CompactRecent() {
                     {merchant}
                   </div>
                   {label && (
-                    <div className="text-[11px] text-gray-500 truncate">
+                    <div className="text-xs text-gray-500 truncate">
                       {label}
                     </div>
                   )}
                 </div>
-                <div className="text-[11px] text-gray-400 sm:text-right">
+                <div className="text-xs text-gray-400 sm:text-right">
                   {displayDate}
                 </div>
               </div>
@@ -153,7 +153,7 @@ export default function CompactRecent() {
                 onClick={() =>
                   window.open(shortPath, "_blank", "noopener,noreferrer")
                 }
-                className="mt-1 w-full text-left text-[11px] font-mono text-emerald-700 break-all underline-offset-2 hover:underline"
+                className="mt-1 w-full text-left text-xs font-mono text-emerald-700 break-all underline-offset-2 hover:underline"
               >
                 {fullShort}
               </button>
@@ -190,12 +190,12 @@ export default function CompactRecent() {
         <h3 className="text-sm font-semibold">Your recent links</h3>
         <Link
           href="/dashboard/links"
-          className="text-[11px] text-emerald-700 hover:text-emerald-800 underline"
+          className="text-xs text-emerald-700 hover:text-emerald-800 underline"
         >
           View all
         </Link>
       </div>
-      <p className="text-[11px] text-gray-500 mb-2">
+      <p className="text-xs text-gray-500 mb-2">
         Quick access to the last few links you created.
       </p>
       {renderBody()}

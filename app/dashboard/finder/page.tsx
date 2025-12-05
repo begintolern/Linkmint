@@ -240,7 +240,7 @@ export default function FinderPage() {
               </div>
 
               {(it.rating || it.reviews) && (
-                <div className="mt-1 text-[11px] text-muted-foreground">
+                <div className="mt-1 text-xs text-muted-foreground">
                   {it.rating ? `${it.rating.toFixed(1)}★` : ""}{" "}
                   {it.reviews ? `· ${Intl.NumberFormat().format(it.reviews)} reviews` : ""}
                 </div>
@@ -265,7 +265,7 @@ export default function FinderPage() {
                 </a>
               </div>
 
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Tip: Share your smart link on FB, Messenger, TikTok. You may earn when friends buy.
               </p>
             </div>

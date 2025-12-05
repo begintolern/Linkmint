@@ -394,7 +394,7 @@ export default async function MerchantsPage() {
                         {m.name}
                       </h2>
                       {m.viaShopeeMall && (
-                        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[9px] text-slate-300">
+                        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-sm text-slate-300">
                           via Shopee Mall
                         </span>
                       )}
@@ -409,9 +409,9 @@ export default async function MerchantsPage() {
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-400">{m.region}</p>
+                  <p className="text-xs text-slate-400">{m.region}</p>
 
-                  <div className="mt-3 grid grid-cols-1 gap-2 text-[11px] text-slate-300 sm:grid-cols-2">
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-300 sm:grid-cols-2">
                     <div>
                       <p className="font-semibold text-slate-200">
                         Payout feel
@@ -440,7 +440,7 @@ export default async function MerchantsPage() {
                     </div>
                   </div>
 
-                  <p className="mt-3 text-[11px] text-slate-300">
+                  <p className="mt-3 text-xs text-slate-300">
                     {m.notes}
                   </p>
 
@@ -454,7 +454,7 @@ export default async function MerchantsPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
                     href="/dashboard/create-link"
-                    className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-[11px] font-semibold text-slate-950 hover:bg-teal-400"
+                    className="inline-flex items-center rounded-full bg-teal-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-teal-400"
                   >
                     Create smart link
                   </Link>
@@ -464,7 +464,7 @@ export default async function MerchantsPage() {
                       href={homepage}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
+                      className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-slate-50"
                     >
                       Visit merchant site
                     </a>
@@ -472,7 +472,7 @@ export default async function MerchantsPage() {
 
                   <Link
                     href="/tutorial"
-                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[11px] text-slate-200 hover:border-teal-500 hover:text-slate-50"
+                    className="inline-flex items-center rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-200 hover:border-teal-500 hover:text-slate-50"
                   >
                     Learn how to promote safely
                   </Link>

@@ -101,7 +101,7 @@ export default function AdminLogsPage() {
                   </td>
                   <td className="p-3">
                     <div className="font-medium">{r.user?.name || r.user?.email || "—"}</div>
-                    <div className="text-[11px] text-gray-600">{r.user?.email || "—"}</div>
+                    <div className="text-xs text-gray-600">{r.user?.email || "—"}</div>
                   </td>
                   <td className="p-3">{r.amount != null ? `₱${r.amount}` : "—"}</td>
                   <td className="p-3">
@@ -120,7 +120,7 @@ export default function AdminLogsPage() {
                       {r.transactionId ? <div>Txn: {r.transactionId}</div> : null}
                     </div>
                   </td>
-                  <td className="p-3 text-[11px] text-gray-600">{r.id}</td>
+                  <td className="p-3 text-xs text-gray-600">{r.id}</td>
                 </tr>
               ))
             )}

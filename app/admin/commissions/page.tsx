@@ -235,7 +235,7 @@ export default function AdminCommissionsPage() {
                     <div className="font-medium truncate max-w-[18ch] md:max-w-none">
                       {it.user?.email ?? "—"}
                     </div>
-                    <div className="text-[11px] md:text-xs text-zinc-500 truncate max-w-[18ch] md:max-w-none">
+                    <div className="text-xs md:text-xs text-zinc-500 truncate max-w-[18ch] md:max-w-none">
                       {it.user?.name ?? "—"}
                     </div>
                   </td>
@@ -255,7 +255,7 @@ export default function AdminCommissionsPage() {
                     {it.type}
                   </td>
                   <td className="px-3 py-2 md:px-4 md:py-3 align-top">
-                    <span className="inline-block rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] md:text-xs">
+                    <span className="inline-block rounded-md bg-zinc-100 px-2 py-0.5 text-xs md:text-xs">
                       {it.status}
                     </span>
                   </td>
@@ -269,7 +269,7 @@ export default function AdminCommissionsPage() {
                     {it.description ?? "—"}
                   </td>
                   <td
-                    className="px-3 py-2 md:px-4 md:py-3 align-top hidden md:table-cell text-[11px] md:text-xs max-w-[30ch] truncate"
+                    className="px-3 py-2 md:px-4 md:py-3 align-top hidden md:table-cell text-xs md:text-xs max-w-[30ch] truncate"
                     title={it.id}
                   >
                     {it.id}

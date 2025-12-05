@@ -177,7 +177,7 @@ export default function PayoutMethodsPage() {
                 </pre>
               </div>
             )}
-            <p className="mt-2 text-[11px] text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               This tool sends a request to <code>/api/payouts/gcash</code>. It does not
               transfer funds.
             </p>

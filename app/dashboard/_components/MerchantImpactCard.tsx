@@ -90,29 +90,29 @@ export default function MerchantImpactCard() {
           <h2 className="text-sm font-semibold text-slate-900">
             Merchant impact
           </h2>
-          <p className="mt-0.5 text-[11px] text-slate-500">
+          <p className="mt-0.5 text-xs text-slate-500">
             Which merchants are generating your recent commissions.
           </p>
         </div>
       </header>
 
       {loading && (
-        <p className="text-[11px] text-slate-500">Loading…</p>
+        <p className="text-xs text-slate-500">Loading…</p>
       )}
 
       {!loading && error && (
-        <p className="text-[11px] text-rose-500">{error}</p>
+        <p className="text-xs text-rose-500">{error}</p>
       )}
 
       {!loading && !error && (!data || data.length === 0) && (
-        <p className="text-[11px] text-slate-500">
+        <p className="text-xs text-slate-500">
           No merchant impact yet. Once you earn commissions, your top
           merchants will appear here.
         </p>
       )}
 
       {!loading && !error && data && data.length > 0 && (
-        <ul className="mt-2 space-y-2 text-[11px]">
+        <ul className="mt-2 space-y-2 text-xs">
           {data.map((row) => {
             const max = data[0]?.total || 1;
             const pct = Math.max(

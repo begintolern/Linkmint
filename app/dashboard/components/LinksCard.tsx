@@ -101,10 +101,10 @@ export default async function LinksCard() {
                       >
                         {l.shortUrl ? l.shortUrl.replace(/^https?:\/\//, "") : "—"}
                       </a>
-                      <div className="text-[11px] text-gray-500">{timeAgo(l.createdAt)}</div>
+                      <div className="text-xs text-gray-500">{timeAgo(l.createdAt)}</div>
                     </div>
                   </div>
-                  <div className="mt-1 text-[11px] text-gray-500">Clicks: {l.clicks}</div>
+                  <div className="mt-1 text-xs text-gray-500">Clicks: {l.clicks}</div>
                 </div>
               </div>
             </li>

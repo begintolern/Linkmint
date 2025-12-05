@@ -153,7 +153,7 @@ export default function AdminPayoutsPage() {
                   </td>
                   <td className="p-3">
                     <div className="font-medium">{r.user?.name || r.user?.email || "—"}</div>
-                    <div className="text-[11px] text-gray-600">{r.user?.email || "—"}</div>
+                    <div className="text-xs text-gray-600">{r.user?.email || "—"}</div>
                   </td>
                   <td className="p-3 font-semibold">{r.amountPhp.toLocaleString()}</td>
                   <td className="p-3">{r.method}</td>
@@ -193,7 +193,7 @@ export default function AdminPayoutsPage() {
                       </button>
                     </div>
                   </td>
-                  <td className="p-3 text-[11px] text-gray-600">{r.id}</td>
+                  <td className="p-3 text-xs text-gray-600">{r.id}</td>
                 </tr>
               ))}
             </tbody>

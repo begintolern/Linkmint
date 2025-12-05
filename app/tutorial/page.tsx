@@ -582,7 +582,7 @@ function MockPhone({ children }: { children: React.ReactNode }) {
       <div className="relative aspect-[9/16] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/40 shadow-xl">
         {children}
       </div>
-      <p className="mt-2 text-center text-[11px] text-slate-400">Phone-size preview (9:16)</p>
+      <p className="mt-2 text-center text-xs text-slate-400">Phone-size preview (9:16)</p>
     </div>
   );
 }

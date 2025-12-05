@@ -204,7 +204,7 @@ export default function AdminMerchantsPage() {
                       {m.ready ? "Ready" : "Provisioned"}
                     </span>
                     {m.mode && (
-                      <span className="ml-2 align-middle text-[11px] text-muted-foreground">
+                      <span className="ml-2 align-middle text-xs text-muted-foreground">
                         {m.mode}
                       </span>
                     )}
