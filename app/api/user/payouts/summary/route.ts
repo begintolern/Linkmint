@@ -15,30 +15,60 @@ function toInt(n: unknown) {
 
 export async function GET(req: NextRequest) {
   try {
-    // 1) Resolve user via JWT (same pattern as commissions summary)
+    const url = new URL(req.url);
+
+    // Dev bypass flags (same behavior as before)
+    const allowDev =
+      process.env.ALLOW_DEV_PAYOUTS_REQUEST === "1" ||
+      process.env.ALLOW_DEV_PAYOUTS_REQUEST_BYPASS === "1";
+    const devUserIdParam = url.searchParams.get("devUserId") || undefined;
+
+    // 1) Primary auth: JWT token from NextAuth (same style as commissions summary)
     const token = await getToken({
       req,
       secret: process.env.NEXTAUTH_SECRET,
     });
 
-    if (!token || !token.email) {
+    let user = null as
+      | {
+          id: string;
+          email: string | null;
+          disabled: boolean;
+          deletedAt: Date | null;
+        }
+      | null;
+
+    if (token?.email) {
+      user = await prisma.user.findUnique({
+        where: { email: token.email },
+        select: {
+          id: true,
+          email: true,
+          disabled: true,
+          deletedAt: true,
+        },
+      });
+    } else if (allowDev && devUserIdParam) {
+      // 2) Dev-only fallback: explicit userId via query param
+      user = await prisma.user.findUnique({
+        where: { id: devUserIdParam },
+        select: {
+          id: true,
+          email: true,
+          disabled: true,
+          deletedAt: true,
+        },
+      });
+    }
+
+    if (!user) {
       return NextResponse.json(
         { ok: false, error: "UNAUTHORIZED" },
         { status: 401 }
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: token.email },
-      select: {
-        id: true,
-        email: true,
-        disabled: true,
-        deletedAt: true,
-      },
-    });
-
-    if (!user || user.disabled || user.deletedAt) {
+    if (user.disabled || user.deletedAt) {
       return NextResponse.json(
         { ok: false, error: "ACCOUNT_DISABLED" },
         { status: 403 }
@@ -47,7 +77,7 @@ export async function GET(req: NextRequest) {
 
     const userId = user.id;
 
-    // 2) Stats by status from payoutRequest
+    // 3) Stats by status (same logic as before)
     const byStatus = await prisma.payoutRequest.groupBy({
       by: ["status"],
       where: { userId },
@@ -70,7 +100,7 @@ export async function GET(req: NextRequest) {
       FAILED: stat("FAILED"),
     };
 
-    // 3) Recent items (last 10)
+    // 4) Recent items (last 10)
     const recent = await prisma.payoutRequest.findMany({
       where: { userId },
       orderBy: { requestedAt: "desc" },
