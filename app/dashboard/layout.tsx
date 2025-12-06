@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <nav className="hidden sm:flex items-center gap-6">
               <Link
                 href="/dashboard"
-                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+                className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Overview
               </Link>
@@ -40,26 +40,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {/* NEW: Discover (AI-assisted) */}
               <Link
                 href="/dashboard/discover"
-                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+                className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Discover (AI-assisted)
               </Link>
 
               <Link
                 href="/dashboard/earnings"
-                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+                className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Earnings
               </Link>
               <Link
                 href="/dashboard/links"
-                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+                className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Links
               </Link>
               <Link
                 href="/dashboard/referrals"
-                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+                className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Referrals
               </Link>
@@ -67,14 +67,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {/* ⭐ NEW: TRUST CENTER LINK */}
               <Link
                 href="/trust-center"
-                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+                className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Trust Center
               </Link>
 
               <Link
                 href="/dashboard/settings"
-                className="text-sm text-gray-600 hover:text-teal-700 transition-colors"
+                className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Settings
               </Link>
@@ -87,10 +87,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <div className="sm:hidden -mx-4 border-t border-gray-200">
             <div className="overflow-x-auto no-scrollbar">
               <div className="flex gap-2 px-4 py-2">
-
                 <Link
                   href="/dashboard"
-                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
                 >
                   Overview
                 </Link>
@@ -98,28 +97,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 {/* NEW: Discover (AI-assisted) */}
                 <Link
                   href="/dashboard/discover"
-                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
                 >
                   Discover (AI-assisted)
                 </Link>
 
                 <Link
                   href="/dashboard/earnings"
-                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
                 >
                   Earnings
                 </Link>
 
                 <Link
                   href="/dashboard/links"
-                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
                 >
                   Links
                 </Link>
 
                 <Link
                   href="/dashboard/referrals"
-                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
                 >
                   Referrals
                 </Link>
@@ -127,18 +126,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 {/* ⭐ NEW: TRUST CENTER LINK */}
                 <Link
                   href="/trust-center"
-                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
                 >
                   Trust Center
                 </Link>
 
                 <Link
                   href="/dashboard/settings"
-                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border hover:bg-gray-50"
+                  className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
                 >
                   Settings
                 </Link>
-
               </div>
             </div>
           </div>
