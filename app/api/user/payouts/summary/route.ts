@@ -5,8 +5,6 @@ export const revalidate = 0;
 
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/db";
 
 type Status = "PENDING" | "PROCESSING" | "PAID" | "FAILED";
@@ -17,104 +15,34 @@ function toInt(n: unknown) {
 
 export async function GET(req: NextRequest) {
   try {
-    // -------- 1) Try JWT token (same as commissions/summary) --------
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    // 1) Resolve user via JWT (same pattern as commissions summary)
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-    let userId: string | undefined;
-    let emailFromAuth: string | undefined;
-
-    if (token) {
-      if (typeof token.sub === "string") {
-        userId = token.sub;
-      }
-      if (typeof token.email === "string") {
-        emailFromAuth = token.email;
-      }
-    }
-
-    // -------- 2) Fallback: try getServerSession (App Router style) --------
-    let sessionUser: any = null;
-    if (!userId && !emailFromAuth) {
-      const session = (await getServerSession(authOptions)) as any;
-      if (session?.user) {
-        sessionUser = session.user;
-        if (typeof session.user.id === "string") {
-          userId = session.user.id;
-        }
-        if (typeof session.user.email === "string") {
-          emailFromAuth = session.user.email;
-        }
-      }
-    }
-
-    // Debug: what did auth give us (shows in Railway logs)
-    console.log("PAYOUTS_AUTH_DEBUG", {
-      hasToken: !!token,
-      tokenEmail: token?.email,
-      tokenSub: token?.sub,
-      sessionUser,
-      resolvedUserId: userId,
-      resolvedEmail: emailFromAuth,
-    });
-
-    // -------- 3) If we still have no id/email → truly unauthorized --------
-    if (!userId && !emailFromAuth) {
+    if (!token || !token.email) {
       return NextResponse.json(
         { ok: false, error: "UNAUTHORIZED" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
-    // -------- 4) Load user from DB (by id first, then email) --------
-    let user = null;
+    const user = await prisma.user.findUnique({
+      where: { email: token.email },
+      select: { id: true, email: true, disabled: true, deletedAt: true },
+    });
 
-    if (userId) {
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          email: true,
-          disabled: true,
-          deletedAt: true,
-        },
-      });
-    }
-
-    if (!user && emailFromAuth) {
-      user = await prisma.user.findUnique({
-        where: { email: emailFromAuth },
-        select: {
-          id: true,
-          email: true,
-          disabled: true,
-          deletedAt: true,
-        },
-      });
-    }
-
-    if (!user) {
-      return NextResponse.json(
-        { ok: false, error: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
-    }
-
-    if (user.disabled || user.deletedAt) {
+    if (!user || user.disabled || user.deletedAt) {
       return NextResponse.json(
         { ok: false, error: "ACCOUNT_DISABLED" },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
-    const finalUserId = user.id;
+    const userId = user.id;
 
-    // -------- 5) Stats by status from payoutRequest --------
+    // 2) Stats by status (payoutRequest table)
     const byStatus = await prisma.payoutRequest.groupBy({
       by: ["status"],
-      where: { userId: finalUserId },
+      where: { userId },
       _count: { _all: true },
       _sum: { amountPhp: true },
     });
@@ -134,9 +62,9 @@ export async function GET(req: NextRequest) {
       FAILED: stat("FAILED"),
     };
 
-    // -------- 6) Recent payout requests --------
+    // 3) Recent items (last 10)
     const recent = await prisma.payoutRequest.findMany({
-      where: { userId: finalUserId },
+      where: { userId },
       orderBy: { requestedAt: "desc" },
       take: 10,
       select: {
@@ -157,10 +85,7 @@ export async function GET(req: NextRequest) {
       summary,
       totals: {
         requests: Object.values(summary).reduce((a, b) => a + b.count, 0),
-        amountPhp: Object.values(summary).reduce(
-          (a, b) => a + b.amountPhp,
-          0,
-        ),
+        amountPhp: Object.values(summary).reduce((a, b) => a + b.amountPhp, 0),
       },
       recent,
     });
@@ -168,7 +93,7 @@ export async function GET(req: NextRequest) {
     console.error("GET /api/user/payouts/summary error:", err);
     return NextResponse.json(
       { ok: false, error: "SERVER_ERROR" },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
