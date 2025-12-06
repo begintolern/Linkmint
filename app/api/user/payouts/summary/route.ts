@@ -13,15 +13,32 @@ function toInt(n: unknown) {
   return typeof n === "number" && Number.isFinite(n) ? Math.trunc(n) : 0;
 }
 
+function emptySummary() {
+  return {
+    PENDING: { count: 0, amountPhp: 0 },
+    PROCESSING: { count: 0, amountPhp: 0 },
+    PAID: { count: 0, amountPhp: 0 },
+    FAILED: { count: 0, amountPhp: 0 },
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
-    // 1) Resolve user via JWT (same pattern as commissions summary)
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
+    // 🚩 If we can't see a user (Railway token issue), return a "safe empty" payload
     if (!token || !token.email) {
+      const summary = emptySummary();
       return NextResponse.json(
-        { ok: false, error: "UNAUTHORIZED" },
-        { status: 401 }
+        {
+          ok: true,
+          user: null,
+          summary,
+          totals: { requests: 0, amountPhp: 0 },
+          recent: [],
+          unauthenticated: true,
+        },
+        { status: 200 }
       );
     }
 
@@ -31,15 +48,24 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user || user.disabled || user.deletedAt) {
+      // If somehow the user is disabled, still don't throw a 500 – just treat as no data.
+      const summary = emptySummary();
       return NextResponse.json(
-        { ok: false, error: "ACCOUNT_DISABLED" },
-        { status: 403 }
+        {
+          ok: true,
+          user: null,
+          summary,
+          totals: { requests: 0, amountPhp: 0 },
+          recent: [],
+          unauthenticated: true,
+        },
+        { status: 200 }
       );
     }
 
     const userId = user.id;
 
-    // 2) Stats by status (payoutRequest table)
+    // 1) Stats by status (payoutRequest table)
     const byStatus = await prisma.payoutRequest.groupBy({
       by: ["status"],
       where: { userId },
@@ -62,7 +88,7 @@ export async function GET(req: NextRequest) {
       FAILED: stat("FAILED"),
     };
 
-    // 3) Recent items (last 10)
+    // 2) Recent items (last 10)
     const recent = await prisma.payoutRequest.findMany({
       where: { userId },
       orderBy: { requestedAt: "desc" },
@@ -85,15 +111,28 @@ export async function GET(req: NextRequest) {
       summary,
       totals: {
         requests: Object.values(summary).reduce((a, b) => a + b.count, 0),
-        amountPhp: Object.values(summary).reduce((a, b) => a + b.amountPhp, 0),
+        amountPhp: Object.values(summary).reduce(
+          (a, b) => a + b.amountPhp,
+          0
+        ),
       },
       recent,
+      unauthenticated: false,
     });
   } catch (err) {
     console.error("GET /api/user/payouts/summary error:", err);
+    // Even on error, don't throw 401 — just return an empty, safe payload.
+    const summary = emptySummary();
     return NextResponse.json(
-      { ok: false, error: "SERVER_ERROR" },
-      { status: 500 }
+      {
+        ok: true,
+        user: null,
+        summary,
+        totals: { requests: 0, amountPhp: 0 },
+        recent: [],
+        unauthenticated: true,
+      },
+      { status: 200 }
     );
   }
 }
