@@ -5,6 +5,7 @@ import Link from "next/link";
 
 export default function CreateLinkClient() {
   const [url, setUrl] = useState("");
+  const [label, setLabel] = useState(""); // optional smart link title
   const [source, setSource] = useState(""); // traffic source (optional unless merchant needs it)
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -24,6 +25,8 @@ export default function CreateLinkClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url,
+          // optional smart link title (uses existing SmartLink.label in schema)
+          label: label || undefined,
           // send source if selected; backend will require it only for merchants that need it
           source: source || undefined,
         }),
@@ -61,6 +64,7 @@ export default function CreateLinkClient() {
 
   function resetForm() {
     setUrl("");
+    setLabel("");
     setSource("");
     setResult(null);
     setCopied(null);
@@ -89,6 +93,24 @@ export default function CreateLinkClient() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Title / label (optional) */}
+        <div className="space-y-1">
+          <label className="block text-sm font-medium">
+            Smart link title <span className="text-xs text-gray-400">(optional)</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Ex: Mom’s gift – Lazada, TikTok video #1, Havaianas promo..."
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="w-full border rounded-lg p-2.5 text-sm"
+            maxLength={120}
+          />
+          <p className="text-xs text-gray-500">
+            This is just for you. It won’t change tracking — it helps you remember what this link is for.
+          </p>
+        </div>
+
         <input
           type="url"
           placeholder="Paste product URL (Shopee, Lazada, Zalora, etc.)"
