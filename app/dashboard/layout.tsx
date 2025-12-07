@@ -9,13 +9,25 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="h-14 flex items-center justify-between">
-            {/* Brand */}
-            <Link
-              href="/dashboard"
-              className="text-base sm:text-lg font-semibold text-teal-700 truncate"
-            >
-              linkmint.co
-            </Link>
+            {/* Brand + PHDEBUG */}
+            <div className="flex items-center gap-2">
+              <Link
+                href="/dashboard"
+                className="text-base sm:text-lg font-semibold text-teal-700 truncate"
+              >
+                linkmint.co
+              </Link>
+              <span
+                style={{
+                  color: "#000000",
+                  fontWeight: 800,
+                  fontSize: 11,
+                  marginLeft: 4,
+                }}
+              >
+                PHDEBUG
+              </span>
+            </div>
 
             {/* Right side on mobile: compact actions */}
             <div className="flex items-center gap-2 sm:hidden">
