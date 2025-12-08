@@ -6,7 +6,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Sticky top bar; mobile-friendly and scroll-safe */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+      <header
+        className="sticky top-0 z-40 bg-white border-b border-gray-200"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
         <div className="w-full">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="h-14 flex items-center justify-between">
