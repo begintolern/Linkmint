@@ -9,25 +9,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="h-14 flex items-center justify-between">
-            {/* Brand + PHDEBUG */}
-            <div className="flex items-center gap-2">
-              <Link
-                href="/dashboard"
-                className="text-base sm:text-lg font-semibold text-teal-700 truncate"
-              >
-                linkmint.co
-              </Link>
-              <span
-                style={{
-                  color: "#000000",
-                  fontWeight: 800,
-                  fontSize: 11,
-                  marginLeft: 4,
-                }}
-              >
-                PHDEBUG
-              </span>
-            </div>
+            {/* Brand */}
+            <Link
+              href="/dashboard"
+              className="text-base sm:text-lg font-semibold text-teal-700 truncate"
+            >
+              linkmint.co
+            </Link>
 
             {/* Right side on mobile: compact actions */}
             <div className="flex items-center gap-2 sm:hidden">
@@ -49,7 +37,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 Overview
               </Link>
 
-              {/* NEW: Discover (AI-assisted) */}
               <Link
                 href="/dashboard/discover"
                 className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
@@ -63,12 +50,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               >
                 Earnings
               </Link>
+
               <Link
                 href="/dashboard/links"
                 className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
               >
                 Links
               </Link>
+
               <Link
                 href="/dashboard/referrals"
                 className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
@@ -76,7 +65,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 Referrals
               </Link>
 
-              {/* ⭐ NEW: TRUST CENTER LINK */}
               <Link
                 href="/trust-center"
                 className="text-sm font-medium text-gray-900 hover:text-teal-700 transition-colors"
@@ -106,7 +94,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   Overview
                 </Link>
 
-                {/* NEW: Discover (AI-assisted) */}
                 <Link
                   href="/dashboard/discover"
                   className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
@@ -135,7 +122,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   Referrals
                 </Link>
 
-                {/* ⭐ NEW: TRUST CENTER LINK */}
                 <Link
                   href="/trust-center"
                   className="whitespace-nowrap px-3 py-1.5 text-xs rounded-full border font-medium text-gray-900 hover:bg-gray-50"
