@@ -6,19 +6,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Sticky top bar; mobile-friendly and scroll-safe */}
-      <header
-        className="sticky top-0 z-40 bg-white border-b border-gray-200"
-        style={{
-          paddingTop: "env(safe-area-inset-top)",
-          paddingLeft: "env(safe-area-inset-left)",
-          paddingRight: "env(safe-area-inset-right)",
-        }}
-      >
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="w-full">
           <div className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="h-14 flex items-center justify-between">
-              {/* Brand (wrapped so it never gets clipped) */}
-              <div className="flex items-center gap-2 min-w-0 shrink-0">
+              {/* Brand: padded so it never hugs the left edge */}
+              <div className="flex items-center gap-2 min-w-0 shrink-0 pl-3">
                 <Link
                   href="/dashboard"
                   className="text-base sm:text-lg font-semibold text-teal-700 truncate"
