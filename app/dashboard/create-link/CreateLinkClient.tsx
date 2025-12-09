@@ -4,9 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 
 export default function CreateLinkClient() {
-  const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
-  const [source, setSource] = useState(""); // traffic source (optional unless merchant needs it)
+  const [source, setSource] = useState(""); // traffic source
+  const [label, setLabel] = useState(""); // optional smart link title
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [copied, setCopied] = useState<null | "ok" | "err">(null);
@@ -25,9 +25,8 @@ export default function CreateLinkClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url,
-          label: label || undefined,
-          // send source if selected; backend will require it only for merchants that need it
           source: source || undefined,
+          label: label.trim() || undefined,
         }),
       });
 
@@ -62,9 +61,9 @@ export default function CreateLinkClient() {
   }
 
   function resetForm() {
-    setLabel("");
     setUrl("");
     setSource("");
+    setLabel("");
     setResult(null);
     setCopied(null);
   }
@@ -73,17 +72,19 @@ export default function CreateLinkClient() {
     <div className="space-y-6">
       {/* Top nav */}
       <div className="flex items-center justify-between border-b pb-3">
-        <h2 className="text-lg font-semibold">Create Smart Link</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          Create Smart Link
+        </h2>
         <div className="flex items-center gap-2">
           <Link
             href="/dashboard"
-            className="text-sm px-3 py-1.5 rounded-md border hover:bg-gray-50"
+            className="inline-flex items-center justify-center text-sm font-medium text-gray-900 px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50 relative z-20"
           >
             ← Dashboard
           </Link>
           <Link
             href="/dashboard/links"
-            className="text-sm px-3 py-1.5 rounded-md border hover:bg-gray-50"
+            className="inline-flex items-center justify-center text-sm font-medium text-gray-900 px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50 relative z-20"
           >
             View Links
           </Link>
@@ -92,7 +93,7 @@ export default function CreateLinkClient() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Optional title/label */}
+        {/* Optional smart link title */}
         <div className="space-y-1">
           <label className="block text-sm font-medium text-gray-900">
             Smart link title{" "}
@@ -102,10 +103,10 @@ export default function CreateLinkClient() {
           </label>
           <input
             type="text"
-            placeholder="Ex: Mom’s gift — Lazada, TikTok video #1, Havaianas"
+            placeholder="Ex: Mom’s gift — Lazada, TikTok video #1, Havaianas sale"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg p-3 text-sm bg-white text-gray-900"
+            className="w-full border rounded-lg p-3 text-sm text-gray-900 placeholder:text-gray-400 bg-white"
           />
           <p className="text-xs text-gray-500">
             This is just for you. It won’t change tracking — it helps you
@@ -113,13 +114,12 @@ export default function CreateLinkClient() {
           </p>
         </div>
 
-        {/* URL input */}
         <input
           type="url"
           placeholder="Paste product URL (Shopee, Lazada, Zalora, etc.)"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg p-3 text-sm bg-white text-gray-900"
+          className="w-full border rounded-lg p-3 text-sm text-gray-900 placeholder:text-gray-400 bg-white"
           required
         />
 
@@ -128,27 +128,18 @@ export default function CreateLinkClient() {
           <label className="block text-sm font-medium text-gray-900">
             Traffic source
           </label>
-
-          <div className="relative">
-            <select
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg p-2.5 pr-8 text-sm bg-white text-gray-900 appearance-none"
-            >
-              <option value="">Select where you’ll share this</option>
-              <option value="tiktok">TikTok</option>
-              <option value="instagram">Instagram</option>
-              <option value="facebook">Facebook</option>
-              <option value="youtube">YouTube</option>
-              <option value="other">Other / mixed</option>
-            </select>
-
-            {/* Custom dropdown arrow so it’s always visible */}
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500 text-xs">
-              ▼
-            </span>
-          </div>
-
+          <select
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="w-full border rounded-lg p-2.5 text-sm text-gray-900 bg-white"
+          >
+            <option value="">Select where you’ll share this</option>
+            <option value="tiktok">TikTok</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="youtube">YouTube</option>
+            <option value="other">Other / mixed</option>
+          </select>
           <p className="text-xs text-gray-500">
             Some merchants only allow certain platforms. If required, we’ll use
             this to block risky traffic and keep your account safe.
@@ -168,7 +159,9 @@ export default function CreateLinkClient() {
       {result && result.ok && (
         <div className="p-4 border rounded-md bg-white shadow-sm space-y-3">
           <div className="space-y-1">
-            <p className="font-medium text-sm">Your link is ready:</p>
+            <p className="font-medium text-sm text-gray-900">
+              Your link is ready:
+            </p>
             <a
               href={result.link}
               target="_blank"
