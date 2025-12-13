@@ -367,7 +367,7 @@ export default async function MerchantsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       <div className="mx-auto max-w-5xl px-4 py-6">
         <header className="mb-6">
           <h1 className="text-xl font-semibold text-slate-900">Browse merchants</h1>
