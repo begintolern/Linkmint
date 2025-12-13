@@ -430,7 +430,7 @@ export default async function MerchantsPage() {
                   <p className="mt-3 text-xs text-slate-700">{m.notes}</p>
 
                   {m.disclaimer && (
-                    <p className="mt-2 text-[10px] text-slate-500">{m.disclaimer}</p>
+                    <p className="mt-2 text-[10px] text-slate-700">{m.disclaimer}</p>
                   )}
                 </div>
 
@@ -465,7 +465,7 @@ export default async function MerchantsPage() {
           })}
         </div>
 
-        <p className="mt-5 text-[10px] text-slate-500">
+        <p className="mt-5 text-[10px] text-slate-700">
           All information above is general and AI-assisted and does not override any
           official affiliate program terms.
         </p>
