@@ -432,34 +432,30 @@ export default async function MerchantsPage() {
 
                   <p className="mt-3 text-xs text-slate-700">{m.notes}</p>
 
-                  {/* Temu: clear, non-ambiguous rules block (visible by default) */}
+                  {/* Temu: clear rules block (visible by default here) */}
                   {isTemu && (
                     <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-slate-800">
                       <p className="font-semibold text-slate-900">Temu — Sharing rules</p>
-
                       <ul className="mt-2 list-disc space-y-1 pl-5">
                         <li>
-                          Your Temu smart link may open the <span className="font-semibold">Temu homepage</span>
-                          . Temu does <span className="font-semibold">not</span> support item-level deep links here.
+                          Your Temu smart link may open the <span className="font-semibold">Temu homepage</span>. Temu does{" "}
+                          <span className="font-semibold">not</span> support item-level deep links here.
                         </li>
                         <li>
-                          Tracking is <span className="font-semibold">cookie-based</span>. Buyer should click your link
-                          first, then browse and buy in the same session.
+                          Tracking is <span className="font-semibold">cookie-based</span>. Buyer should click your link first, then browse and buy in the same session.
                         </li>
                         <li>
-                          If the buyer purchases <span className="font-semibold">multiple items</span> in the same
-                          session, commissions may apply to <span className="font-semibold">all eligible items</span>
-                          (not just one).
+                          If the buyer purchases <span className="font-semibold">multiple items</span> in the same session, commissions may apply to{" "}
+                          <span className="font-semibold">all eligible items</span>.
                         </li>
                         <li>
-                          Conditions: buyer must be in the <span className="font-semibold">US</span> and delivery
-                          address must be <span className="font-semibold">US-based</span>.
+                          Conditions: buyer must be in the <span className="font-semibold">US</span> and delivery address must be{" "}
+                          <span className="font-semibold">US-based</span>.
                         </li>
                         <li>
                           Refunded/canceled orders do <span className="font-semibold">not</span> qualify.
                         </li>
                       </ul>
-
                       <p className="mt-2 text-[10px] text-slate-700">
                         Note: Temu controls tracking + approval rules. linkmint.co cannot override Temu’s system.
                       </p>
@@ -474,7 +470,7 @@ export default async function MerchantsPage() {
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
-                    href="/dashboard/create-link"
+                    href={`/dashboard/create-link?merchant=${encodeURIComponent(m.id)}`}
                     className="inline-flex items-center rounded-full bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700"
                   >
                     Create smart link
