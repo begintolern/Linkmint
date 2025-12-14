@@ -6,20 +6,26 @@ export default function DashboardPageHeader({
 }: {
   title: string;
   subtitle?: string;
-  rightSlot?: React.ReactNode; // ⬅️ new optional prop
+  rightSlot?: React.ReactNode;
 }) {
   return (
     <header className="flex items-start sm:items-baseline justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold">{title}</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">
+          {title}
+        </h1>
+
         {subtitle ? (
-          <p className="text-sm text-gray-600 mt-1">{subtitle}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {subtitle}
+          </p>
         ) : null}
       </div>
 
-      {/* Right-aligned slot for totals/badges/actions */}
       {rightSlot ? (
-        <div className="flex-shrink-0">{rightSlot}</div>
+        <div className="flex-shrink-0">
+          {rightSlot}
+        </div>
       ) : null}
     </header>
   );
