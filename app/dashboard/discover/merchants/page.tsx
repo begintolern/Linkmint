@@ -99,10 +99,10 @@ const MERCHANTS: Merchant[] = [
     categoryFocus: "Deals, gadgets, home items, accessories.",
     allowedTrafficNotes:
       "Organic short-form content works best. Avoid coupon spam and misleading claims.",
-    notes: "Strong for viral deal-finds and trending items.",
+    notes: "Strong for viral deal-finds and trending items. Full sharing rules appear when creating a link.",
     ruleMerchantName: "Temu (Global) - CPS",
-    disclaimer:
-      "How it works: A single click starts a tracking session. If the buyer purchases multiple items in the same session, commissions may apply to all eligible items. Item-level links are not required; landing on the Temu homepage is normal. Conditions: Buyer must be in the US, delivery address must be US-based, and orders must complete within Temu’s tracking window. Refunded or canceled orders do not qualify.",
+    // NOTE: We intentionally do NOT show the long Temu sharing rules here.
+    // Those rules are shown only on /dashboard/create-link when Temu is selected.
   },
 
   {
@@ -382,7 +382,6 @@ export default async function MerchantsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {enhancedMerchants.map((m) => {
             const homepage = MERCHANT_HOMEPAGES[m.id];
-            const isTemu = m.id === "temu-global";
 
             return (
               <article
@@ -432,38 +431,7 @@ export default async function MerchantsPage() {
 
                   <p className="mt-3 text-xs text-slate-700">{m.notes}</p>
 
-                  {/* Temu: clear rules block (visible by default here) */}
-                  {isTemu && (
-                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-slate-800">
-                      <p className="font-semibold text-slate-900">Temu — Sharing rules</p>
-                      <ul className="mt-2 list-disc space-y-1 pl-5">
-                        <li>
-                          Your Temu smart link may open the <span className="font-semibold">Temu homepage</span>. Temu does{" "}
-                          <span className="font-semibold">not</span> support item-level deep links here.
-                        </li>
-                        <li>
-                          Tracking is <span className="font-semibold">cookie-based</span>. Buyer should click your link first, then browse and buy in the same session.
-                        </li>
-                        <li>
-                          If the buyer purchases <span className="font-semibold">multiple items</span> in the same session, commissions may apply to{" "}
-                          <span className="font-semibold">all eligible items</span>.
-                        </li>
-                        <li>
-                          Conditions: buyer must be in the <span className="font-semibold">US</span> and delivery address must be{" "}
-                          <span className="font-semibold">US-based</span>.
-                        </li>
-                        <li>
-                          Refunded/canceled orders do <span className="font-semibold">not</span> qualify.
-                        </li>
-                      </ul>
-                      <p className="mt-2 text-[10px] text-slate-700">
-                        Note: Temu controls tracking + approval rules. linkmint.co cannot override Temu’s system.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Other merchants: keep existing small disclaimer */}
-                  {!isTemu && m.disclaimer && (
+                  {m.disclaimer && (
                     <p className="mt-2 text-[10px] text-slate-700">{m.disclaimer}</p>
                   )}
                 </div>
