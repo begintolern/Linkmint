@@ -35,6 +35,33 @@ export default function CreateLinkPage() {
           {/* Left: create form */}
           <section className="card">
             <CreateLinkClient />
+
+            {/* Temu rules note (process-only, explicit) */}
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-slate-800">
+              <p className="font-semibold text-slate-900">
+                Temu links — important
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                <li>
+                  Temu smart links may open the <strong>Temu homepage</strong>. Item-level links are not required.
+                </li>
+                <li>
+                  Tracking is <strong>cookie-based</strong>. Buyer should click your link first, then browse and buy in the same session.
+                </li>
+                <li>
+                  If multiple items are purchased in the same session, commissions may apply to <strong>all eligible items</strong>.
+                </li>
+                <li>
+                  Buyer and delivery address must be <strong>US-based</strong>.
+                </li>
+                <li>
+                  Refunded or canceled orders do <strong>not</strong> qualify.
+                </li>
+              </ul>
+              <p className="mt-2 text-[10px] text-slate-700">
+                Temu controls tracking and approval. linkmint.co cannot override Temu rules.
+              </p>
+            </div>
           </section>
 
           {/* Right: recent links */}
