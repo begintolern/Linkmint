@@ -112,7 +112,6 @@ export default function CreateLinkClient() {
         />
 
         {/* ================= MERCHANT RULES ================= */}
-
         {(showTemuRules || showAliRules || showSheinRules) && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-slate-800">
             {showTemuRules && (
@@ -123,6 +122,11 @@ export default function CreateLinkClient() {
                 <ul className="mt-2 list-disc pl-5 space-y-1">
                   <li>Homepage landing is normal (no item deep links)</li>
                   <li>Cookie-based session tracking</li>
+                  <li>
+                    If Temu opens in the <strong>Temu app</strong>, tracking may
+                    be lost. For best results, complete checkout in the{" "}
+                    <strong>browser</strong>.
+                  </li>
                   <li>Multiple items may earn commission</li>
                   <li>US buyer + US delivery only</li>
                   <li>Refunds and cancellations do not qualify</li>
@@ -159,8 +163,8 @@ export default function CreateLinkClient() {
             )}
 
             <p className="mt-2 text-[10px] text-slate-700">
-              Merchant controls tracking and approval. linkmint.co cannot override
-              official program rules.
+              Merchant controls tracking and approval. linkmint.co cannot
+              override official program rules.
             </p>
           </div>
         )}
