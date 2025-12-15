@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import InfoTooltip from "@/app/dashboard/_components/InfoTooltip";
+import InfoTooltip from "../_components/InfoTooltip";
 
 export default function CreateLinkClient() {
   const sp = useSearchParams();

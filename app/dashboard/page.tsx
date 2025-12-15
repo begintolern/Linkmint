@@ -15,6 +15,7 @@ import ColoredStats from "./_components/ColoredStats";
 import PayoutNotice from "./_components/PayoutNotice";
 import FirstTimeTutorial from "./_components/FirstTimeTutorial";
 import TrustScoreInfo from "./_components/TrustScoreInfo";
+import InfoTooltip from "./_components/InfoTooltip";
 
 type AppUser = {
   id?: string;
@@ -103,8 +104,13 @@ export default async function DashboardPage() {
       {/* Heading */}
       <div className="flex flex-col gap-2">
         <DashboardPageHeader
-          title="Overview"
-          subtitle={`Welcome back, ${name}! Manage your links, merchants, and payouts.`}
+  title="Overview"
+  subtitle={`Welcome back, ${name}! Manage your links, merchants, and payouts.`}
+  rightSlot={
+    <div className="flex items-center gap-2">
+      <InfoTooltip text="Tracking can fail if the buyer switches apps/devices, blocks cookies, or buys later outside the session." />
+    </div>
+  }
         />
 
         {/* Quick actions (mobile-first) */}
@@ -158,7 +164,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Recent commissions + recent links row, directly under Referrals/Settings */}
+      {/* Recent commissions + recent links row */}
       <section
         aria-label="recent-activity"
         className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
