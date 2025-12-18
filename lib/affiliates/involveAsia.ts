@@ -63,7 +63,8 @@ export function buildInvolveAsiaUrl(
   // Normal IA deeplink build
   const u = new URL(base);
   u.searchParams.set(DEEPLINK_PARAM, originalUrl);
-  u.searchParams.set(SUBID_PARAM, smartlinkId);
+  const safeSubidParam = (SUBID_PARAM || "sub_id").trim().replace(/^[=+]+/, "");
+u.searchParams.set(safeSubidParam, smartlinkId);
   u.searchParams.set("lm_subid", smartlinkId);
   u.searchParams.set("utm_source", "linkmint");
 
